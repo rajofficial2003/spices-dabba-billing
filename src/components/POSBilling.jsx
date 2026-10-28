@@ -854,7 +854,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
             )}
           </div>
 
-          <div className="bw-card" style={{
+          <div className="bw-card pos-bill-sticky" style={{
             overflow: "hidden"
           }}>
             {/* Mobile Return to Catalog Button */}

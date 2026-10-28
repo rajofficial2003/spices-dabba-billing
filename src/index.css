@@ -597,14 +597,18 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   display: grid;
   grid-template-columns: 1fr 440px;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .pos-cart-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-bill-sticky {
   position: -webkit-sticky;
   position: sticky;
   top: 80px;
-  align-self: start;
   z-index: 20;
 }
 
@@ -617,6 +621,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     display: none !important;
   }
   .pos-cart-column {
+    position: static !important;
+  }
+  .pos-bill-sticky {
     position: static !important;
     top: auto !important;
   }

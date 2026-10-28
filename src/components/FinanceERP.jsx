@@ -72,6 +72,7 @@ const QUICK_SPICE_TEMPLATES = [
 
 export default function FinanceERP() {
   const { 
+    categories = [],
     orders = [], 
     expenses = [], 
     rawMaterials = [],
@@ -269,10 +270,14 @@ export default function FinanceERP() {
   const totalBillingIncome = completedOrders.reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0);
   
   // Raw Material Purchases vs Other Expenses (Date filtered)
-  const rawMaterialBills = dateFilteredExpenses.filter(e => e.expenseType === "raw_material" || e.category === "Raw Materials");
+  const rawMaterialBills = dateFilteredExpenses.filter(e => 
+    e.expenseType === "raw_material" || (!e.expenseType && e.category === "Raw Materials")
+  );
   const rawMaterialsTotal = rawMaterialBills.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   
-  const otherExpensesList = dateFilteredExpenses.filter(e => e.expenseType !== "raw_material" && e.category !== "Raw Materials");
+  const otherExpensesList = dateFilteredExpenses.filter(e => 
+    e.expenseType === "other" || (e.expenseType !== "raw_material" && e.category !== "Raw Materials")
+  );
   const otherExpensesTotal = otherExpensesList.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
   const totalAllExpenses = rawMaterialsTotal + otherExpensesTotal;
@@ -579,7 +584,10 @@ export default function FinanceERP() {
   const handleOpenOtherExpenseModal = () => {
     setEditingExpenseId(null);
     setExistingProofUrl(null);
-    const defaultCat = expenseCategories.length > 0 ? expenseCategories[0].name : "Petrol & Fuel";
+    const activeCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
+    const defaultCat = activeCats.length > 0 
+      ? activeCats[0].name 
+      : (expenseCategories.length > 0 ? expenseCategories[0].name : "Operational Expense");
     setOtherExpenseData({
       category: defaultCat,
       title: "",
@@ -598,8 +606,12 @@ export default function FinanceERP() {
   const handleStartEditOtherExpense = (exp) => {
     setEditingExpenseId(exp.id);
     setExistingProofUrl(exp.proofUrl || null);
+    const activeCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
+    const defaultCat = activeCats.length > 0 
+      ? activeCats[0].name 
+      : (expenseCategories[0]?.name || "Operational Expense");
     setOtherExpenseData({
-      category: exp.category || (expenseCategories[0]?.name || "Petrol & Fuel"),
+      category: exp.category || defaultCat,
       title: exp.title || "",
       amount: exp.amount || "",
       date: exp.date || new Date().toISOString().split("T")[0],
@@ -771,7 +783,11 @@ export default function FinanceERP() {
   });
 
   const filteredOtherExpenses = otherExpensesList.filter(exp => {
-    if (categoryFilter !== "all" && exp.category !== categoryFilter) return false;
+    if (categoryFilter !== "all") {
+      const isDirectMatch = exp.category === categoryFilter;
+      const isSubMatch = exp.category?.startsWith(`${categoryFilter} - `);
+      if (!isDirectMatch && !isSubMatch) return false;
+    }
     const q = searchQuery.toLowerCase();
     const titleMatch = (exp.title || "").toLowerCase().includes(q);
     const catMatch = (exp.category || "").toLowerCase().includes(q);
@@ -1493,8 +1509,23 @@ export default function FinanceERP() {
                 All Categories ({otherExpensesList.length})
               </button>
 
-              {expenseCategories.map((cat) => {
-                const count = otherExpensesList.filter(e => e.category === cat.name).length;
+              {/* Dynamic Filter Pills: Main categories, operational categories, and recorded expense categories */}
+              {[
+                ...categories
+                  .filter(c => c.id !== "all" && c.isActive !== false)
+                  .map(c => ({ id: c.id, name: c.name, color: "var(--sd-red)" })),
+                ...expenseCategories.filter(ec => !categories.some(c => c.name === ec.name)),
+                ...Array.from(new Set(otherExpensesList.map(e => e.category).filter(Boolean)))
+                  .filter(catName => 
+                    !categories.some(c => c.name === catName) &&
+                    !expenseCategories.some(ec => ec.name === catName) &&
+                    !categories.some(c => (c.subcategories || []).some(s => `${c.name} - ${typeof s === "string" ? s : s.name}` === catName))
+                  )
+                  .map(catName => ({ id: catName, name: catName, color: "#6366F1" }))
+              ].map((cat) => {
+                const count = otherExpensesList.filter(e => 
+                  e.category === cat.name || e.category?.startsWith(`${cat.name} - `)
+                ).length;
                 const isSelected = categoryFilter === cat.name;
 
                 return (
@@ -2793,9 +2824,47 @@ export default function FinanceERP() {
                       outline: "none"
                     }}
                   >
-                    {expenseCategories.map(c => (
-                      <option key={c.id || c.name} value={c.name}>{c.name}</option>
-                    ))}
+                    {/* System Categories with Subcategories */}
+                    {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => {
+                      const activeSubs = (cat.subcategories || [])
+                        .filter(s => typeof s === "string" || s.isActive !== false)
+                        .map(s => typeof s === "string" ? s : s.name)
+                        .filter(Boolean);
+
+                      return (
+                        <optgroup 
+                          key={cat.id || cat.name} 
+                          label={`${cat.name}${cat.tamilName ? ` (${cat.tamilName})` : ''}`}
+                        >
+                          <option value={cat.name}>
+                            {cat.name} (Main Category)
+                          </option>
+                          {activeSubs.map(subName => (
+                            <option key={`${cat.id || cat.name}-${subName}`} value={`${cat.name} - ${subName}`}>
+                              ↳ {subName}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+
+                    {/* Operational Categories */}
+                    {expenseCategories.length > 0 && (
+                      <optgroup label="Operational & Overhead Categories">
+                        {expenseCategories.map(c => (
+                          <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {/* Fallback if current category isn't in lists */}
+                    {otherExpenseData.category && 
+                      !categories.some(c => c.name === otherExpenseData.category) &&
+                      !categories.some(c => (c.subcategories || []).some(s => `${c.name} - ${typeof s === "string" ? s : s.name}` === otherExpenseData.category || (typeof s === "string" ? s : s.name) === otherExpenseData.category)) &&
+                      !expenseCategories.some(c => c.name === otherExpenseData.category) && (
+                        <option value={otherExpenseData.category}>{otherExpenseData.category}</option>
+                    )}
+
                     <option value="__NEW_CAT__" style={{ fontWeight: 800, color: "var(--sd-red)" }}>
                       + Add New Category...
                     </option>

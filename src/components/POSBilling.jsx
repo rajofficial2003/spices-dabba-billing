@@ -896,8 +896,13 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                     {activeDraftId ? "Draft Order (On-Field)" : "BILL"}
                   </h2>
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", marginTop: "1px" }}>
-                  {totalItemsCount} packs • {cartItems.length} items
+                <div style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", marginTop: "1px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>{totalItemsCount} packs • {cartItems.length} items</span>
+                  {cartItems.length > 1 && (
+                    <span style={{ fontSize: "0.68rem", color: "var(--sd-red)", fontWeight: 700, background: "var(--sd-red-subtle)", padding: "1px 5px", borderRadius: "3px" }}>
+                      Scroll for more ↓
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -926,17 +931,17 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
               )}
             </div>
 
-            {/* Cart Items List */}
-            <div style={{ maxHeight: "min(320px, calc(100vh - 460px))", minHeight: "80px", overflowY: "auto", padding: "10px", background: "var(--sd-white)" }}>
+            {/* Cart Items List - Compact Single Product Main View with Internal Scroll */}
+            <div style={{ maxHeight: "115px", overflowY: "auto", padding: "8px 10px", background: "var(--sd-white)" }}>
               {cartItems.length === 0 ? (
                 <div style={{
-                  padding: "36px 16px",
+                  padding: "16px 12px",
                   textAlign: "center",
                   color: "var(--sd-zinc-500)"
                 }}>
-                  <ShoppingBag size={40} strokeWidth={1.5} color="var(--sd-zinc-300)" style={{ margin: "0 auto 10px" }} />
-                  <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>No items in bill</p>
-                  <p style={{ fontSize: "0.78rem", marginTop: "2px", color: "var(--sd-zinc-400)" }}>
+                  <ShoppingBag size={26} strokeWidth={1.5} color="var(--sd-zinc-300)" style={{ margin: "0 auto 6px" }} />
+                  <p style={{ fontWeight: 700, fontSize: "0.85rem", margin: 0 }}>No items in bill</p>
+                  <p style={{ fontSize: "0.74rem", marginTop: "2px", color: "var(--sd-zinc-400)", margin: 0 }}>
                     Select masalas from catalog to start billing.
                   </p>
                 </div>
@@ -1248,11 +1253,11 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 background: "var(--sd-black)",
                 color: "var(--sd-white)",
                 borderRadius: "12px",
-                padding: "12px 16px",
+                padding: "10px 14px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                margin: "12px 0",
+                margin: "8px 0",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.12)"
               }}>
                 <div>
@@ -1263,22 +1268,22 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                     Standard A4 Tax Invoice
                   </div>
                 </div>
-                <div className="font-heading" style={{ fontSize: "1.65rem", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px" }}>
+                <div className="font-heading" style={{ fontSize: "1.55rem", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px" }}>
                   {formatCurrency(grandTotal)}
                 </div>
               </div>
 
               {/* Payment Details */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", margin: "10px 0" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", margin: "6px 0 8px 0" }}>
                 <div>
-                  <label className="input-label" style={{ marginBottom: "4px", fontSize: "0.85rem", fontWeight: 800 }}>
+                  <label className="input-label" style={{ marginBottom: "3px", fontSize: "0.82rem", fontWeight: 800 }}>
                     Payment Mode
                   </label>
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value)}
                     className="custom-select"
-                    style={{ padding: "8px 30px 8px 10px", fontSize: "0.85rem", fontWeight: 700 }}
+                    style={{ padding: "7px 28px 7px 8px", fontSize: "0.82rem", fontWeight: 700 }}
                   >
                     <option value="Cash">Cash</option>
                     <option value="UPI">UPI / GPay</option>
@@ -1288,14 +1293,14 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 </div>
 
                 <div>
-                  <label className="input-label" style={{ marginBottom: "4px", fontSize: "0.85rem", fontWeight: 800 }}>
+                  <label className="input-label" style={{ marginBottom: "3px", fontSize: "0.82rem", fontWeight: 800 }}>
                     Status
                   </label>
                   <select
                     value={paymentStatus}
                     onChange={(e) => setPaymentStatus(e.target.value)}
                     className="custom-select"
-                    style={{ padding: "8px 30px 8px 10px", fontSize: "0.85rem", fontWeight: 700 }}
+                    style={{ padding: "7px 28px 7px 8px", fontSize: "0.82rem", fontWeight: 700 }}
                   >
                     <option value="paid">Paid</option>
                     <option value="pending">Pending / Due</option>
@@ -1310,7 +1315,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="text-input"
-                style={{ padding: "8px 10px", fontSize: "0.88rem", marginBottom: "12px" }}
+                style={{ padding: "7px 10px", fontSize: "0.85rem", marginBottom: "8px" }}
               />
 
               {/* Actions */}

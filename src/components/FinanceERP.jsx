@@ -201,6 +201,8 @@ export default function FinanceERP() {
   // RAW MATERIAL PURCHASE BILL FORM STATE (Single Bill with Multiple Products)
   // ==========================================
   const [rawBillData, setRawBillData] = useState({
+    category: "",
+    categoryName: "",
     supplierName: "",
     supplierPhone: "",
     invoiceNumber: "",
@@ -208,6 +210,11 @@ export default function FinanceERP() {
     paymentMode: "Cash",
     notes: ""
   });
+
+  const rawBillCategoryObj = categories.find(c => c.id === rawBillData.category || c.name === rawBillData.category);
+  const rawBillSubcategories = (rawBillCategoryObj?.subcategories || [])
+    .filter(s => typeof s === "string" || s.isActive !== false)
+    .map(s => typeof s === "string" ? s : s.name);
 
   // Multiple item rows inside the single raw material purchase bill
   const [rawBillItems, setRawBillItems] = useState([
@@ -514,8 +521,15 @@ export default function FinanceERP() {
   const handleOpenRawMaterialModal = () => {
     setEditingExpenseId(null);
     setExistingProofUrl(null);
+    const validCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
+    const defaultCat = validCats.find(c => c.id === "raw-materials" || c.name?.toLowerCase().includes("raw")) || validCats[0] || null;
+    const rawFirstSub = defaultCat?.subcategories?.[0];
+    const defaultSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
+
     setRawBillData({
-      supplierName: "",
+      category: defaultCat?.id || (defaultCat?.name || ""),
+      categoryName: defaultCat?.name || "",
+      supplierName: defaultSub,
       supplierPhone: "",
       invoiceNumber: "",
       date: new Date().toISOString().split("T")[0],
@@ -544,8 +558,11 @@ export default function FinanceERP() {
   const handleStartEditRawBill = (bill) => {
     setEditingExpenseId(bill.id);
     setExistingProofUrl(bill.proofUrl || null);
+    const catObj = categories.find(c => c.id === bill.category || c.name === bill.category || c.id === bill.categoryId || c.name === bill.categoryName);
     setRawBillData({
-      supplierName: bill.supplierName || bill.paidTo || "",
+      category: catObj ? catObj.id : (bill.category || "raw-materials"),
+      categoryName: catObj ? catObj.name : (bill.categoryName || bill.category || "Raw Materials"),
+      supplierName: bill.supplierName || bill.paidTo || bill.subcategory || "",
       supplierPhone: bill.supplierPhone || "",
       invoiceNumber: bill.invoiceNumber || "",
       date: bill.date || new Date().toISOString().split("T")[0],
@@ -637,7 +654,7 @@ export default function FinanceERP() {
   const handleSubmitRawMaterialBill = async (e) => {
     e.preventDefault();
     if (!rawBillData.supplierName.trim()) {
-      setFormError("Please enter the Supplier / Mandi Name.");
+      setFormError("Please select or enter the Supplier.");
       return;
     }
 
@@ -681,12 +698,19 @@ export default function FinanceERP() {
         total: (Number(itm.quantity) || 1) * (Number(itm.unitPrice) || 0)
       }));
 
+      const catObj = categories.find(c => c.id === rawBillData.category || c.name === rawBillData.category);
+      const categoryName = catObj ? catObj.name : (rawBillData.categoryName || rawBillData.category || "Raw Materials");
+
       const payload = {
         expenseType: "raw_material",
-        category: "Raw Materials",
+        category: categoryName,
+        categoryId: catObj ? catObj.id : (rawBillData.category || "raw-materials"),
+        categoryName: categoryName,
+        subcategory: rawBillData.supplierName.trim(),
         title: `Raw Materials: ${rawBillData.supplierName.trim()} (${formattedItems.length} items)`,
         amount: rawBillGrandTotal,
         supplierName: rawBillData.supplierName.trim(),
+        paidTo: rawBillData.supplierName.trim(),
         supplierPhone: rawBillData.supplierPhone?.trim() || "",
         invoiceNumber: rawBillData.invoiceNumber?.trim() || "",
         date: rawBillData.date,
@@ -791,9 +815,11 @@ export default function FinanceERP() {
   const filteredRawBills = rawMaterialBills.filter(bill => {
     const q = searchQuery.toLowerCase();
     const vendorMatch = (bill.supplierName || "").toLowerCase().includes(q);
+    const catMatch = (bill.categoryName || bill.category || "").toLowerCase().includes(q);
+    const subcatMatch = (bill.subcategory || "").toLowerCase().includes(q);
     const invMatch = (bill.invoiceNumber || "").toLowerCase().includes(q);
     const itemMatch = (bill.items || []).some(itm => (itm.name || "").toLowerCase().includes(q));
-    return vendorMatch || invMatch || itemMatch;
+    return vendorMatch || catMatch || subcatMatch || invMatch || itemMatch;
   });
 
   const filteredOtherExpenses = otherExpensesList.filter(exp => {
@@ -1942,19 +1968,28 @@ export default function FinanceERP() {
                 marginBottom: "18px"
               }}>
                 <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-zinc-700)", textTransform: "uppercase", marginBottom: "10px" }}>
-                  1. Mandi / Supplier Invoice Info
+                  1. Supplier & Invoice Info
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
+                  {/* Category Field */}
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
-                      Supplier / Mandi Name *
+                      Category *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Sri Murugan Spices Mandi"
-                      value={rawBillData.supplierName}
-                      onChange={(e) => setRawBillData({ ...rawBillData, supplierName: e.target.value })}
+                    <select
+                      value={rawBillData.category}
+                      onChange={(e) => {
+                        const newCatVal = e.target.value;
+                        const catObj = categories.find(c => c.id === newCatVal || c.name === newCatVal);
+                        const rawFirstSub = catObj?.subcategories?.[0];
+                        const firstSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
+                        setRawBillData({
+                          ...rawBillData,
+                          category: newCatVal,
+                          categoryName: catObj?.name || newCatVal,
+                          supplierName: firstSub
+                        });
+                      }}
                       style={{
                         width: "100%",
                         padding: "8px 10px",
@@ -1964,7 +1999,68 @@ export default function FinanceERP() {
                         background: "#FFFFFF",
                         outline: "none"
                       }}
-                    />
+                      required
+                    >
+                      <option value="" disabled>-- Select Category --</option>
+                      {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} {cat.tamilName ? `(${cat.tamilName})` : ''}
+                        </option>
+                      ))}
+                      {rawBillData.category && !categories.some(c => c.id === rawBillData.category || c.name === rawBillData.category) && (
+                        <option value={rawBillData.category}>
+                          {rawBillData.categoryName || rawBillData.category}
+                        </option>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Supplier Field (Loads Subcategories) */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
+                      Supplier *
+                    </label>
+                    {rawBillSubcategories.length > 0 ? (
+                      <select
+                        value={rawBillData.supplierName}
+                        onChange={(e) => setRawBillData({ ...rawBillData, supplierName: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--sd-zinc-300)",
+                          fontSize: "0.82rem",
+                          background: "#FFFFFF",
+                          outline: "none"
+                        }}
+                        required
+                      >
+                        <option value="">-- Select Supplier --</option>
+                        {rawBillSubcategories.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                        {rawBillData.supplierName && !rawBillSubcategories.includes(rawBillData.supplierName) && (
+                          <option value={rawBillData.supplierName}>{rawBillData.supplierName}</option>
+                        )}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Sri Murugan Spices Mandi"
+                        value={rawBillData.supplierName}
+                        onChange={(e) => setRawBillData({ ...rawBillData, supplierName: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--sd-zinc-300)",
+                          fontSize: "0.82rem",
+                          background: "#FFFFFF",
+                          outline: "none"
+                        }}
+                      />
+                    )}
                   </div>
 
                   <div>

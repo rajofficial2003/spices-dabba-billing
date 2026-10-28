@@ -10,7 +10,7 @@ import {
   AlertCircle
 } from "lucide-react";
 
-export default function ExpenseCategoriesManager() {
+export default function ExpenseCategoriesManager({ subViewToggle = null }) {
   const { 
     expenseCategories = [], 
     expenses = [], 
@@ -113,23 +113,30 @@ export default function ExpenseCategoriesManager() {
         borderBottom: "1px solid var(--sd-zinc-200)"
       }}>
         <div>
-          <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-            Expense Categories
-          </h2>
-          <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "2px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Tag size={22} color="var(--sd-red)" />
+            <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
+              Expense Categories
+            </h2>
+          </div>
+          <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "3px" }}>
             Manage operational, transport, salary, and overhead expense categories for Finance ERP.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenAdd}
-          className="btn-primary"
-          style={{ padding: "8px 16px", fontSize: "0.82rem" }}
-        >
-          <Plus size={15} />
-          <span>Add Expense Category</span>
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {subViewToggle}
+
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="btn-primary"
+            style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+          >
+            <Plus size={15} />
+            <span>Add Expense Category</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar matching Products & Customers */}

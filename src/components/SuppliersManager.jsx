@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { cleanPhoneNumber } from "../utils/formatters";
 
-export default function SuppliersManager() {
+export default function SuppliersManager({ subViewToggle = null }) {
   const { 
     suppliers = [], 
     addSupplier, 
@@ -166,23 +166,30 @@ export default function SuppliersManager() {
         borderBottom: "1px solid var(--sd-zinc-200)"
       }}>
         <div>
-          <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-            Suppliers & Mandi Directory
-          </h2>
-          <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "2px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Building2 size={22} color="var(--sd-red)" />
+            <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
+              Suppliers & Mandi Directory
+            </h2>
+          </div>
+          <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "3px" }}>
             Vendors, procurement mandis, contacts, GSTIN, and raw material purchase sources.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenAdd}
-          className="btn-primary"
-          style={{ padding: "8px 16px", fontSize: "0.82rem" }}
-        >
-          <Plus size={15} />
-          <span>Add New Supplier</span>
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {subViewToggle}
+
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="btn-primary"
+            style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+          >
+            <Plus size={15} />
+            <span>Add New Supplier</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}

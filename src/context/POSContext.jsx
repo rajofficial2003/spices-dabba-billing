@@ -99,7 +99,7 @@ export function POSProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState("fixed"); // "fixed" (₹) or "percent" (%)
-  const [taxPercent, setTaxPercent] = useState(0); // GST % toggle
+  const [taxPercentOverride, setTaxPercent] = useState(null); // Optional override / draft buffer
   const [paymentMode, setPaymentMode] = useState("Cash"); // Cash, UPI, Credit / Khata, Bank Transfer
   const [paymentStatus, setPaymentStatus] = useState("paid"); // "paid" or "pending" (credit)
   const [notes, setNotes] = useState("");
@@ -274,7 +274,7 @@ export function POSProvider({ children }) {
     };
   }, []);
 
-  // CART CALCULATIONS
+  // CART CALCULATIONS (GST is automatically calculated from product GST %)
   const subtotal = cartItems.reduce((sum, item) => {
     const price = Number(item.wholesalePrice) || Number(item.price) || 0;
     return sum + price * (item.quantity || 1);
@@ -285,8 +285,22 @@ export function POSProvider({ children }) {
     : Math.min(subtotal, Number(discount) || 0);
 
   const taxableAmount = Math.max(0, subtotal - discountAmount);
-  const taxAmount = Math.round((taxableAmount * (Number(taxPercent) || 0)) / 100);
-  const grandTotal = taxableAmount + taxAmount;
+
+  // Automatic GST calculation based on each product's specific GST %
+  const totalItemGst = cartItems.reduce((sum, item) => {
+    if (item.isSample) return sum;
+    const price = Number(item.wholesalePrice) || Number(item.price) || 0;
+    const qty = Number(item.quantity) || 1;
+    const itemGst = item.gstPercent !== undefined ? Number(item.gstPercent) : 5;
+    return sum + (price * qty * itemGst) / 100;
+  }, 0);
+
+  const discountFactor = subtotal > 0 ? taxableAmount / subtotal : 1;
+  const taxAmount = Math.round(totalItemGst * discountFactor * 100) / 100;
+  const taxPercent = taxPercentOverride !== null 
+    ? taxPercentOverride 
+    : (subtotal > 0 ? Math.round((totalItemGst / subtotal) * 100) : 5);
+  const grandTotal = Math.round((taxableAmount + taxAmount) * 100) / 100;
   const totalItemsCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
   // CUSTOMER SHOP SELECTION & PRICING TIER ACTIONS
@@ -369,6 +383,7 @@ export function POSProvider({ children }) {
           wholesalePrice: isSample ? 0 : variantWholesale,
           originalPrice: variantWholesale,
           mrp: variantMrp,
+          gstPercent: product.gstPercent !== undefined ? Number(product.gstPercent) : 5,
           image: product.image || "/images/products/pepper-powder.png",
           quantity: qty,
           isSample: Boolean(isSample),
@@ -421,7 +436,7 @@ export function POSProvider({ children }) {
     setSelectedCustomer(null);
     setPricingTier('R');
     setDiscount(0);
-    setTaxPercent(0);
+    setTaxPercent(null);
     setPaymentMode("Cash");
     setPaymentStatus("paid");
     setNotes("");
@@ -435,7 +450,7 @@ export function POSProvider({ children }) {
     setCartItems(draftOrder.items || []);
     setDiscount(draftOrder.discount || 0);
     setDiscountType(draftOrder.discountType || "fixed");
-    setTaxPercent(draftOrder.taxPercent || 0);
+    setTaxPercent(draftOrder.taxPercent !== undefined ? draftOrder.taxPercent : null);
     setPaymentMode(draftOrder.paymentMode || "Cash");
     setPaymentStatus(draftOrder.paymentStatus || "pending");
     setNotes(draftOrder.notes || "");
@@ -460,8 +475,11 @@ export function POSProvider({ children }) {
       discount: discountAmount,
       discountValue: discount,
       discountType,
+      taxableAmount,
       taxPercent,
       tax: taxAmount,
+      cgst: Math.round((taxAmount / 2) * 100) / 100,
+      sgst: Math.round((taxAmount / 2) * 100) / 100,
       grandTotal,
       totalItemsCount,
       paymentMode,
@@ -520,8 +538,11 @@ export function POSProvider({ children }) {
       discount: discountAmount,
       discountValue: discount,
       discountType,
+      taxableAmount,
       taxPercent,
       tax: taxAmount,
+      cgst: Math.round((taxAmount / 2) * 100) / 100,
+      sgst: Math.round((taxAmount / 2) * 100) / 100,
       grandTotal,
       totalItemsCount,
       paymentMode,

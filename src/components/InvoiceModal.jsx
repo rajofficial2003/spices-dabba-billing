@@ -97,7 +97,26 @@ export default function InvoiceModal({ order, onClose }) {
     }, 1500);
   };
 
-  // Build WhatsApp share link including HSN codes
+  // Calculate dynamic GST breakdown based on items (supports both new and previous orders)
+  const calculatedTax = Number(order.tax) > 0 
+    ? Number(order.tax) 
+    : (order.items || []).reduce((sum, item) => {
+        if (item.isSample) return sum;
+        const rate = Number(item.wholesalePrice) || Number(item.price) || 0;
+        const gst = item.gstPercent !== undefined ? Number(item.gstPercent) : 5;
+        return sum + (rate * (item.quantity || 1) * gst) / 100;
+      }, 0);
+
+  const taxPct = Number(order.taxPercent) > 0 
+    ? Number(order.taxPercent) 
+    : (order.subtotal > 0 ? Math.round((calculatedTax / order.subtotal) * 100) : 5);
+
+  const halfTax = calculatedTax / 2;
+  const finalGrandTotal = Number(order.grandTotal) > 0 && Number(order.tax) > 0
+    ? Number(order.grandTotal)
+    : Math.round((Number(order.subtotal || 0) - Number(order.discount || 0) + calculatedTax) * 100) / 100;
+
+  // Build WhatsApp share link including HSN codes & GST breakdown
   const generateWhatsAppA4BillLink = () => {
     if (!order.customer?.phone) return null;
     const cleanPhone = cleanPhoneNumber(order.customer.phone);
@@ -116,15 +135,20 @@ export default function InvoiceModal({ order, onClose }) {
     (order.items || []).forEach((item, idx) => {
       const itemTotal = (item.wholesalePrice || item.price) * item.quantity;
       const hsn = item.hsnCode || "0910 91 00";
-      msg += `${idx + 1}. ${item.name} (${item.unit || "unit"}) [HSN: ${hsn}]\n`;
-      msg += `   Qty: ${item.quantity} × ₹${item.wholesalePrice || item.price} = *₹${itemTotal}*\n`;
+      const gst = item.gstPercent !== undefined ? item.gstPercent : 5;
+      msg += `${idx + 1}. ${item.name} (${item.unit || "unit"}) [HSN: ${hsn} | GST: ${gst}%]\n`;
+      msg += `   Qty: ${item.quantity} × ₹${item.wholesalePrice || item.price} = *₹${itemTotal.toFixed(2)}*\n`;
     });
 
     msg += `--------------------------------\n`;
-    msg += `Subtotal: ₹${order.subtotal || 0}\n`;
-    if (order.discount > 0) msg += `Discount: -₹${order.discount}\n`;
-    if (order.tax > 0) msg += `GST (${order.taxPercent || 0}%): +₹${order.tax}\n`;
-    msg += `*GRAND TOTAL: ₹${order.grandTotal || 0}*\n`;
+    msg += `Subtotal (Taxable): ₹${Number(order.subtotal || 0).toFixed(2)}\n`;
+    if (order.discount > 0) msg += `Discount: -₹${Number(order.discount).toFixed(2)}\n`;
+    if (calculatedTax > 0) {
+      msg += `CGST (${(taxPct / 2).toFixed(1)}%): +₹${halfTax.toFixed(2)}\n`;
+      msg += `SGST (${(taxPct / 2).toFixed(1)}%): +₹${halfTax.toFixed(2)}\n`;
+      msg += `Total GST (${taxPct}%): +₹${calculatedTax.toFixed(2)}\n`;
+    }
+    msg += `*GRAND TOTAL: ₹${finalGrandTotal.toFixed(2)}*\n`;
     msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}* (${order.paymentMode || "Cash"})\n`;
     msg += `--------------------------------\n`;
     msg += `🙏 Thank you for your business!`;
@@ -342,10 +366,11 @@ export default function InvoiceModal({ order, onClose }) {
               <tr style={{ background: "#09090b", color: "#FFFFFF", textAlign: "left" }}>
                 <th style={{ padding: "8px 6px", width: "35px", textAlign: "center" }}>#</th>
                 <th style={{ padding: "8px 10px" }}>Item Description & Masala</th>
-                <th style={{ padding: "8px 8px", width: "110px", textAlign: "center", background: "#18181b" }}>HSN Code</th>
-                <th style={{ padding: "8px 8px", width: "90px", textAlign: "center" }}>Pack</th>
-                <th style={{ padding: "8px 8px", width: "85px", textAlign: "right" }}>Rate (₹)</th>
-                <th style={{ padding: "8px 8px", width: "70px", textAlign: "center" }}>Qty</th>
+                <th style={{ padding: "8px 8px", width: "105px", textAlign: "center", background: "#18181b" }}>HSN Code</th>
+                <th style={{ padding: "8px 8px", width: "80px", textAlign: "center" }}>Pack</th>
+                <th style={{ padding: "8px 8px", width: "80px", textAlign: "right" }}>Rate (₹)</th>
+                <th style={{ padding: "8px 8px", width: "60px", textAlign: "center" }}>Qty</th>
+                <th style={{ padding: "8px 8px", width: "65px", textAlign: "center" }}>GST %</th>
                 <th style={{ padding: "8px 10px", width: "95px", textAlign: "right" }}>Amount (₹)</th>
               </tr>
             </thead>
@@ -394,6 +419,9 @@ export default function InvoiceModal({ order, onClose }) {
                     <td style={{ padding: "8px 8px", textAlign: "center", fontWeight: 800 }}>
                       {item.quantity}
                     </td>
+                    <td style={{ padding: "8px 8px", textAlign: "center", fontWeight: 700, color: "#18181b" }}>
+                      {item.isSample ? "0%" : `${item.gstPercent !== undefined ? item.gstPercent : 5}%`}
+                    </td>
                     <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 800, color: item.isSample ? "#DC2626" : "#09090b" }}>
                       {item.isSample ? "₹0.00 (Free)" : `₹${total.toFixed(2)}`}
                     </td>
@@ -411,7 +439,7 @@ export default function InvoiceModal({ order, onClose }) {
                 Total Amount in Words:
               </div>
               <div style={{ fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                {numberToWords(Math.round(order.grandTotal || 0))}
+                {numberToWords(Math.round(finalGrandTotal))}
               </div>
 
               {order.notes && (
@@ -428,7 +456,7 @@ export default function InvoiceModal({ order, onClose }) {
             {/* Calculations Table */}
             <div style={{ fontSize: "0.85rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-                <span style={{ color: "#52525B" }}>Subtotal:</span>
+                <span style={{ color: "#52525B" }}>Taxable Subtotal:</span>
                 <span style={{ fontWeight: 600 }}>₹{Number(order.subtotal || 0).toFixed(2)}</span>
               </div>
 
@@ -439,15 +467,19 @@ export default function InvoiceModal({ order, onClose }) {
                 </div>
               )}
 
-              {Number(order.tax) > 0 ? (
+              {calculatedTax > 0 ? (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: "#52525B", fontSize: "0.8rem" }}>
-                    <span>CGST ({(order.taxPercent || 0) / 2}%):</span>
-                    <span>₹{(Number(order.tax) / 2).toFixed(2)}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: "#52525B", fontSize: "0.82rem" }}>
+                    <span>CGST ({(taxPct / 2).toFixed(1)}%):</span>
+                    <span style={{ fontWeight: 600 }}>₹{halfTax.toFixed(2)}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: "#52525B", fontSize: "0.8rem" }}>
-                    <span>SGST ({(order.taxPercent || 0) / 2}%):</span>
-                    <span>₹{(Number(order.tax) / 2).toFixed(2)}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: "#52525B", fontSize: "0.82rem" }}>
+                    <span>SGST ({(taxPct / 2).toFixed(1)}%):</span>
+                    <span style={{ fontWeight: 600 }}>₹{halfTax.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: "#09090b", fontSize: "0.85rem", fontWeight: 700, borderTop: "1px dashed #E4E4E7", marginTop: "2px", paddingTop: "3px" }}>
+                    <span>Total GST ({taxPct}%):</span>
+                    <span>+₹{calculatedTax.toFixed(2)}</span>
                   </div>
                 </>
               ) : (
@@ -470,7 +502,7 @@ export default function InvoiceModal({ order, onClose }) {
                 color: "#09090b"
               }}>
                 <span>GRAND TOTAL:</span>
-                <span>{formatCurrency(order.grandTotal)}</span>
+                <span>₹{finalGrandTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>

@@ -14,7 +14,7 @@ import {
   XCircle
 } from "lucide-react";
 
-export default function CategoriesManager({ isNested = false }) {
+export default function CategoriesManager({ isNested = false, addCategoryTrigger = 0 }) {
   const { 
     categories, 
     products, 
@@ -71,6 +71,12 @@ export default function CategoriesManager({ isNested = false }) {
     setCatError("");
     setShowCatModal(true);
   };
+
+  React.useEffect(() => {
+    if (addCategoryTrigger > 0) {
+      handleOpenAddCategory();
+    }
+  }, [addCategoryTrigger]);
 
   const handleOpenEditCategory = (cat) => {
     setEditingCat(cat);
@@ -312,15 +318,17 @@ export default function CategoriesManager({ isNested = false }) {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={handleOpenAddCategory}
-            className="btn-primary"
-            style={{ padding: "8px 16px", fontSize: "0.82rem" }}
-          >
-            <Plus size={15} />
-            <span>Add Main Category</span>
-          </button>
+          {!isNested && (
+            <button
+              type="button"
+              onClick={handleOpenAddCategory}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+            >
+              <Plus size={15} />
+              <span>Add Main Category</span>
+            </button>
+          )}
         </div>
       </div>
 

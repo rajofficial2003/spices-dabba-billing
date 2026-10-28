@@ -32,6 +32,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
   } = usePOS();
 
   const [activeSubView, setActiveSubView] = useState(initialSubView || "products");
+  const [addCatTrigger, setAddCatTrigger] = useState(0);
 
   React.useEffect(() => {
     if (initialSubView) {
@@ -560,7 +561,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
             </button>
           </div>
 
-          {activeSubView === "products" && (
+          {activeSubView === "products" ? (
             <button
               type="button"
               onClick={handleOpenAdd}
@@ -570,13 +571,23 @@ export default function ProductsManager({ initialSubView = "products" }) {
               <Plus size={15} />
               <span>Add New Spice</span>
             </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddCatTrigger(c => c + 1)}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+            >
+              <Plus size={15} />
+              <span>Add Main Category</span>
+            </button>
           )}
         </div>
       </div>
 
       {/* Sub-view 1: Categories Section inside Products */}
       <div style={{ display: activeSubView === "categories" ? "block" : "none" }}>
-        <CategoriesManager isNested={true} />
+        <CategoriesManager isNested={true} addCategoryTrigger={addCatTrigger} />
       </div>
 
       {/* Sub-view 2: Products Catalog Section */}

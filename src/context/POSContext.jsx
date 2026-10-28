@@ -108,6 +108,51 @@ export function POSProvider({ children }) {
     }
   });
 
+  // Dynamic Suppliers Directory State
+  const DEFAULT_SUPPLIERS = [
+    { 
+      id: "sup_1", 
+      name: "Sri Murugan Spices Mandi", 
+      contactPerson: "Murugan",
+      phone: "9842123456", 
+      city: "Bodinayakanur", 
+      gstin: "33AAAAA0000A1Z5", 
+      address: "Bazaar Street, Bodinayakanur, Theni", 
+      notes: "Cardamom and black pepper direct procurement",
+      isActive: true 
+    },
+    { 
+      id: "sup_2", 
+      name: "Guntur Chilli Traders", 
+      contactPerson: "Ramarao",
+      phone: "9876543210", 
+      city: "Guntur", 
+      gstin: "37BBBBB1111B2Z6", 
+      address: "Mirchi Yard, Guntur, AP", 
+      notes: "Bulk Red Chilli",
+      isActive: true 
+    },
+    { 
+      id: "sup_3", 
+      name: "Erode Manjal Mandi", 
+      contactPerson: "Selvam",
+      phone: "9443210987", 
+      city: "Erode", 
+      gstin: "", 
+      address: "Semmampalayam, Erode", 
+      notes: "Turmeric fingers and bulbs",
+      isActive: true 
+    }
+  ];
+  const [suppliers, setSuppliers] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sdb_suppliers");
+      return saved ? JSON.parse(saved) : DEFAULT_SUPPLIERS;
+    } catch {
+      return DEFAULT_SUPPLIERS;
+    }
+  });
+
   const [loading, setLoading] = useState(true);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
 
@@ -140,6 +185,10 @@ export function POSProvider({ children }) {
   useEffect(() => {
     localStorage.setItem("sdb_customer_categories", JSON.stringify(customerCategories));
   }, [customerCategories]);
+
+  useEffect(() => {
+    localStorage.setItem("sdb_suppliers", JSON.stringify(suppliers));
+  }, [suppliers]);
 
   useEffect(() => {
     localStorage.setItem("sdb_orders", JSON.stringify(orders));
@@ -200,6 +249,7 @@ export function POSProvider({ children }) {
     let unsubscribeRawMaterials = () => {};
     let unsubscribeExpenseCategories = () => {};
     let unsubscribeCustomerCategories = () => {};
+    let unsubscribeSuppliers = () => {};
 
     try {
       // 1. Products listener
@@ -295,6 +345,20 @@ export function POSProvider({ children }) {
         console.warn("Firestore customer categories listener note:", err.message);
       });
 
+      // 9. Dynamic Suppliers listener
+      const suppCol = collection(db, "billing_suppliers");
+      unsubscribeSuppliers = onSnapshot(suppCol, (snapshot) => {
+        if (!snapshot.empty) {
+          const sups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          sups.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+          setSuppliers(sups);
+        } else {
+          setSuppliers(DEFAULT_SUPPLIERS);
+        }
+      }, (err) => {
+        console.warn("Firestore suppliers listener note:", err.message);
+      });
+
     } catch (error) {
       console.warn("Firebase listener initialization error:", error);
       setLoading(false);
@@ -309,6 +373,7 @@ export function POSProvider({ children }) {
       unsubscribeRawMaterials();
       unsubscribeExpenseCategories();
       unsubscribeCustomerCategories();
+      unsubscribeSuppliers();
     };
   }, []);
 
@@ -1217,6 +1282,56 @@ export function POSProvider({ children }) {
     setCustomerCategories(prev => prev.filter(c => c.id !== catId));
   };
 
+  // DYNAMIC SUPPLIERS DIRECTORY CRUD
+  const addSupplier = async (supData) => {
+    if (!supData.name?.trim()) throw new Error("Supplier Name is required!");
+    const id = supData.id || `sup_${Date.now()}`;
+    const newSup = {
+      id,
+      name: supData.name.trim(),
+      contactPerson: supData.contactPerson?.trim() || "",
+      phone: supData.phone?.trim() || "",
+      email: supData.email?.trim() || "",
+      gstin: supData.gstin?.trim() || "",
+      address: supData.address?.trim() || "",
+      city: supData.city?.trim() || "",
+      notes: supData.notes?.trim() || "",
+      isActive: supData.isActive !== false,
+      timestamp: Date.now()
+    };
+    try {
+      await setDoc(doc(db, "billing_suppliers", id), {
+        ...newSup,
+        createdAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Supplier save note:", e.message);
+    }
+    setSuppliers(prev => [...prev.filter(s => s.id !== id), newSup]);
+    return newSup;
+  };
+
+  const updateSupplier = async (supId, updatedFields) => {
+    try {
+      await updateDoc(doc(db, "billing_suppliers", supId), {
+        ...updatedFields,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Supplier update note:", e.message);
+    }
+    setSuppliers(prev => prev.map(s => s.id === supId ? { ...s, ...updatedFields } : s));
+  };
+
+  const deleteSupplier = async (supId) => {
+    try {
+      await deleteDoc(doc(db, "billing_suppliers", supId));
+    } catch (e) {
+      console.warn("Supplier delete note:", e.message);
+    }
+    setSuppliers(prev => prev.filter(s => s.id !== supId));
+  };
+
   return (
     <POSContext.Provider
       value={{
@@ -1316,6 +1431,12 @@ export function POSProvider({ children }) {
         addCustomerCategory,
         updateCustomerCategory,
         deleteCustomerCategory,
+
+        // Dynamic Suppliers Directory CRUD
+        suppliers,
+        addSupplier,
+        updateSupplier,
+        deleteSupplier,
 
         // Global Delete / Action Confirm Modal
         showConfirmModal

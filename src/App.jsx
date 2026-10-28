@@ -22,9 +22,9 @@ function POSApp() {
     setLastGeneratedInvoice 
   } = usePOS();
 
-  // Navigation handler that seamlessly routes master sub-tabs (customers, products, categories)
+  // Navigation handler that seamlessly routes master sub-tabs (customers, products, categories, suppliers)
   const handleNavigate = (tab, subTab = null) => {
-    if (tab === "customers" || tab === "products" || tab === "categories") {
+    if (tab === "customers" || tab === "products" || tab === "categories" || tab === "suppliers" || tab === "expense-categories") {
       setActiveTab("assets");
       setAssetsSubTab(tab);
     } else if (tab === "assets") {

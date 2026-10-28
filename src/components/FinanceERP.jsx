@@ -77,6 +77,7 @@ export default function FinanceERP() {
     rawMaterials = [],
     categories = [],
     expenseCategories = [],
+    suppliers = [],
     addRawMaterial,
     addExpense, 
     updateExpense,
@@ -201,8 +202,6 @@ export default function FinanceERP() {
   // RAW MATERIAL PURCHASE BILL FORM STATE (Single Bill with Multiple Products)
   // ==========================================
   const [rawBillData, setRawBillData] = useState({
-    category: "",
-    categoryName: "",
     supplierName: "",
     supplierPhone: "",
     invoiceNumber: "",
@@ -210,11 +209,6 @@ export default function FinanceERP() {
     paymentMode: "Cash",
     notes: ""
   });
-
-  const rawBillCategoryObj = categories.find(c => c.id === rawBillData.category || c.name === rawBillData.category);
-  const rawBillSubcategories = (rawBillCategoryObj?.subcategories || [])
-    .filter(s => typeof s === "string" || s.isActive !== false)
-    .map(s => typeof s === "string" ? s : s.name);
 
   // Multiple item rows inside the single raw material purchase bill
   const [rawBillItems, setRawBillItems] = useState([
@@ -233,8 +227,6 @@ export default function FinanceERP() {
   // ==========================================
   const [otherExpenseData, setOtherExpenseData] = useState({
     category: "",
-    categoryName: "",
-    subcategory: "",
     title: "",
     amount: "",
     date: new Date().toISOString().split("T")[0],
@@ -242,11 +234,6 @@ export default function FinanceERP() {
     paidTo: "",
     notes: ""
   });
-
-  const otherExpenseCategoryObj = categories.find(c => c.id === otherExpenseData.category || c.name === otherExpenseData.category);
-  const otherExpenseSubcategories = (otherExpenseCategoryObj?.subcategories || [])
-    .filter(s => typeof s === "string" || s.isActive !== false)
-    .map(s => typeof s === "string" ? s : s.name);
 
   // Proof Image Upload State (shared by both modals)
   const [selectedFile, setSelectedFile] = useState(null);
@@ -521,16 +508,11 @@ export default function FinanceERP() {
   const handleOpenRawMaterialModal = () => {
     setEditingExpenseId(null);
     setExistingProofUrl(null);
-    const validCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
-    const defaultCat = validCats.find(c => c.id === "raw-materials" || c.name?.toLowerCase().includes("raw")) || validCats[0] || null;
-    const rawFirstSub = defaultCat?.subcategories?.[0];
-    const defaultSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
+    const activeSup = suppliers.find(s => s.isActive !== false);
 
     setRawBillData({
-      category: defaultCat?.id || (defaultCat?.name || ""),
-      categoryName: defaultCat?.name || "",
-      supplierName: defaultSub,
-      supplierPhone: "",
+      supplierName: activeSup ? activeSup.name : "",
+      supplierPhone: activeSup ? activeSup.phone : "",
       invoiceNumber: "",
       date: new Date().toISOString().split("T")[0],
       paymentMode: "Cash",
@@ -558,11 +540,8 @@ export default function FinanceERP() {
   const handleStartEditRawBill = (bill) => {
     setEditingExpenseId(bill.id);
     setExistingProofUrl(bill.proofUrl || null);
-    const catObj = categories.find(c => c.id === bill.category || c.name === bill.category || c.id === bill.categoryId || c.name === bill.categoryName);
     setRawBillData({
-      category: catObj ? catObj.id : (bill.category || "raw-materials"),
-      categoryName: catObj ? catObj.name : (bill.categoryName || bill.category || "Raw Materials"),
-      supplierName: bill.supplierName || bill.paidTo || bill.subcategory || "",
+      supplierName: bill.supplierName || bill.paidTo || "",
       supplierPhone: bill.supplierPhone || "",
       invoiceNumber: bill.invoiceNumber || "",
       date: bill.date || new Date().toISOString().split("T")[0],
@@ -604,14 +583,9 @@ export default function FinanceERP() {
   const handleOpenOtherExpenseModal = () => {
     setEditingExpenseId(null);
     setExistingProofUrl(null);
-    const validCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
-    const defaultCat = validCats[0] || null;
-    const rawFirstSub = defaultCat?.subcategories?.[0];
-    const defaultSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
+    const defaultCat = expenseCategories[0]?.name || "General Misc";
     setOtherExpenseData({
-      category: defaultCat?.id || (defaultCat?.name || ""),
-      categoryName: defaultCat?.name || "",
-      subcategory: defaultSub,
+      category: defaultCat,
       title: "",
       amount: "",
       date: new Date().toISOString().split("T")[0],
@@ -628,12 +602,8 @@ export default function FinanceERP() {
   const handleStartEditOtherExpense = (exp) => {
     setEditingExpenseId(exp.id);
     setExistingProofUrl(exp.proofUrl || null);
-    const catObj = categories.find(c => c.id === exp.category || c.name === exp.category || c.id === exp.categoryId || c.name === exp.categoryName);
-    const subcatVal = typeof exp.subcategory === "string" ? exp.subcategory : (exp.subcategory?.name || "");
     setOtherExpenseData({
-      category: catObj ? catObj.id : (exp.category || ""),
-      categoryName: catObj ? catObj.name : (exp.categoryName || exp.category || ""),
-      subcategory: subcatVal,
+      category: exp.category || exp.categoryName || expenseCategories[0]?.name || "General Misc",
       title: exp.title || "",
       amount: exp.amount || "",
       date: exp.date || new Date().toISOString().split("T")[0],
@@ -698,15 +668,11 @@ export default function FinanceERP() {
         total: (Number(itm.quantity) || 1) * (Number(itm.unitPrice) || 0)
       }));
 
-      const catObj = categories.find(c => c.id === rawBillData.category || c.name === rawBillData.category);
-      const categoryName = catObj ? catObj.name : (rawBillData.categoryName || rawBillData.category || "Raw Materials");
-
       const payload = {
         expenseType: "raw_material",
-        category: categoryName,
-        categoryId: catObj ? catObj.id : (rawBillData.category || "raw-materials"),
-        categoryName: categoryName,
-        subcategory: rawBillData.supplierName.trim(),
+        category: "Raw Materials",
+        categoryId: "raw-materials",
+        categoryName: "Raw Materials",
         title: `Raw Materials: ${rawBillData.supplierName.trim()} (${formattedItems.length} items)`,
         amount: rawBillGrandTotal,
         supplierName: rawBillData.supplierName.trim(),
@@ -754,18 +720,14 @@ export default function FinanceERP() {
     setFormError("");
 
     try {
-      const catObj = categories.find(c => c.id === otherExpenseData.category || c.name === otherExpenseData.category);
-      const categoryName = catObj ? catObj.name : (otherExpenseData.categoryName || otherExpenseData.category || "General");
-      const subcategoryStr = typeof otherExpenseData.subcategory === "string"
-        ? otherExpenseData.subcategory.trim()
-        : (otherExpenseData.subcategory?.name || "");
+      const catName = otherExpenseData.category.trim() || expenseCategories[0]?.name || "General Misc";
+      const catObj = expenseCategories.find(c => c.name === catName || c.id === catName);
 
       const payload = {
         expenseType: "other",
-        category: categoryName,
-        categoryId: catObj ? catObj.id : otherExpenseData.category,
-        categoryName: categoryName,
-        subcategory: subcategoryStr,
+        category: catName,
+        categoryId: catObj?.id || "cat_general",
+        categoryName: catName,
         title: otherExpenseData.title.trim(),
         amount: Number(otherExpenseData.amount),
         date: otherExpenseData.date,
@@ -1971,23 +1933,20 @@ export default function FinanceERP() {
                   1. Supplier & Invoice Info
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
-                  {/* Category Field */}
+                  {/* Supplier Field (Dropdown from dynamic Suppliers) */}
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
-                      Category *
+                      Supplier / Mandi *
                     </label>
                     <select
-                      value={rawBillData.category}
+                      value={rawBillData.supplierName}
                       onChange={(e) => {
-                        const newCatVal = e.target.value;
-                        const catObj = categories.find(c => c.id === newCatVal || c.name === newCatVal);
-                        const rawFirstSub = catObj?.subcategories?.[0];
-                        const firstSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
+                        const selName = e.target.value;
+                        const matchedSup = suppliers.find(s => s.name === selName);
                         setRawBillData({
                           ...rawBillData,
-                          category: newCatVal,
-                          categoryName: catObj?.name || newCatVal,
-                          supplierName: firstSub
+                          supplierName: selName,
+                          supplierPhone: matchedSup?.phone || rawBillData.supplierPhone || ""
                         });
                       }}
                       style={{
@@ -2001,66 +1960,16 @@ export default function FinanceERP() {
                       }}
                       required
                     >
-                      <option value="" disabled>-- Select Category --</option>
-                      {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name} {cat.tamilName ? `(${cat.tamilName})` : ''}
+                      <option value="">-- Select Supplier --</option>
+                      {suppliers.filter(s => s.isActive !== false).map(sup => (
+                        <option key={sup.id} value={sup.name}>
+                          {sup.name} {sup.city ? `(${sup.city})` : ''}
                         </option>
                       ))}
-                      {rawBillData.category && !categories.some(c => c.id === rawBillData.category || c.name === rawBillData.category) && (
-                        <option value={rawBillData.category}>
-                          {rawBillData.categoryName || rawBillData.category}
-                        </option>
+                      {rawBillData.supplierName && !suppliers.some(s => s.name === rawBillData.supplierName) && (
+                        <option value={rawBillData.supplierName}>{rawBillData.supplierName}</option>
                       )}
                     </select>
-                  </div>
-
-                  {/* Supplier Field (Loads Subcategories) */}
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
-                      Supplier *
-                    </label>
-                    {rawBillSubcategories.length > 0 ? (
-                      <select
-                        value={rawBillData.supplierName}
-                        onChange={(e) => setRawBillData({ ...rawBillData, supplierName: e.target.value })}
-                        style={{
-                          width: "100%",
-                          padding: "8px 10px",
-                          borderRadius: "8px",
-                          border: "1px solid var(--sd-zinc-300)",
-                          fontSize: "0.82rem",
-                          background: "#FFFFFF",
-                          outline: "none"
-                        }}
-                        required
-                      >
-                        <option value="">-- Select Supplier --</option>
-                        {rawBillSubcategories.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                        {rawBillData.supplierName && !rawBillSubcategories.includes(rawBillData.supplierName) && (
-                          <option value={rawBillData.supplierName}>{rawBillData.supplierName}</option>
-                        )}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Sri Murugan Spices Mandi"
-                        value={rawBillData.supplierName}
-                        onChange={(e) => setRawBillData({ ...rawBillData, supplierName: e.target.value })}
-                        style={{
-                          width: "100%",
-                          padding: "8px 10px",
-                          borderRadius: "8px",
-                          border: "1px solid var(--sd-zinc-300)",
-                          fontSize: "0.82rem",
-                          background: "#FFFFFF",
-                          outline: "none"
-                        }}
-                      />
-                    )}
                   </div>
 
                   <div>
@@ -2904,91 +2813,35 @@ export default function FinanceERP() {
               )}
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {/* Category & Subcategory Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
-                      Category *
-                    </label>
-                    <select
-                      value={otherExpenseData.category}
-                      onChange={(e) => {
-                        const newCatVal = e.target.value;
-                        const catObj = categories.find(c => c.id === newCatVal || c.name === newCatVal);
-                        const rawFirstSub = catObj?.subcategories?.[0];
-                        const firstSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
-                        setOtherExpenseData({
-                          ...otherExpenseData,
-                          category: newCatVal,
-                          categoryName: catObj?.name || newCatVal,
-                          subcategory: firstSub
-                        });
-                      }}
-                      style={{
-                        width: "100%",
-                        padding: "9px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid var(--sd-zinc-300)",
-                        fontSize: "0.85rem",
-                        background: "#FFFFFF",
-                        outline: "none"
-                      }}
-                      required
-                    >
-                      <option value="" disabled>-- Select Category --</option>
-                      {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name} {cat.tamilName ? `(${cat.tamilName})` : ''}
-                        </option>
-                      ))}
-                      {otherExpenseData.category && !categories.some(c => c.id === otherExpenseData.category || c.name === otherExpenseData.category) && (
-                        <option value={otherExpenseData.category}>
-                          {otherExpenseData.categoryName || otherExpenseData.category}
-                        </option>
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
-                      Subcategory
-                    </label>
-                    {otherExpenseSubcategories.length > 0 ? (
-                      <select
-                        value={typeof otherExpenseData.subcategory === "string" ? otherExpenseData.subcategory : (otherExpenseData.subcategory?.name || "")}
-                        onChange={(e) => setOtherExpenseData({ ...otherExpenseData, subcategory: e.target.value })}
-                        style={{
-                          width: "100%",
-                          padding: "9px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid var(--sd-zinc-300)",
-                          fontSize: "0.85rem",
-                          background: "#FFFFFF",
-                          outline: "none"
-                        }}
-                      >
-                        <option value="">-- Select Subcategory --</option>
-                        {otherExpenseSubcategories.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        placeholder="e.g. Whole Spices, Packing..."
-                        value={typeof otherExpenseData.subcategory === "string" ? otherExpenseData.subcategory : (otherExpenseData.subcategory?.name || "")}
-                        onChange={(e) => setOtherExpenseData({ ...otherExpenseData, subcategory: e.target.value })}
-                        style={{
-                          width: "100%",
-                          padding: "9px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid var(--sd-zinc-300)",
-                          fontSize: "0.85rem",
-                          outline: "none"
-                        }}
-                      />
+                {/* Expense Category Field (Loads from dynamic Expense Categories) */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
+                    Expense Category *
+                  </label>
+                  <select
+                    value={otherExpenseData.category}
+                    onChange={(e) => setOtherExpenseData({ ...otherExpenseData, category: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--sd-zinc-300)",
+                      fontSize: "0.85rem",
+                      background: "#FFFFFF",
+                      outline: "none"
+                    }}
+                    required
+                  >
+                    <option value="" disabled>-- Select Expense Category --</option>
+                    {expenseCategories.map(cat => (
+                      <option key={cat.id || cat.name} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                    {otherExpenseData.category && !expenseCategories.some(c => c.name === otherExpenseData.category || c.id === otherExpenseData.category) && (
+                      <option value={otherExpenseData.category}>{otherExpenseData.category}</option>
                     )}
-                  </div>
+                  </select>
                 </div>
 
                 <div>

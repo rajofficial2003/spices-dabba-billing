@@ -569,7 +569,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
               style={{ padding: "8px 16px", fontSize: "0.82rem" }}
             >
               <Plus size={15} />
-              <span>Add New Spice</span>
+              <span>Add New Product</span>
             </button>
           ) : (
             <button
@@ -756,13 +756,13 @@ export default function ProductsManager({ initialSubView = "products" }) {
           <h3 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--sd-black)" }}>No spices in database</h3>
           <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-400)", marginTop: "4px", marginBottom: "16px" }}>
             {products.length === 0 
-              ? "All static sample data removed. You are connected to pure Firebase Firestore & Storage. Click '+ Add New Spice' to create your first spice product."
-              : "No spice products match your filter search."}
+              ? "All static sample data removed. You are connected to pure Firebase Firestore & Storage. Click '+ Add New Product' to create your first product."
+              : "No products match your filter search."}
           </p>
           {products.length === 0 && (
             <button type="button" onClick={handleOpenAdd} className="btn-accent" style={{ display: "inline-flex", margin: "0 auto" }}>
               <Plus size={15} />
-              <span>Add First Spice</span>
+              <span>Add First Product</span>
             </button>
           )}
         </div>
@@ -1085,7 +1085,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Package size={18} color="var(--sd-red)" />
                 <h3 className="font-heading" style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>
-                  {editingProduct ? "Edit Spice Product" : "Add New Spice Product"}
+                  {editingProduct ? "Edit Product" : "Add New Product"}
                 </h3>
               </div>
               <button

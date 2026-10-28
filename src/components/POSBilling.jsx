@@ -61,7 +61,8 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     activeDraftId,
     saveAsDraft,
     finalizeBill,
-    addCustomer
+    addCustomer,
+    customerCategories = []
   } = usePOS();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -79,7 +80,6 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     phone: "",
     customerName: "",
     category: "",
-    subcategory: "",
     address: "",
     notes: ""
   });
@@ -139,7 +139,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     try {
       const businessName = newCustomerForm.shopName.trim();
       const customerName = newCustomerForm.customerName.trim();
-      const catObj = categories.find(c => c.id === newCustomerForm.category);
+      const catObj = customerCategories.find(c => c.id === newCustomerForm.category || c.name === newCustomerForm.category);
       const categoryName = catObj ? catObj.name : (newCustomerForm.category || "");
       const created = await addCustomer({
         businessName,
@@ -148,14 +148,14 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
         customerName,
         category: newCustomerForm.category || "",
         categoryName,
-        subcategory: newCustomerForm.subcategory || "",
+        pricingTier: catObj?.defaultPricingTier || "R",
         address: newCustomerForm.address.trim(),
         notes: newCustomerForm.notes?.trim() || ""
       });
 
       setSelectedCustomer(created);
       setShowAddCustomerModal(false);
-      setNewCustomerForm({ shopName: "", phone: "", customerName: "", category: "", subcategory: "", address: "", notes: "" });
+      setNewCustomerForm({ shopName: "", phone: "", customerName: "", category: "", address: "", notes: "" });
       showNotification("Customer added successfully!", "success");
     } catch (err) {
       setCustomerFormError(err.message || "Failed to add customer");
@@ -1431,65 +1431,28 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 />
               </div>
 
-              {/* Category & Subcategory */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
-                <div>
-                  <label className="input-label">
-                    Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
-                  </label>
-                  <select
-                    value={newCustomerForm.category}
-                    onChange={(e) => {
-                      const newCatId = e.target.value;
-                      setNewCustomerForm({
-                        ...newCustomerForm,
-                        category: newCatId,
-                        subcategory: ""
-                      });
-                    }}
-                    className="custom-select"
-                  >
-                    <option value="">-- Select Category --</option>
-                    {categories.filter(c => c.id !== "all").map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name} {cat.tamilName ? `(${cat.tamilName})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="input-label">
-                    Subcategory <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
-                  </label>
-                  {(() => {
-                    const selCat = categories.find(c => c.id === newCustomerForm.category);
-                    const subcats = (selCat?.subcategories || [])
-                      .filter(s => typeof s === "string" || s.isActive !== false)
-                      .map(s => typeof s === "string" ? s : s.name);
-                    return (
-                      <select
-                        value={newCustomerForm.subcategory}
-                        onChange={(e) => setNewCustomerForm({ ...newCustomerForm, subcategory: e.target.value })}
-                        className="custom-select"
-                        disabled={!newCustomerForm.category || subcats.length === 0}
-                        style={{
-                          opacity: (!newCustomerForm.category || subcats.length === 0) ? 0.6 : 1,
-                          cursor: (!newCustomerForm.category || subcats.length === 0) ? "not-allowed" : "pointer"
-                        }}
-                      >
-                        <option value="">
-                          {!newCustomerForm.category 
-                            ? "-- Select Category First --" 
-                            : (subcats.length > 0 ? "-- Select Subcategory --" : "-- No Subcategories --")}
-                        </option>
-                        {subcats.map(sub => (
-                          <option key={sub} value={sub}>{sub}</option>
-                        ))}
-                      </select>
-                    );
-                  })()}
-                </div>
+              {/* Customer Category */}
+              <div style={{ marginBottom: "10px" }}>
+                <label className="input-label">
+                  Customer Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
+                </label>
+                <select
+                  value={newCustomerForm.category}
+                  onChange={(e) => {
+                    setNewCustomerForm({
+                      ...newCustomerForm,
+                      category: e.target.value
+                    });
+                  }}
+                  className="custom-select"
+                >
+                  <option value="">-- Select Customer Category --</option>
+                  {customerCategories.map(cat => (
+                    <option key={cat.id || cat.name} value={cat.id || cat.name}>
+                      {cat.name} (Tier: {cat.defaultPricingTier || 'R'})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ marginBottom: "14px" }}>

@@ -90,6 +90,24 @@ export function POSProvider({ children }) {
   ];
   const [expenseCategories, setExpenseCategories] = useState(DEFAULT_EXPENSE_CATEGORIES);
 
+  // Dynamic Customer Categories
+  const DEFAULT_CUSTOMER_CATEGORIES = [
+    { id: "custcat_retailer", name: "Retailer", defaultPricingTier: "R", color: "#2563EB" },
+    { id: "custcat_wholesaler", name: "Wholesaler", defaultPricingTier: "R", color: "#0891B2" },
+    { id: "custcat_dealer", name: "Dealer", defaultPricingTier: "D", color: "#059669" },
+    { id: "custcat_stockist", name: "Super Stockist", defaultPricingTier: "SS", color: "#7C3AED" },
+    { id: "custcat_hotel", name: "Hotel / Restaurant / Mess", defaultPricingTier: "R", color: "#D97706" },
+    { id: "custcat_consumer", name: "Direct Consumer / Walk-in", defaultPricingTier: "C", color: "#DC2626" }
+  ];
+  const [customerCategories, setCustomerCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sdb_customer_categories");
+      return saved ? JSON.parse(saved) : DEFAULT_CUSTOMER_CATEGORIES;
+    } catch {
+      return DEFAULT_CUSTOMER_CATEGORIES;
+    }
+  });
+
   const [loading, setLoading] = useState(true);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
 
@@ -118,6 +136,10 @@ export function POSProvider({ children }) {
   useEffect(() => {
     localStorage.setItem("sdb_customers", JSON.stringify(customers));
   }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem("sdb_customer_categories", JSON.stringify(customerCategories));
+  }, [customerCategories]);
 
   useEffect(() => {
     localStorage.setItem("sdb_orders", JSON.stringify(orders));
@@ -177,6 +199,7 @@ export function POSProvider({ children }) {
     let unsubscribeExpenses = () => {};
     let unsubscribeRawMaterials = () => {};
     let unsubscribeExpenseCategories = () => {};
+    let unsubscribeCustomerCategories = () => {};
 
     try {
       // 1. Products listener
@@ -258,6 +281,20 @@ export function POSProvider({ children }) {
         console.warn("Firestore expense categories listener note:", err.message);
       });
 
+      // 8. Dynamic Customer Categories listener
+      const custCatCol = collection(db, "billing_customer_categories");
+      unsubscribeCustomerCategories = onSnapshot(custCatCol, (snapshot) => {
+        if (!snapshot.empty) {
+          const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          cats.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+          setCustomerCategories(cats);
+        } else {
+          setCustomerCategories(DEFAULT_CUSTOMER_CATEGORIES);
+        }
+      }, (err) => {
+        console.warn("Firestore customer categories listener note:", err.message);
+      });
+
     } catch (error) {
       console.warn("Firebase listener initialization error:", error);
       setLoading(false);
@@ -271,6 +308,7 @@ export function POSProvider({ children }) {
       unsubscribeExpenses();
       unsubscribeRawMaterials();
       unsubscribeExpenseCategories();
+      unsubscribeCustomerCategories();
     };
   }, []);
 
@@ -1134,6 +1172,51 @@ export function POSProvider({ children }) {
     setExpenseCategories(prev => prev.filter(c => c.id !== catId));
   };
 
+  // DYNAMIC CUSTOMER CATEGORIES CRUD
+  const addCustomerCategory = async (catData) => {
+    if (!catData.name?.trim()) throw new Error("Category name is required!");
+    const id = catData.id || `custcat_${Date.now()}`;
+    const newCat = {
+      id,
+      name: catData.name.trim(),
+      tamilName: catData.tamilName?.trim() || "",
+      defaultPricingTier: catData.defaultPricingTier || "R",
+      color: catData.color || "#2563EB",
+      timestamp: Date.now()
+    };
+    try {
+      await setDoc(doc(db, "billing_customer_categories", id), {
+        ...newCat,
+        createdAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Customer category save note:", e.message);
+    }
+    setCustomerCategories(prev => [...prev.filter(c => c.id !== id), newCat]);
+    return newCat;
+  };
+
+  const updateCustomerCategory = async (catId, updatedFields) => {
+    try {
+      await updateDoc(doc(db, "billing_customer_categories", catId), {
+        ...updatedFields,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Customer category update note:", e.message);
+    }
+    setCustomerCategories(prev => prev.map(c => c.id === catId ? { ...c, ...updatedFields } : c));
+  };
+
+  const deleteCustomerCategory = async (catId) => {
+    try {
+      await deleteDoc(doc(db, "billing_customer_categories", catId));
+    } catch (e) {
+      console.warn("Customer category delete note:", e.message);
+    }
+    setCustomerCategories(prev => prev.filter(c => c.id !== catId));
+  };
+
   return (
     <POSContext.Provider
       value={{
@@ -1227,6 +1310,12 @@ export function POSProvider({ children }) {
         addExpenseCategory,
         updateExpenseCategory,
         deleteExpenseCategory,
+
+        // Dynamic Customer Categories CRUD
+        customerCategories,
+        addCustomerCategory,
+        updateCustomerCategory,
+        deleteCustomerCategory,
 
         // Global Delete / Action Confirm Modal
         showConfirmModal

@@ -486,7 +486,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                     )}
                     {product.subcategory && (
                       <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)", marginBottom: "4px" }}>
-                        {product.subcategory}
+                        {typeof product.subcategory === "string" ? product.subcategory : (product.subcategory?.name || "")}
                       </div>
                     )}
 

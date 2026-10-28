@@ -75,13 +75,17 @@ export default function ProductsManager() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const formCategoryObj = categories.find(c => c.id === formData.category);
-  const formSubcategories = (formCategoryObj?.subcategories || []).map(s => typeof s === "string" ? s : s.name);
+  const formSubcategories = (formCategoryObj?.subcategories || [])
+    .filter(s => typeof s === "string" || s.isActive !== false)
+    .map(s => typeof s === "string" ? s : s.name);
 
   const activeCategoryObj = categories.find(c => c.id === selectedCategory);
   const availableSubcategories = activeCategoryObj && activeCategoryObj.subcategories?.length > 0
-    ? activeCategoryObj.subcategories.map(s => typeof s === "string" ? s : s.name)
+    ? activeCategoryObj.subcategories
+        .filter(s => typeof s === "string" || s.isActive !== false)
+        .map(s => typeof s === "string" ? s : s.name)
     : selectedCategory === "all"
-    ? Array.from(new Set(products.map(p => p.subcategory).filter(Boolean)))
+    ? Array.from(new Set(products.map(p => typeof p.subcategory === "string" ? p.subcategory : p.subcategory?.name).filter(Boolean)))
     : [];
 
   // When GST % is changed in the dropdown, recalculate MRP for all variant rows (price + GST% = MRP)
@@ -173,11 +177,13 @@ export default function ProductsManager() {
   const handleOpenAdd = () => {
     setEditingProduct(null);
     const defaultCat = categories.find(c => c.id !== "all") || categories[0];
+    const defaultSubcatRaw = defaultCat?.subcategories?.[0];
+    const defaultSubcat = typeof defaultSubcatRaw === "string" ? defaultSubcatRaw : (defaultSubcatRaw?.name || "");
     setFormData({
       name: "",
       tamilName: "",
       category: defaultCat?.id || "",
-      subcategory: defaultCat?.subcategories?.[0] || "",
+      subcategory: defaultSubcat,
       hsnCode: "0910 91 00",
       gstPercent: 5,
       unit: "50 g",
@@ -229,7 +235,7 @@ export default function ProductsManager() {
       name: product.name || "",
       tamilName: product.tamilName || "",
       category: product.category || "ready-to-cook",
-      subcategory: product.subcategory || "",
+      subcategory: typeof product.subcategory === "string" ? product.subcategory : (product.subcategory?.name || ""),
       hsnCode: product.hsnCode || "0910 91 00",
       gstPercent: product.gstPercent ?? 5,
       unit: existingVariants[0]?.size || product.unit || "50 g",
@@ -390,14 +396,17 @@ export default function ProductsManager() {
 
       const categoryObj = categories.find(c => c.id === formData.category);
       const totalStock = cleanVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+      const subcategoryStr = typeof formData.subcategory === "string"
+        ? formData.subcategory.trim()
+        : (formData.subcategory?.name ? String(formData.subcategory.name).trim() : "");
 
       const productPayload = {
-        name: formData.name.trim(),
-        tamilName: formData.tamilName.trim(),
+        name: String(formData.name || "").trim(),
+        tamilName: String(formData.tamilName || "").trim(),
         category: formData.category,
         categoryName: categoryObj?.name || formData.category,
-        subcategory: formData.subcategory.trim(),
-        hsnCode: formData.hsnCode.trim() || "0910 91 00",
+        subcategory: subcategoryStr,
+        hsnCode: String(formData.hsnCode || "").trim() || "0910 91 00",
         gstPercent: Number(formData.gstPercent) || 0,
         unit: primaryVariant.size,
         superStockistPrice: primaryVariant.superStockistPrice,
@@ -784,7 +793,7 @@ export default function ProductsManager() {
                 )}
                 {product.subcategory && (
                   <div style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)", marginBottom: "4px" }}>
-                    {product.subcategory}
+                    {typeof product.subcategory === "string" ? product.subcategory : (product.subcategory?.name || "")}
                   </div>
                 )}
 
@@ -1023,10 +1032,12 @@ export default function ProductsManager() {
                     onChange={(e) => {
                       const newCat = e.target.value;
                       const catObj = categories.find(c => c.id === newCat);
+                      const rawFirstSub = catObj?.subcategories?.[0];
+                      const firstSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
                       setFormData({ 
                         ...formData, 
                         category: newCat,
-                        subcategory: catObj?.subcategories?.[0] || ""
+                        subcategory: firstSub
                       });
                     }}
                     className="custom-select"
@@ -1041,7 +1052,7 @@ export default function ProductsManager() {
                   <label className="input-label">Subcategory</label>
                   {formSubcategories.length > 0 ? (
                     <select
-                      value={formData.subcategory}
+                      value={typeof formData.subcategory === "string" ? formData.subcategory : (formData.subcategory?.name || "")}
                       onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
                       className="custom-select"
                     >
@@ -1053,7 +1064,7 @@ export default function ProductsManager() {
                     <input
                       type="text"
                       placeholder="e.g. Biryani Pastes"
-                      value={formData.subcategory}
+                      value={typeof formData.subcategory === "string" ? formData.subcategory : (formData.subcategory?.name || "")}
                       onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
                       className="text-input"
                     />

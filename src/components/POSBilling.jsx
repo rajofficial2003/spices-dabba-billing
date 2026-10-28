@@ -1464,7 +1464,9 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   </label>
                   {(() => {
                     const selCat = categories.find(c => c.id === newCustomerForm.category);
-                    const subcats = selCat?.subcategories || [];
+                    const subcats = (selCat?.subcategories || [])
+                      .filter(s => typeof s === "string" || s.isActive !== false)
+                      .map(s => typeof s === "string" ? s : s.name);
                     return (
                       <select
                         value={newCustomerForm.subcategory}

@@ -240,7 +240,7 @@ export default function CustomersManager({ onStartBillForCustomer }) {
            (c.customerName && c.customerName.toLowerCase().includes(q)) ||
            (c.gstin && c.gstin.toLowerCase().includes(q)) ||
            (c.categoryName && c.categoryName.toLowerCase().includes(q)) ||
-           (c.subcategory && c.subcategory.toLowerCase().includes(q)) ||
+           ((typeof c.subcategory === "string" ? c.subcategory : c.subcategory?.name || "").toLowerCase().includes(q)) ||
            (c.address && c.address.toLowerCase().includes(q)) ||
            (c.billingAddress?.city && c.billingAddress.city.toLowerCase().includes(q));
   });
@@ -250,7 +250,9 @@ export default function CustomersManager({ onStartBillForCustomer }) {
   const inactiveCount = customers.filter(c => c.isActive === false).length;
 
   const selectedCategoryObj = categories.find(c => c.id === formData.category);
-  const availableSubcategories = selectedCategoryObj?.subcategories || [];
+  const availableSubcategories = (selectedCategoryObj?.subcategories || [])
+    .filter(s => typeof s === "string" || s.isActive !== false)
+    .map(s => typeof s === "string" ? s : s.name);
 
   return (
     <div className="responsive-page-container">
@@ -479,7 +481,7 @@ export default function CustomersManager({ onStartBillForCustomer }) {
                           <>Category: <strong>{customer.categoryName || customer.category}</strong></>
                         ) : null}
                         {customer.subcategory && (
-                          <span style={{ color: "var(--sd-zinc-500)" }}> › {customer.subcategory}</span>
+                          <span style={{ color: "var(--sd-zinc-500)" }}> › {typeof customer.subcategory === "string" ? customer.subcategory : customer.subcategory?.name}</span>
                         )}
                       </span>
                       {(() => {

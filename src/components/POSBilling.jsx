@@ -30,6 +30,9 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     customers,
     selectedCustomer,
     setSelectedCustomer,
+    pricingTier,
+    setPricingTier,
+    getTierRate,
     cartItems,
     addToCart,
     addSampleToCart,
@@ -368,9 +371,9 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
               const inCart = cartItems.find(item => item.id === expectedRegularId && !item.isSample);
               const inSampleCart = cartItems.find(item => item.id === expectedSampleId && item.isSample);
 
-              const wholesaleRate = currentVariant
-                ? (Number(currentVariant.wholesalePrice) || Number(currentVariant.price) || 0)
-                : (Number(product.wholesalePrice) || Number(product.defaultPrice) || 0);
+              const activeTierRate = getTierRate(currentVariant || product, pricingTier);
+              const wholesaleRate = activeTierRate;
+              const tierName = pricingTier === 'SS' ? 'SS Rate' : pricingTier === 'D' ? 'Dealer Rate' : pricingTier === 'C' ? 'Customer Rate' : 'Retailer Rate';
               const mrpRate = currentVariant
                 ? (Number(currentVariant.mrp) || Number(currentVariant.price) || 0)
                 : (Number(product.mrp) || Number(product.defaultPrice) || 0);
@@ -515,7 +518,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                         </div>
                         {wholesaleRate > 0 && (
                           <div style={{ textAlign: "right" }}>
-                            <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>Wholesale:</span>
+                            <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>{tierName}:</span>
                             <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--sd-zinc-700)" }}>
                               ₹{wholesaleRate}
                             </div>
@@ -723,6 +726,24 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                       <Phone size={12} color="var(--sd-red)" />
                       <strong>{selectedCustomer.phone}</strong>
                     </span>
+                    {(selectedCustomer.categoryName || selectedCustomer.category) && (
+                      <span style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        background: "var(--sd-zinc-100)",
+                        padding: "1px 6px",
+                        borderRadius: "4px",
+                        fontWeight: 700,
+                        color: "var(--sd-zinc-800)"
+                      }}>
+                        <Tag size={11} color="var(--sd-red)" />
+                        {selectedCustomer.categoryName || selectedCustomer.category}
+                        {selectedCustomer.subcategory && (
+                          <span style={{ color: "var(--sd-zinc-500)", fontWeight: 500 }}>• {selectedCustomer.subcategory}</span>
+                        )}
+                      </span>
+                    )}
                     {selectedCustomer.address && (
                       <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                         <MapPin size={12} />
@@ -742,6 +763,49 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                         Khata: {formatCurrency(selectedCustomer.outstandingBalance)}
                       </span>
                     )}
+                  </div>
+
+                  {/* Category-based Billing Pricing Tier Selector */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    flexWrap: "wrap",
+                    marginTop: "8px",
+                    paddingTop: "8px",
+                    borderTop: "1px dashed var(--sd-zinc-200)"
+                  }}>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>
+                      Billing Rate:
+                    </span>
+                    {[
+                      { key: "SS", label: "Super Stockist (SS)" },
+                      { key: "D", label: "Dealer Rate (D)" },
+                      { key: "R", label: "Retailer Rate (R)" },
+                      { key: "C", label: "Customer Rate (C)" }
+                    ].map(t => {
+                      const isActive = pricingTier === t.key;
+                      return (
+                        <button
+                          key={t.key}
+                          type="button"
+                          onClick={() => setPricingTier(t.key)}
+                          style={{
+                            padding: "2px 7px",
+                            borderRadius: "6px",
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            background: isActive ? "var(--sd-black)" : "var(--sd-white)",
+                            color: isActive ? "var(--sd-white)" : "var(--sd-zinc-700)",
+                            border: isActive ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          {t.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -768,7 +832,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   <option value="" disabled>-- Select Customer (Search / Choose) --</option>
                   {filteredCustomers.map(cust => (
                     <option key={cust.id} value={cust.id}>
-                      {cust.businessName || cust.shopName} - 📞 {cust.phone} {cust.customerName ? `(${cust.customerName})` : ''} {cust.isActive === false ? ' [Inactive]' : ''}
+                      {cust.categoryName || cust.category ? `[${cust.categoryName || cust.category}] ` : ''}{cust.businessName || cust.shopName} - 📞 {cust.phone} {cust.customerName ? `(${cust.customerName})` : ''} {cust.isActive === false ? ' [Inactive]' : ''}
                     </option>
                   ))}
                 </select>

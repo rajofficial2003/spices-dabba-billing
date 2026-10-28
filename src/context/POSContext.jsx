@@ -33,6 +33,41 @@ export const preloadProductImage = (url) => {
   img.src = url;
 };
 
+// Customer Pricing Tier helpers (SS: Super Stockist, D: Dealer, R: Retailer, C: Customer)
+export const getCustomerPricingTier = (customer) => {
+  if (!customer) return 'R';
+  if (customer.pricingTier && ['SS', 'D', 'R', 'C'].includes(String(customer.pricingTier).toUpperCase())) {
+    return String(customer.pricingTier).toUpperCase();
+  }
+  const combined = `${customer.categoryName || ''} ${customer.category || ''} ${customer.subcategory || ''} ${customer.businessName || ''} ${customer.shopName || ''}`.toLowerCase();
+  if (combined.includes('super stockist') || combined.includes('stockist') || combined.includes('(ss)') || combined === 'ss') return 'SS';
+  if (combined.includes('dealer') || combined.includes('(d)') || combined === 'd') return 'D';
+  if (combined.includes('customer') || combined.includes('consumer') || combined.includes('(c)') || combined === 'c') return 'C';
+  if (combined.includes('retailer') || combined.includes('retail') || combined.includes('(r)') || combined === 'r') return 'R';
+  return 'R';
+};
+
+export const getTierRate = (productOrVariant, tier = 'R') => {
+  if (!productOrVariant) return 0;
+  const ss = Number(productOrVariant.superStockistPrice) || 0;
+  const d = Number(productOrVariant.dealerPrice) || 0;
+  const r = Number(productOrVariant.retailerPrice) || Number(productOrVariant.wholesalePrice) || Number(productOrVariant.price) || 0;
+  const c = Number(productOrVariant.customerPrice) || Number(productOrVariant.mrp) || 0;
+  const mrp = Number(productOrVariant.mrp) || 0;
+
+  switch (tier) {
+    case 'SS':
+      return ss > 0 ? ss : (r > 0 ? r : mrp);
+    case 'D':
+      return d > 0 ? d : (r > 0 ? r : mrp);
+    case 'C':
+      return c > 0 ? c : (mrp > 0 ? mrp : r);
+    case 'R':
+    default:
+      return r > 0 ? r : (d > 0 ? d : (ss > 0 ? ss : mrp));
+  }
+};
+
 export function POSProvider({ children }) {
   // Database entities - pure Firebase Firestore live state
   const [products, setProducts] = useState([]);
@@ -60,6 +95,7 @@ export function POSProvider({ children }) {
 
   // Active Billing Station / Cart State
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [pricingTier, setPricingTier] = useState('R'); // 'SS' | 'D' | 'R' | 'C'
   const [cartItems, setCartItems] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState("fixed"); // "fixed" (₹) or "percent" (%)
@@ -253,13 +289,52 @@ export function POSProvider({ children }) {
   const grandTotal = taxableAmount + taxAmount;
   const totalItemsCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
+  // CUSTOMER SHOP SELECTION & PRICING TIER ACTIONS
+  const handleSelectCustomer = (cust) => {
+    setSelectedCustomer(cust);
+    if (!cust) {
+      setPricingTier('R');
+      return;
+    }
+    const tier = getCustomerPricingTier(cust);
+    setPricingTier(tier);
+    // Automatically recalculate existing cart items to the selected customer's tier!
+    setCartItems(prev => prev.map(item => {
+      if (item.isSample) return item;
+      const prod = products.find(p => p.id === item.productId);
+      if (!prod) return item;
+      const variant = prod.variants?.find(v => (v.size || v.name) === item.variantSize) || null;
+      const newTierRate = getTierRate(variant || prod, tier);
+      return {
+        ...item,
+        wholesalePrice: newTierRate,
+        originalPrice: newTierRate
+      };
+    }));
+  };
+
+  const handleUpdatePricingTier = (newTier) => {
+    setPricingTier(newTier);
+    setCartItems(prev => prev.map(item => {
+      if (item.isSample) return item;
+      const prod = products.find(p => p.id === item.productId);
+      if (!prod) return item;
+      const variant = prod.variants?.find(v => (v.size || v.name) === item.variantSize) || null;
+      const newTierRate = getTierRate(variant || prod, newTier);
+      return {
+        ...item,
+        wholesalePrice: newTierRate,
+        originalPrice: newTierRate
+      };
+    }));
+  };
+
   // CART ACTIONS
   const addToCart = (product, qty = 1, isSample = false, variant = null) => {
     const selectedVariant = variant || (product.variants && product.variants.length > 0 ? product.variants[0] : null);
     const variantSize = selectedVariant?.size || product.unit || "Pack";
-    const variantWholesale = selectedVariant 
-      ? (Number(selectedVariant.wholesalePrice) || Number(selectedVariant.price) || 0)
-      : (Number(product.wholesalePrice) || Number(product.defaultPrice) || 0);
+    const tierRate = getTierRate(selectedVariant || product, pricingTier);
+    const variantWholesale = isSample ? 0 : tierRate;
     const variantMrp = selectedVariant 
       ? (Number(selectedVariant.mrp) || Number(selectedVariant.price) || 0)
       : (Number(product.mrp) || Number(product.defaultPrice) || 0);
@@ -344,6 +419,7 @@ export function POSProvider({ children }) {
   const clearCart = () => {
     setCartItems([]);
     setSelectedCustomer(null);
+    setPricingTier('R');
     setDiscount(0);
     setTaxPercent(0);
     setPaymentMode("Cash");
@@ -1050,7 +1126,11 @@ export function POSProvider({ children }) {
 
         // Cart & Spot Billing
         selectedCustomer,
-        setSelectedCustomer,
+        setSelectedCustomer: handleSelectCustomer,
+        pricingTier,
+        setPricingTier: handleUpdatePricingTier,
+        getCustomerPricingTier,
+        getTierRate,
         cartItems,
         addToCart,
         addSampleToCart,

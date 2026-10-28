@@ -51,6 +51,7 @@ export default function ProductsManager() {
     category: "",
     subcategory: "",
     hsnCode: "0910 91 00",
+    gstPercent: 5,
     unit: "50 g",
     superStockistPrice: "",
     dealerPrice: "",
@@ -83,6 +84,27 @@ export default function ProductsManager() {
     ? Array.from(new Set(products.map(p => p.subcategory).filter(Boolean)))
     : [];
 
+  // When GST % is changed in the dropdown, recalculate MRP for all variant rows (price + GST% = MRP)
+  const handleGstChange = (newGst) => {
+    setFormData(prev => {
+      const updatedVariants = prev.variants.map(v => {
+        const base = Number(v.customerPrice) || Number(v.retailerPrice) || 0;
+        if (base > 0) {
+          const calcMrp = Math.round((base + (base * newGst) / 100) * 100) / 100;
+          return { ...v, mrp: calcMrp };
+        }
+        return v;
+      });
+      const v0Mrp = updatedVariants[0]?.mrp ?? prev.mrp;
+      return {
+        ...prev,
+        gstPercent: newGst,
+        mrp: v0Mrp,
+        variants: updatedVariants
+      };
+    });
+  };
+
   const handleAddVariantRow = (presetSize = "100 g") => {
     setFormData(prev => {
       const v0 = prev.variants[0] || {};
@@ -109,16 +131,31 @@ export default function ProductsManager() {
     setFormData(prev => {
       const updated = [...prev.variants];
       const numFields = ["superStockistPrice", "dealerPrice", "retailerPrice", "customerPrice", "mrp", "stock"];
-      updated[index] = {
+      const parsedValue = numFields.includes(field) ? (value === "" ? "" : Number(value)) : value;
+      
+      const currentRow = {
         ...updated[index],
-        [field]: numFields.includes(field) ? (value === "" ? "" : Number(value)) : value
+        [field]: parsedValue
       };
+
+      // Automatic GST included calculation:
+      // When Customer Rate (C) (or Retailer Rate if C is empty) is typed, calculate: price + GST% = MRP
+      if (field === "customerPrice" || (field === "retailerPrice" && !currentRow.customerPrice)) {
+        const gstRate = Number(prev.gstPercent ?? 5);
+        const base = Number(parsedValue) || 0;
+        if (base > 0) {
+          const autoMrp = Math.round((base + (base * gstRate) / 100) * 100) / 100;
+          currentRow.mrp = autoMrp;
+        }
+      }
+
+      updated[index] = currentRow;
 
       const isFirst = index === 0 && numFields.includes(field);
       return { 
         ...prev, 
         variants: updated,
-        ...(isFirst ? { [field]: value } : {})
+        ...(isFirst ? { [field]: parsedValue, ...(currentRow.mrp ? { mrp: currentRow.mrp } : {}) } : {})
       };
     });
   };
@@ -143,6 +180,7 @@ export default function ProductsManager() {
       category: defaultCat?.id || "",
       subcategory: defaultCat?.subcategories?.[0] || "",
       hsnCode: "0910 91 00",
+      gstPercent: 5,
       unit: "50 g",
       superStockistPrice: "",
       dealerPrice: "",
@@ -194,6 +232,7 @@ export default function ProductsManager() {
       category: product.category || "ready-to-cook",
       subcategory: product.subcategory || "",
       hsnCode: product.hsnCode || "0910 91 00",
+      gstPercent: product.gstPercent ?? 5,
       unit: existingVariants[0]?.size || product.unit || "50 g",
       superStockistPrice: existingVariants[0]?.superStockistPrice || "",
       dealerPrice: existingVariants[0]?.dealerPrice || "",
@@ -360,6 +399,7 @@ export default function ProductsManager() {
         categoryName: categoryObj?.name || formData.category,
         subcategory: formData.subcategory.trim(),
         hsnCode: formData.hsnCode.trim() || "0910 91 00",
+        gstPercent: Number(formData.gstPercent) || 0,
         unit: primaryVariant.size,
         superStockistPrice: primaryVariant.superStockistPrice,
         dealerPrice: primaryVariant.dealerPrice,
@@ -714,7 +754,7 @@ export default function ProductsManager() {
                   fontWeight: 700,
                   fontFamily: "monospace"
                 }}>
-                  HSN: {product.hsnCode || "0910 91 00"}
+                  HSN: {product.hsnCode || "0910 91 00"} • GST: {product.gstPercent ?? 5}%
                 </span>
 
                 <span style={{
@@ -791,9 +831,14 @@ export default function ProductsManager() {
                   gap: "6px"
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 700, color: "var(--sd-zinc-500)" }}>
-                      MRP Price:
-                    </span>
+                    <div>
+                      <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 700, color: "var(--sd-zinc-500)" }}>
+                        MRP Price:
+                      </span>
+                      <span style={{ fontSize: "0.65rem", color: "var(--sd-zinc-400)", marginLeft: "4px" }}>
+                        (Incl. {product.gstPercent ?? 5}% GST)
+                      </span>
+                    </div>
                     <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "var(--sd-black)" }}>
                       ₹{mrp}
                     </div>
@@ -1017,8 +1062,8 @@ export default function ProductsManager() {
                 </div>
               </div>
 
-              {/* HSN Code & Low Stock Alert */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+              {/* HSN Code, GST Rate (%) & Low Stock Alert */}
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 1fr", gap: "10px", marginBottom: "12px" }}>
                 <div>
                   <label className="input-label">
                     GST HSN Code <span className="input-required">*</span>
@@ -1035,7 +1080,25 @@ export default function ProductsManager() {
                 </div>
 
                 <div>
-                  <label className="input-label">Low Stock Alert Limit (Packs)</label>
+                  <label className="input-label">
+                    GST Rate (%) <span className="input-required">*</span>
+                  </label>
+                  <select
+                    value={formData.gstPercent ?? 5}
+                    onChange={(e) => handleGstChange(Number(e.target.value))}
+                    className="custom-select"
+                    style={{ fontWeight: 700 }}
+                  >
+                    <option value={0}>0% (No GST / Exempt)</option>
+                    <option value={5}>5% GST (Standard)</option>
+                    <option value={12}>12% GST</option>
+                    <option value={18}>18% GST</option>
+                    <option value={28}>28% GST</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="input-label">Low Stock Alert (Packs)</label>
                   <input
                     type="number"
                     min="0"
@@ -1117,10 +1180,10 @@ export default function ProductsManager() {
 
                 {/* Variants List Table with mobile horizontal scroll */}
                 <div style={{ overflowX: "auto", paddingBottom: "4px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "760px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "820px" }}>
                     <div style={{
                       display: "grid",
-                      gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1fr 0.9fr 36px",
+                      gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1.2fr 0.9fr 36px",
                       gap: "6px",
                       padding: "0 4px",
                       fontSize: "0.7rem",
@@ -1133,7 +1196,7 @@ export default function ProductsManager() {
                       <span>Dealer (D) (₹)</span>
                       <span>Retailer (R) (₹)</span>
                       <span>Customer (C) (₹)</span>
-                      <span>MRP (₹)</span>
+                      <span>MRP (₹) (+{formData.gstPercent ?? 5}% GST)</span>
                       <span>Stock</span>
                       <span></span>
                     </div>
@@ -1143,7 +1206,7 @@ export default function ProductsManager() {
                         key={idx}
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1fr 0.9fr 36px",
+                          gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1.2fr 0.9fr 36px",
                           gap: "6px",
                           alignItems: "center",
                           background: "var(--sd-white)",

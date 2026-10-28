@@ -692,145 +692,111 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
         {/* RIGHT COLUMN: Spot Billing Cart Pad */}
         <div className={`pos-cart-column ${mobileTab !== "cart" ? "mobile-hidden" : ""}`}>
-          {/* Retailer Shop Selection Banner (Above Wholesale Bill) */}
-          <div className="bw-card" style={{ padding: "14px 16px", marginBottom: "12px" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+          {/* Customer Selection Banner (Above Bill) */}
+          <div className="bw-card" style={{ padding: "8px 12px", marginBottom: "8px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Store size={17} color="var(--sd-red)" />
-                <span className="font-heading" style={{ fontWeight: 800, fontSize: "0.92rem", color: "var(--sd-black)" }}>
-                  Retailer Shop Selection <span className="input-required">*</span>
+                <Store size={15} color="var(--sd-red)" />
+                <span className="font-heading" style={{ fontWeight: 800, fontSize: "0.86rem", color: "var(--sd-black)" }}>
+                  Customer Selection <span className="input-required">*</span>
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddCustomerModal(true)}
                 className="btn-secondary"
-                style={{ padding: "4px 10px", fontSize: "0.76rem" }}
+                style={{ padding: "2px 8px", fontSize: "0.72rem" }}
               >
-                <UserPlus size={13} />
-                <span>New Retailer</span>
+                <UserPlus size={12} />
+                <span>New Customer</span>
               </button>
             </div>
 
             {selectedCustomer ? (
               <div style={{
                 background: "var(--sd-zinc-50)",
-                borderRadius: "10px",
-                padding: "10px 12px",
+                borderRadius: "8px",
+                padding: "6px 10px",
                 border: "1px solid var(--sd-zinc-200)",
                 display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "8px"
+                flexDirection: "column",
+                gap: "4px"
               }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                    <span className="font-heading" style={{ fontWeight: 800, fontSize: "1rem", color: "var(--sd-black)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                  <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <span className="font-heading" style={{ fontWeight: 800, fontSize: "0.92rem", color: "var(--sd-black)" }}>
                       {selectedCustomer.shopName}
                     </span>
                     {selectedCustomer.customerName && (
-                      <span style={{ fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+                      <span style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)" }}>
                         ({selectedCustomer.customerName})
                       </span>
                     )}
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "3px", fontSize: "0.76rem", color: "var(--sd-zinc-600)" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Phone size={12} color="var(--sd-red)" />
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.74rem", color: "var(--sd-zinc-600)" }}>
+                      <Phone size={11} color="var(--sd-red)" />
                       <strong>{selectedCustomer.phone}</strong>
                     </span>
-                    {(selectedCustomer.categoryName || selectedCustomer.category) && (
-                      <span style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        background: "var(--sd-zinc-100)",
-                        padding: "1px 6px",
-                        borderRadius: "4px",
-                        fontWeight: 700,
-                        color: "var(--sd-zinc-800)"
-                      }}>
-                        <Tag size={11} color="var(--sd-red)" />
-                        {selectedCustomer.categoryName || selectedCustomer.category}
-                        {selectedCustomer.subcategory && (
-                          <span style={{ color: "var(--sd-zinc-500)", fontWeight: 500 }}>• {selectedCustomer.subcategory}</span>
-                        )}
-                      </span>
-                    )}
-                    {selectedCustomer.address && (
-                      <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <MapPin size={12} />
-                        {selectedCustomer.address}
-                      </span>
-                    )}
                     {Number(selectedCustomer.outstandingBalance) > 0 && (
                       <span style={{
                         background: "var(--sd-red-subtle)",
                         color: "var(--sd-red)",
                         border: "1px solid var(--sd-red-border)",
-                        padding: "1px 6px",
+                        padding: "0 5px",
                         borderRadius: "99px",
                         fontWeight: 700,
-                        fontSize: "0.7rem"
+                        fontSize: "0.68rem"
                       }}>
-                        Khata: {formatCurrency(selectedCustomer.outstandingBalance)}
+                        Khata: ₹{selectedCustomer.outstandingBalance}
                       </span>
                     )}
                   </div>
 
-                  {/* Category-based Billing Pricing Tier Selector */}
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    flexWrap: "wrap",
-                    marginTop: "8px",
-                    paddingTop: "8px",
-                    borderTop: "1px dashed var(--sd-zinc-200)"
-                  }}>
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>
-                      Billing Rate:
-                    </span>
-                    {[
-                      { key: "SS", label: "Super Stockist (SS)" },
-                      { key: "D", label: "Dealer Rate (D)" },
-                      { key: "R", label: "Retailer Rate (R)" },
-                      { key: "C", label: "Customer Rate (C)" }
-                    ].map(t => {
-                      const isActive = pricingTier === t.key;
-                      return (
-                        <button
-                          key={t.key}
-                          type="button"
-                          onClick={() => setPricingTier(t.key)}
-                          style={{
-                            padding: "2px 7px",
-                            borderRadius: "6px",
-                            fontSize: "0.7rem",
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            background: isActive ? "var(--sd-black)" : "var(--sd-white)",
-                            color: isActive ? "var(--sd-white)" : "var(--sd-zinc-700)",
-                            border: isActive ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
-                            transition: "all 0.15s ease"
-                          }}
-                        >
-                          {t.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCustomer(null)}
+                    className="btn-secondary"
+                    style={{ padding: "2px 8px", fontSize: "0.72rem", flexShrink: 0 }}
+                  >
+                    Change
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedCustomer(null)}
-                  className="btn-secondary"
-                  style={{ padding: "4px 8px", fontSize: "0.74rem", flexShrink: 0 }}
-                >
-                  Change
-                </button>
+                {/* Inline Rate Tier Selector */}
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "0.7rem" }}>
+                  <span style={{ fontWeight: 700, color: "var(--sd-zinc-500)" }}>Rate Tier:</span>
+                  {[
+                    { key: "SS", label: "SS" },
+                    { key: "D", label: "Dealer" },
+                    { key: "R", label: "Retailer" },
+                    { key: "C", label: "Customer" }
+                  ].map(t => {
+                    const isActive = pricingTier === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setPricingTier(t.key)}
+                        style={{
+                          padding: "1px 6px",
+                          borderRadius: "4px",
+                          fontSize: "0.68rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          background: isActive ? "var(--sd-black)" : "var(--sd-white)",
+                          color: isActive ? "var(--sd-white)" : "var(--sd-zinc-700)",
+                          border: isActive ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)"
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                  {(selectedCustomer.categoryName || selectedCustomer.category) && (
+                    <span style={{ color: "var(--sd-zinc-400)", marginLeft: "auto", fontSize: "0.68rem", fontWeight: 600 }}>
+                      {selectedCustomer.categoryName || selectedCustomer.category}
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
               <div>
@@ -841,7 +807,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                     if (cust) setSelectedCustomer(cust);
                   }}
                   className="custom-select"
-                  style={{ padding: "9px 36px 9px 12px", fontSize: "0.85rem", fontWeight: 600 }}
+                  style={{ padding: "7px 32px 7px 10px", fontSize: "0.82rem", fontWeight: 600 }}
                 >
                   <option value="" disabled>-- Select Customer (Search / Choose) --</option>
                   {filteredCustomers.map(cust => (

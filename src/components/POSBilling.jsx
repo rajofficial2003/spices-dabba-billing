@@ -507,17 +507,17 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
                         <div>
                           <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 700, color: "var(--sd-zinc-500)" }}>
-                            Wholesale:
+                            MRP:
                           </span>
                           <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "var(--sd-black)" }}>
-                            ₹{wholesaleRate}
+                            ₹{mrpRate}
                           </div>
                         </div>
-                        {mrpRate > wholesaleRate && (
+                        {wholesaleRate > 0 && (
                           <div style={{ textAlign: "right" }}>
-                            <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-400)" }}>MRP:</span>
-                            <div style={{ fontSize: "0.82rem", textDecoration: "line-through", color: "var(--sd-zinc-400)" }}>
-                              ₹{mrpRate}
+                            <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>Wholesale:</span>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--sd-zinc-700)" }}>
+                              ₹{wholesaleRate}
                             </div>
                           </div>
                         )}

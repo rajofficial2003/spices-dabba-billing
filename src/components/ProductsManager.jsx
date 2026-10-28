@@ -761,17 +761,17 @@ export default function ProductsManager() {
                 }}>
                   <div>
                     <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 700, color: "var(--sd-zinc-500)" }}>
-                      Wholesale:
+                      MRP:
                     </span>
                     <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "var(--sd-black)" }}>
-                      ₹{wholesale}
+                      ₹{mrp}
                     </div>
                   </div>
 
                   <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-400)" }}>MRP:</span>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--sd-zinc-400)" }}>
-                      ₹{mrp}
+                    <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>Wholesale:</span>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--sd-zinc-700)" }}>
+                      ₹{wholesale}
                     </div>
                   </div>
                 </div>

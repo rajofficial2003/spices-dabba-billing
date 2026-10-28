@@ -1235,12 +1235,9 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 </div>
               </div>
 
-              {/* GST / Tax (Auto-calculated from product GST %) */}
+              {/* Total GST Amount */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <div>
-                  <span style={{ fontSize: "0.88rem", color: "var(--sd-zinc-600)", fontWeight: 600 }}>GST ({taxPercent}%):</span>
-                  <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-400)", marginLeft: "4px" }}>(From products)</span>
-                </div>
+                <span style={{ fontSize: "0.88rem", color: "var(--sd-zinc-600)", fontWeight: 600 }}>Total GST:</span>
                 <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--sd-black)" }}>
                   +₹{Number(taxAmount || 0).toFixed(2)}
                 </span>

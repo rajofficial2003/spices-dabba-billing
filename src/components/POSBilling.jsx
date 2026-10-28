@@ -238,7 +238,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
         >
           <ShoppingBag size={15} />
           <span>
-            Wholesale Bill ({totalItemsCount} • ₹{grandTotal})
+            BILL ({totalItemsCount} • ₹{grandTotal})
           </span>
         </button>
       </div>
@@ -432,7 +432,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                       {currentUnit}
                     </span>
 
-                    {/* HSN Code Pill */}
+                    {/* HSN Code & GST Pills */}
                     <span style={{
                       position: "absolute",
                       bottom: "6px",
@@ -447,6 +447,20 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                       fontFamily: "monospace"
                     }}>
                       HSN: {product.hsnCode || "0910 91 00"}
+                    </span>
+                    <span style={{
+                      position: "absolute",
+                      bottom: "6px",
+                      right: "8px",
+                      background: "var(--sd-red-subtle)",
+                      border: "1px solid var(--sd-red-border)",
+                      color: "var(--sd-red)",
+                      padding: "1px 6px",
+                      borderRadius: "4px",
+                      fontSize: "0.68rem",
+                      fontWeight: 800
+                    }}>
+                      GST: {product.gstPercent ?? 5}%
                     </span>
                   </div>
 
@@ -879,7 +893,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <ShoppingBag size={18} color="var(--sd-black)" />
                   <h2 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 800, margin: 0, color: "var(--sd-black)" }}>
-                    {activeDraftId ? "Draft Order (On-Field)" : "Wholesale Bill"}
+                    {activeDraftId ? "Draft Order (On-Field)" : "BILL"}
                   </h2>
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", marginTop: "1px" }}>
@@ -930,7 +944,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {cartItems.map((item, index) => {
                     const itemRate = Number(item.wholesalePrice) || 0;
-                    const itemTotal = itemRate * item.quantity;
+                    const itemTotal = Math.round(itemRate * item.quantity * 100) / 100;
 
                     return (
                       <div
@@ -968,7 +982,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                             <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>
                               ({item.unit})
                             </span>
-                            <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "1px" }}>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "2px", flexWrap: "wrap" }}>
                               {item.tamilName && (
                                 <span className="font-tamil" style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)" }}>
                                   {item.tamilName}
@@ -984,6 +998,17 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                                 fontFamily: "monospace"
                               }}>
                                 HSN: {item.hsnCode || "0910 91 00"}
+                              </span>
+                              <span style={{
+                                fontSize: "0.68rem",
+                                fontWeight: 800,
+                                background: "var(--sd-red-subtle)",
+                                color: "var(--sd-red)",
+                                border: "1px solid var(--sd-red-border)",
+                                padding: "1px 6px",
+                                borderRadius: "3px"
+                              }}>
+                                GST: {item.isSample ? "0%" : `${item.gstPercent !== undefined ? item.gstPercent : 5}%`}
                               </span>
                             </div>
                           </div>
@@ -1098,11 +1123,13 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                                 <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>@ ₹</span>
                                 <input
                                   type="number"
+                                  step="any"
+                                  min="0"
                                   value={item.wholesalePrice}
                                   onChange={(e) => updateCartItemPrice(item.id, e.target.value)}
                                   title="Wholesale unit rate"
                                   style={{
-                                    width: "62px",
+                                    width: "66px",
                                     padding: "4px 6px",
                                     fontSize: "0.92rem",
                                     fontWeight: 700,
@@ -1123,7 +1150,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                             minWidth: "60px",
                             textAlign: "right"
                           }}>
-                            {item.isSample ? "₹0" : `₹${itemTotal}`}
+                            {item.isSample ? "₹0.00" : `₹${itemTotal.toFixed(2)}`}
                           </div>
                         </div>
                       </div>

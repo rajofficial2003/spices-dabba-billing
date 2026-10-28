@@ -131,18 +131,17 @@ export default function ProductsManager() {
     setFormData(prev => {
       const updated = [...prev.variants];
       const numFields = ["superStockistPrice", "dealerPrice", "retailerPrice", "customerPrice", "mrp", "stock"];
-      const parsedValue = numFields.includes(field) ? (value === "" ? "" : Number(value)) : value;
       
       const currentRow = {
         ...updated[index],
-        [field]: parsedValue
+        [field]: value
       };
 
       // Automatic GST included calculation:
       // When Customer Rate (C) (or Retailer Rate if C is empty) is typed, calculate: price + GST% = MRP
       if (field === "customerPrice" || (field === "retailerPrice" && !currentRow.customerPrice)) {
         const gstRate = Number(prev.gstPercent ?? 5);
-        const base = Number(parsedValue) || 0;
+        const base = parseFloat(value) || 0;
         if (base > 0) {
           const autoMrp = Math.round((base + (base * gstRate) / 100) * 100) / 100;
           currentRow.mrp = autoMrp;
@@ -155,7 +154,7 @@ export default function ProductsManager() {
       return { 
         ...prev, 
         variants: updated,
-        ...(isFirst ? { [field]: parsedValue, ...(currentRow.mrp ? { mrp: currentRow.mrp } : {}) } : {})
+        ...(isFirst ? { [field]: value, ...(currentRow.mrp ? { mrp: currentRow.mrp } : {}) } : {})
       };
     });
   };
@@ -1230,6 +1229,7 @@ export default function ProductsManager() {
                           <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
                           <input
                             type="number"
+                            step="any"
                             min="0"
                             placeholder="SS"
                             value={v.superStockistPrice}
@@ -1244,6 +1244,7 @@ export default function ProductsManager() {
                           <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
                           <input
                             type="number"
+                            step="any"
                             min="0"
                             placeholder="Dealer"
                             value={v.dealerPrice}
@@ -1258,6 +1259,7 @@ export default function ProductsManager() {
                           <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
                           <input
                             type="number"
+                            step="any"
                             min="0"
                             placeholder="Retailer"
                             value={v.retailerPrice}
@@ -1272,6 +1274,7 @@ export default function ProductsManager() {
                           <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
                           <input
                             type="number"
+                            step="any"
                             min="0"
                             placeholder="Customer"
                             value={v.customerPrice}
@@ -1286,6 +1289,7 @@ export default function ProductsManager() {
                           <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
                           <input
                             type="number"
+                            step="any"
                             min="0"
                             placeholder="MRP"
                             value={v.mrp}

@@ -931,8 +931,8 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
               )}
             </div>
 
-            {/* Cart Items List - Compact Single Product Main View with Internal Scroll */}
-            <div style={{ maxHeight: "115px", overflowY: "auto", padding: "8px 10px", background: "var(--sd-white)" }}>
+            {/* Cart Items List - 1.5 Products Preview View with Internal Scroll */}
+            <div style={{ maxHeight: "155px", overflowY: "auto", padding: "8px 10px", background: "var(--sd-white)" }}>
               {cartItems.length === 0 ? (
                 <div style={{
                   padding: "16px 12px",

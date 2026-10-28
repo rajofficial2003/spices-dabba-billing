@@ -735,18 +735,34 @@ export function POSProvider({ children }) {
     setCategories(prev => prev.filter(c => c.id !== categoryId));
   };
 
-  // Subcategory helpers
+  // Subcategory helpers (supports both string and { name, isActive })
   const addSubcategory = async (categoryId, subcategoryName) => {
-    const cleanName = subcategoryName.trim();
+    const cleanName = typeof subcategoryName === "string" ? subcategoryName.trim() : subcategoryName.name?.trim();
     if (!cleanName) return;
 
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return;
 
     const existingSubcats = cat.subcategories || [];
-    if (existingSubcats.includes(cleanName)) return; // duplicate
+    const exists = existingSubcats.some(s => (typeof s === "string" ? s : s.name).toLowerCase() === cleanName.toLowerCase());
+    if (exists) return; // duplicate
 
-    const updatedSubcats = [...existingSubcats, cleanName];
+    const newSubcatObj = { name: cleanName, isActive: true };
+    const updatedSubcats = [...existingSubcats, newSubcatObj];
+    await updateCategory(categoryId, { subcategories: updatedSubcats });
+  };
+
+  const toggleSubcategoryStatus = async (categoryId, subcatName, newStatus) => {
+    const cat = categories.find(c => c.id === categoryId);
+    if (!cat) return;
+
+    const updatedSubcats = (cat.subcategories || []).map(s => {
+      const sName = typeof s === "string" ? s : s.name;
+      if (sName === subcatName) {
+        return { name: sName, isActive: newStatus };
+      }
+      return typeof s === "string" ? { name: s, isActive: true } : s;
+    });
     await updateCategory(categoryId, { subcategories: updatedSubcats });
   };
 
@@ -757,7 +773,13 @@ export function POSProvider({ children }) {
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return;
 
-    const updatedSubcats = (cat.subcategories || []).map(s => s === oldName ? cleanNew : s);
+    const updatedSubcats = (cat.subcategories || []).map(s => {
+      const sName = typeof s === "string" ? s : s.name;
+      if (sName === oldName) {
+        return typeof s === "object" ? { ...s, name: cleanNew } : { name: cleanNew, isActive: true };
+      }
+      return s;
+    });
     await updateCategory(categoryId, { subcategories: updatedSubcats });
 
     // Also update any products that have this subcategory
@@ -774,7 +796,10 @@ export function POSProvider({ children }) {
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return;
 
-    const updatedSubcats = (cat.subcategories || []).filter(s => s !== subcategoryName);
+    const updatedSubcats = (cat.subcategories || []).filter(s => {
+      const sName = typeof s === "string" ? s : s.name;
+      return sName !== subcategoryName;
+    });
     await updateCategory(categoryId, { subcategories: updatedSubcats });
   };
 
@@ -1082,6 +1107,7 @@ export function POSProvider({ children }) {
         addSubcategory,
         editSubcategory,
         deleteSubcategory,
+        toggleSubcategoryStatus,
 
         // Raw Material Catalog CRUD
         rawMaterials,

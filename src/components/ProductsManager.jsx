@@ -52,7 +52,10 @@ export default function ProductsManager() {
     subcategory: "",
     hsnCode: "0910 91 00",
     unit: "50 g",
-    wholesalePrice: "",
+    superStockistPrice: "",
+    dealerPrice: "",
+    retailerPrice: "",
+    customerPrice: "",
     mrp: "",
     stock: "",
     minStock: 10,
@@ -60,7 +63,7 @@ export default function ProductsManager() {
     image: "",
     isActive: true,
     variants: [
-      { size: "50 g", wholesalePrice: "", mrp: "", stock: 50 }
+      { size: "50 g", superStockistPrice: "", dealerPrice: "", retailerPrice: "", customerPrice: "", mrp: "", stock: 50 }
     ]
   });
 
@@ -71,27 +74,30 @@ export default function ProductsManager() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const formCategoryObj = categories.find(c => c.id === formData.category);
-  const formSubcategories = formCategoryObj?.subcategories || [];
+  const formSubcategories = (formCategoryObj?.subcategories || []).map(s => typeof s === "string" ? s : s.name);
 
   const activeCategoryObj = categories.find(c => c.id === selectedCategory);
   const availableSubcategories = activeCategoryObj && activeCategoryObj.subcategories?.length > 0
-    ? activeCategoryObj.subcategories
+    ? activeCategoryObj.subcategories.map(s => typeof s === "string" ? s : s.name)
     : selectedCategory === "all"
     ? Array.from(new Set(products.map(p => p.subcategory).filter(Boolean)))
     : [];
 
   const handleAddVariantRow = (presetSize = "100 g") => {
     setFormData(prev => {
-      const baseWholesale = prev.variants[0]?.wholesalePrice ? Math.round(Number(prev.variants[0].wholesalePrice) * 1.8) : 50;
-      const baseMrp = prev.variants[0]?.mrp ? Math.round(Number(prev.variants[0].mrp) * 1.8) : 65;
+      const v0 = prev.variants[0] || {};
+      const mult = (val) => val ? Math.round(Number(val) * 1.8) : "";
       return {
         ...prev,
         variants: [
           ...prev.variants,
           {
             size: presetSize,
-            wholesalePrice: baseWholesale,
-            mrp: baseMrp,
+            superStockistPrice: mult(v0.superStockistPrice),
+            dealerPrice: mult(v0.dealerPrice),
+            retailerPrice: mult(v0.retailerPrice),
+            customerPrice: mult(v0.customerPrice),
+            mrp: mult(v0.mrp),
             stock: 100
           }
         ]
@@ -102,19 +108,17 @@ export default function ProductsManager() {
   const handleUpdateVariantRow = (index, field, value) => {
     setFormData(prev => {
       const updated = [...prev.variants];
+      const numFields = ["superStockistPrice", "dealerPrice", "retailerPrice", "customerPrice", "mrp", "stock"];
       updated[index] = {
         ...updated[index],
-        [field]: (field === "wholesalePrice" || field === "mrp" || field === "stock")
-          ? (value === "" ? "" : Number(value))
-          : value
+        [field]: numFields.includes(field) ? (value === "" ? "" : Number(value)) : value
       };
-      const primaryWholesale = index === 0 && field === "wholesalePrice" ? value : prev.wholesalePrice;
-      const primaryMrp = index === 0 && field === "mrp" ? value : prev.mrp;
+
+      const isFirst = index === 0 && numFields.includes(field);
       return { 
         ...prev, 
         variants: updated,
-        wholesalePrice: primaryWholesale,
-        mrp: primaryMrp
+        ...(isFirst ? { [field]: value } : {})
       };
     });
   };
@@ -140,7 +144,10 @@ export default function ProductsManager() {
       subcategory: defaultCat?.subcategories?.[0] || "",
       hsnCode: "0910 91 00",
       unit: "50 g",
-      wholesalePrice: "",
+      superStockistPrice: "",
+      dealerPrice: "",
+      retailerPrice: "",
+      customerPrice: "",
       mrp: "",
       stock: 50,
       minStock: 10,
@@ -148,7 +155,7 @@ export default function ProductsManager() {
       image: "",
       isActive: true,
       variants: [
-        { size: "50 g", wholesalePrice: "", mrp: "", stock: 50 }
+        { size: "50 g", superStockistPrice: "", dealerPrice: "", retailerPrice: "", customerPrice: "", mrp: "", stock: 50 }
       ]
     });
     setSelectedFile(null);
@@ -162,15 +169,21 @@ export default function ProductsManager() {
     const existingVariants = (product.variants && product.variants.length > 0)
       ? product.variants.map(v => ({
           size: v.size || v.name || "50 g",
-          wholesalePrice: v.wholesalePrice ?? v.price ?? product.wholesalePrice ?? product.defaultPrice ?? 0,
-          mrp: v.mrp ?? v.price ?? product.mrp ?? product.defaultPrice ?? 0,
+          superStockistPrice: v.superStockistPrice ?? v.ssPrice ?? product.superStockistPrice ?? "",
+          dealerPrice: v.dealerPrice ?? v.dPrice ?? product.dealerPrice ?? "",
+          retailerPrice: v.retailerPrice ?? v.rPrice ?? v.wholesalePrice ?? product.wholesalePrice ?? "",
+          customerPrice: v.customerPrice ?? v.cPrice ?? v.mrp ?? product.mrp ?? "",
+          mrp: v.mrp ?? product.mrp ?? "",
           stock: v.stock ?? product.stock ?? 100
         }))
       : [
           {
             size: product.unit || "50 g",
-            wholesalePrice: product.wholesalePrice ?? product.defaultPrice ?? 0,
-            mrp: product.mrp ?? product.defaultPrice ?? 0,
+            superStockistPrice: product.superStockistPrice ?? "",
+            dealerPrice: product.dealerPrice ?? "",
+            retailerPrice: product.retailerPrice ?? product.wholesalePrice ?? "",
+            customerPrice: product.customerPrice ?? product.mrp ?? "",
+            mrp: product.mrp ?? "",
             stock: product.stock ?? 100
           }
         ];
@@ -182,7 +195,10 @@ export default function ProductsManager() {
       subcategory: product.subcategory || "",
       hsnCode: product.hsnCode || "0910 91 00",
       unit: existingVariants[0]?.size || product.unit || "50 g",
-      wholesalePrice: existingVariants[0]?.wholesalePrice || product.wholesalePrice || "",
+      superStockistPrice: existingVariants[0]?.superStockistPrice || "",
+      dealerPrice: existingVariants[0]?.dealerPrice || "",
+      retailerPrice: existingVariants[0]?.retailerPrice || "",
+      customerPrice: existingVariants[0]?.customerPrice || "",
       mrp: existingVariants[0]?.mrp || product.mrp || "",
       stock: product.stock ?? 100,
       minStock: product.minStock ?? 15,
@@ -289,26 +305,28 @@ export default function ProductsManager() {
     const cleanVariants = (formData.variants && formData.variants.length > 0)
       ? formData.variants.map(v => ({
           size: String(v.size || "50 g").trim(),
-          wholesalePrice: Number(v.wholesalePrice) || 0,
-          mrp: Number(v.mrp) || Number(v.wholesalePrice) || 0,
+          superStockistPrice: Number(v.superStockistPrice) || 0,
+          dealerPrice: Number(v.dealerPrice) || 0,
+          retailerPrice: Number(v.retailerPrice) || 0,
+          customerPrice: Number(v.customerPrice) || 0,
+          wholesalePrice: Number(v.retailerPrice) || Number(v.dealerPrice) || 0,
+          mrp: Number(v.mrp) || Number(v.customerPrice) || 0,
           stock: Number(v.stock) || 0
         }))
       : [
           {
             size: formData.unit?.trim() || "50 g",
-            wholesalePrice: Number(formData.wholesalePrice) || 0,
-            mrp: Number(formData.mrp) || Number(formData.wholesalePrice) || 0,
+            superStockistPrice: Number(formData.superStockistPrice) || 0,
+            dealerPrice: Number(formData.dealerPrice) || 0,
+            retailerPrice: Number(formData.retailerPrice) || 0,
+            customerPrice: Number(formData.customerPrice) || 0,
+            wholesalePrice: Number(formData.retailerPrice) || Number(formData.dealerPrice) || 0,
+            mrp: Number(formData.mrp) || Number(formData.customerPrice) || 0,
             stock: Number(formData.stock) || 0
           }
         ];
 
     const primaryVariant = cleanVariants[0];
-    const wholesaleVal = primaryVariant?.wholesalePrice || Number(formData.wholesalePrice) || 0;
-
-    if (!wholesaleVal || wholesaleVal <= 0) {
-      setErrorMsg("Wholesale Price is required in the Variants table!");
-      return;
-    }
 
     try {
       let finalImageUrl = formData.image;
@@ -343,7 +361,11 @@ export default function ProductsManager() {
         subcategory: formData.subcategory.trim(),
         hsnCode: formData.hsnCode.trim() || "0910 91 00",
         unit: primaryVariant.size,
-        wholesalePrice: primaryVariant.wholesalePrice,
+        superStockistPrice: primaryVariant.superStockistPrice,
+        dealerPrice: primaryVariant.dealerPrice,
+        retailerPrice: primaryVariant.retailerPrice,
+        customerPrice: primaryVariant.customerPrice,
+        wholesalePrice: primaryVariant.retailerPrice || primaryVariant.wholesalePrice,
         mrp: primaryVariant.mrp,
         stock: totalStock,
         minStock: Number(formData.minStock) || 10,
@@ -583,12 +605,21 @@ export default function ProductsManager() {
           const hasVariants = product.variants && product.variants.length > 0;
           const currentVariant = hasVariants ? (product.variants[activeVariantIdx] || product.variants[0]) : null;
 
-          const wholesale = currentVariant 
-            ? (Number(currentVariant.wholesalePrice) || Number(currentVariant.price) || 0)
-            : (Number(product.wholesalePrice) || Number(product.defaultPrice) || 0);
           const mrp = currentVariant 
             ? (Number(currentVariant.mrp) || Number(currentVariant.price) || 0)
             : (Number(product.mrp) || Number(product.defaultPrice) || 0);
+          const ssPrice = currentVariant 
+            ? (Number(currentVariant.superStockistPrice) || 0)
+            : (Number(product.superStockistPrice) || 0);
+          const dealerPrice = currentVariant 
+            ? (Number(currentVariant.dealerPrice) || 0)
+            : (Number(product.dealerPrice) || 0);
+          const retailerPrice = currentVariant 
+            ? (Number(currentVariant.retailerPrice) || Number(currentVariant.wholesalePrice) || 0)
+            : (Number(product.retailerPrice) || Number(product.wholesalePrice) || 0);
+          const customerPrice = currentVariant 
+            ? (Number(currentVariant.customerPrice) || Number(currentVariant.mrp) || 0)
+            : (Number(product.customerPrice) || Number(product.mrp) || 0);
           const currentUnit = currentVariant ? currentVariant.size : (product.unit || "Pack");
           const currentStock = currentVariant && currentVariant.stock !== undefined ? currentVariant.stock : (product.stock ?? 0);
           const isLowStock = currentStock <= (product.minStock || 15);
@@ -756,22 +787,44 @@ export default function ProductsManager() {
                   paddingTop: "8px",
                   borderTop: "1px solid var(--sd-zinc-100)",
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-end"
+                  flexDirection: "column",
+                  gap: "6px"
                 }}>
-                  <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                     <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 700, color: "var(--sd-zinc-500)" }}>
-                      MRP:
+                      MRP Price:
                     </span>
                     <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "var(--sd-black)" }}>
                       ₹{mrp}
                     </div>
                   </div>
 
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>Wholesale:</span>
-                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--sd-zinc-700)" }}>
-                      ₹{wholesale}
+                  {/* 4-Tier Rates Grid */}
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "4px",
+                    background: "var(--sd-zinc-50)",
+                    padding: "6px 8px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--sd-zinc-200)",
+                    fontSize: "0.72rem"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--sd-zinc-500)", fontWeight: 600 }}>SS:</span>
+                      <strong style={{ color: "var(--sd-zinc-800)" }}>₹{ssPrice}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--sd-zinc-500)", fontWeight: 600 }}>Dealer (D):</span>
+                      <strong style={{ color: "var(--sd-zinc-800)" }}>₹{dealerPrice}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--sd-zinc-500)", fontWeight: 600 }}>Retailer (R):</span>
+                      <strong style={{ color: "var(--sd-zinc-800)" }}>₹{retailerPrice}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--sd-zinc-500)", fontWeight: 600 }}>Cust (C):</span>
+                      <strong style={{ color: "var(--sd-zinc-800)" }}>₹{customerPrice}</strong>
                     </div>
                   </div>
                 </div>
@@ -1064,105 +1117,152 @@ export default function ProductsManager() {
 
                 {/* Variants List Table with mobile horizontal scroll */}
                 <div style={{ overflowX: "auto", paddingBottom: "4px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "440px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "760px" }}>
                     <div style={{
                       display: "grid",
-                      gridTemplateColumns: "1.4fr 1.2fr 1.2fr 1.2fr 36px",
-                      gap: "8px",
+                      gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1fr 0.9fr 36px",
+                      gap: "6px",
                       padding: "0 4px",
-                      fontSize: "0.72rem",
+                      fontSize: "0.7rem",
                       fontWeight: 700,
                       color: "var(--sd-zinc-500)",
                       textTransform: "uppercase"
                     }}>
-                    <span>Weight / Size</span>
-                    <span>Wholesale (₹) *</span>
-                    <span>MRP (₹)</span>
-                    <span>Stock (Packs)</span>
-                    <span></span>
-                  </div>
+                      <span>Weight / Size</span>
+                      <span>SS Rate (₹)</span>
+                      <span>Dealer (D) (₹)</span>
+                      <span>Retailer (R) (₹)</span>
+                      <span>Customer (C) (₹)</span>
+                      <span>MRP (₹)</span>
+                      <span>Stock</span>
+                      <span></span>
+                    </div>
 
-                  {formData.variants.map((v, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.4fr 1.2fr 1.2fr 1.2fr 36px",
-                        gap: "8px",
-                        alignItems: "center",
-                        background: "var(--sd-white)",
-                        border: "1px solid var(--sd-zinc-200)",
-                        borderRadius: "8px",
-                        padding: "6px 8px"
-                      }}
-                    >
-                      <input
-                        type="text"
-                        placeholder="e.g. 50 g, 100 g"
-                        value={v.size}
-                        onChange={(e) => handleUpdateVariantRow(idx, "size", e.target.value)}
-                        className="text-input"
-                        style={{ padding: "6px 8px", fontSize: "0.82rem", fontWeight: 700 }}
-                        required
-                      />
-
-                      <div style={{ position: "relative" }}>
-                        <span style={{ position: "absolute", left: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="Wholesale"
-                          value={v.wholesalePrice}
-                          onChange={(e) => handleUpdateVariantRow(idx, "wholesalePrice", e.target.value)}
-                          className="text-input"
-                          style={{ padding: "6px 8px 6px 20px", fontSize: "0.82rem", fontWeight: 800 }}
-                          required
-                        />
-                      </div>
-
-                      <div style={{ position: "relative" }}>
-                        <span style={{ position: "absolute", left: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="MRP"
-                          value={v.mrp}
-                          onChange={(e) => handleUpdateVariantRow(idx, "mrp", e.target.value)}
-                          className="text-input"
-                          style={{ padding: "6px 8px 6px 20px", fontSize: "0.82rem" }}
-                        />
-                      </div>
-
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Stock"
-                        value={v.stock}
-                        onChange={(e) => handleUpdateVariantRow(idx, "stock", e.target.value)}
-                        className="text-input"
-                        style={{ padding: "6px 8px", fontSize: "0.82rem" }}
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveVariantRow(idx)}
-                        disabled={formData.variants.length <= 1}
-                        title={formData.variants.length <= 1 ? "At least 1 variant required" : "Remove variant"}
+                    {formData.variants.map((v, idx) => (
+                      <div
+                        key={idx}
                         style={{
-                          background: "transparent",
-                          border: "none",
-                          color: formData.variants.length <= 1 ? "var(--sd-zinc-300)" : "var(--sd-red)",
-                          cursor: formData.variants.length <= 1 ? "not-allowed" : "pointer",
-                          display: "flex",
+                          display: "grid",
+                          gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1fr 0.9fr 36px",
+                          gap: "6px",
                           alignItems: "center",
-                          justifyContent: "center",
-                          padding: "4px"
+                          background: "var(--sd-white)",
+                          border: "1px solid var(--sd-zinc-200)",
+                          borderRadius: "8px",
+                          padding: "6px 8px"
                         }}
                       >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  ))}
+                        <input
+                          type="text"
+                          placeholder="e.g. 50 g"
+                          value={v.size}
+                          onChange={(e) => handleUpdateVariantRow(idx, "size", e.target.value)}
+                          className="text-input"
+                          style={{ padding: "6px 8px", fontSize: "0.8rem", fontWeight: 700 }}
+                          required
+                        />
+
+                        {/* Super Stockist (SS) */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="SS"
+                            value={v.superStockistPrice}
+                            onChange={(e) => handleUpdateVariantRow(idx, "superStockistPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
+                          />
+                        </div>
+
+                        {/* Dealer Rate (D) */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Dealer"
+                            value={v.dealerPrice}
+                            onChange={(e) => handleUpdateVariantRow(idx, "dealerPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
+                          />
+                        </div>
+
+                        {/* Retailer Rate (R) */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Retailer"
+                            value={v.retailerPrice}
+                            onChange={(e) => handleUpdateVariantRow(idx, "retailerPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 800 }}
+                          />
+                        </div>
+
+                        {/* Customer Rate (C) */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Customer"
+                            value={v.customerPrice}
+                            onChange={(e) => handleUpdateVariantRow(idx, "customerPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
+                          />
+                        </div>
+
+                        {/* MRP (₹) */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="MRP"
+                            value={v.mrp}
+                            onChange={(e) => handleUpdateVariantRow(idx, "mrp", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 800 }}
+                          />
+                        </div>
+
+                        {/* Stock */}
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="Stock"
+                          value={v.stock}
+                          onChange={(e) => handleUpdateVariantRow(idx, "stock", e.target.value)}
+                          className="text-input"
+                          style={{ padding: "6px 6px", fontSize: "0.8rem" }}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVariantRow(idx)}
+                          disabled={formData.variants.length <= 1}
+                          title={formData.variants.length <= 1 ? "At least 1 variant required" : "Remove variant"}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: formData.variants.length <= 1 ? "var(--sd-zinc-300)" : "var(--sd-red)",
+                            cursor: formData.variants.length <= 1 ? "not-allowed" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "4px"
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

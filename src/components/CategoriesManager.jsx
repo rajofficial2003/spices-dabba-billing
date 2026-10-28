@@ -24,6 +24,7 @@ export default function CategoriesManager() {
     addSubcategory, 
     editSubcategory, 
     deleteSubcategory,
+    toggleSubcategoryStatus,
     showConfirmModal
   } = usePOS();
 
@@ -54,7 +55,10 @@ export default function CategoriesManager() {
     const q = catSearch.toLowerCase().trim();
     const matchName = cat.name?.toLowerCase().includes(q);
     const matchTamil = cat.tamilName?.includes(q);
-    const matchSubcat = cat.subcategories?.some(s => s.toLowerCase().includes(q));
+    const matchSubcat = cat.subcategories?.some(s => {
+      const sName = typeof s === "string" ? s : s.name;
+      return sName?.toLowerCase().includes(q);
+    });
     return matchName || matchTamil || matchSubcat;
   });
 
@@ -183,6 +187,24 @@ export default function CategoriesManager() {
 
     if (ok) {
       await deleteSubcategory(catId, subcatName);
+    }
+  };
+
+  const handleToggleSubcatStatus = async (catId, subcatName, currentStatus) => {
+    const newStatus = !currentStatus;
+    const targetText = newStatus ? "Active" : "Inactive";
+    const ok = await showConfirmModal({
+      title: newStatus ? "Activate Subcategory" : "Deactivate Subcategory",
+      message: newStatus
+        ? `Are you sure you want to mark subcategory "${subcatName}" as Active? Products under this subcategory will be available for spot billing.`
+        : `Are you sure you want to mark subcategory "${subcatName}" as Inactive? Inactive subcategories and their products will be hidden from spot billing.`,
+      confirmText: `Yes, Mark ${targetText}`,
+      cancelText: "Cancel",
+      isDanger: !newStatus
+    });
+
+    if (ok) {
+      await toggleSubcategoryStatus(catId, subcatName, newStatus);
     }
   };
 
@@ -494,7 +516,9 @@ export default function CategoriesManager() {
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {subcats.map((subcat) => {
+                    {subcats.map((subcatItem) => {
+                      const subcat = typeof subcatItem === "string" ? subcatItem : subcatItem.name;
+                      const isSubAct = typeof subcatItem === "string" ? true : subcatItem.isActive !== false;
                       const prodsWithSubcat = products.filter(p => p.category === cat.id && p.subcategory === subcat);
 
                       if (editingSubcat && editingSubcat.catId === cat.id && editingSubcat.oldName === subcat) {
@@ -550,8 +574,8 @@ export default function CategoriesManager() {
                         <div
                           key={subcat}
                           style={{
-                            background: "var(--sd-white)",
-                            border: "1px solid var(--sd-zinc-200)",
+                            background: isSubAct ? "var(--sd-white)" : "var(--sd-zinc-100)",
+                            border: isSubAct ? "1px solid var(--sd-zinc-200)" : "1px dashed var(--sd-zinc-300)",
                             borderRadius: "8px",
                             padding: "4px 8px",
                             display: "inline-flex",
@@ -559,13 +583,43 @@ export default function CategoriesManager() {
                             gap: "6px",
                             fontSize: "0.78rem",
                             fontWeight: 600,
-                            color: "var(--sd-black)"
+                            color: isSubAct ? "var(--sd-black)" : "var(--sd-zinc-500)",
+                            opacity: isSubAct ? 1 : 0.8
                           }}
                         >
-                          <span>{subcat}</span>
+                          <span style={{ textDecoration: isSubAct ? "none" : "line-through" }}>{subcat}</span>
                           <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-400)" }}>
                             ({prodsWithSubcat.length})
                           </span>
+
+                          {/* Subcategory Active / Inactive Toggle Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSubcatStatus(cat.id, subcat, isSubAct)}
+                            title={isSubAct ? "Click to deactivate subcategory" : "Click to activate subcategory"}
+                            style={{
+                              background: isSubAct ? "#DCFCE7" : "var(--sd-zinc-200)",
+                              color: isSubAct ? "#15803D" : "var(--sd-zinc-700)",
+                              border: isSubAct ? "1px solid #86EFAC" : "1px solid var(--sd-zinc-300)",
+                              borderRadius: "99px",
+                              padding: "2px 7px",
+                              fontSize: "0.65rem",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            <span style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              background: isSubAct ? "#16A34A" : "var(--sd-zinc-500)"
+                            }} />
+                            {isSubAct ? "Active" : "Inactive"}
+                          </button>
 
                           {/* Edit / Delete Subcategory */}
                           <div style={{ display: "inline-flex", alignItems: "center", gap: "2px", marginLeft: "2px" }}>

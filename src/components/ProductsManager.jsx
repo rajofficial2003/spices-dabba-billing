@@ -13,12 +13,14 @@ import {
   X,
   XCircle,
   Tag,
-  PackagePlus
+  PackagePlus,
+  Layers
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
 import { compressImage, uploadProductImage, formatBytes } from "../utils/imageCompressor";
+import CategoriesManager from "./CategoriesManager";
 
-export default function ProductsManager() {
+export default function ProductsManager({ initialSubView = "products" }) {
   const {
     products,
     categories,
@@ -28,6 +30,14 @@ export default function ProductsManager() {
     deleteProduct,
     showConfirmModal
   } = usePOS();
+
+  const [activeSubView, setActiveSubView] = useState(initialSubView || "products");
+
+  React.useEffect(() => {
+    if (initialSubView) {
+      setActiveSubView(initialSubView);
+    }
+  }, [initialSubView]);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedSubcategory, setSelectedSubcategory] = useState("all");
@@ -464,36 +474,113 @@ export default function ProductsManager() {
 
   return (
     <div className="responsive-page-container">
-      {/* Header and Add button */}
+      {/* Header Banner & Sub-View Switcher */}
       <div style={{
         display: "flex",
         flexWrap: "wrap",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: "16px",
+        gap: "14px",
         marginBottom: "20px",
         paddingBottom: "14px",
         borderBottom: "1px solid var(--sd-zinc-200)"
       }}>
         <div>
-          <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-            Products Catalog & Stock
-          </h2>
-          <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "2px" }}>
-            Categories, subcategories, GST HSN codes, wholesale pricing, and compressed product photos.
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {activeSubView === "categories" ? (
+              <Layers size={22} color="var(--sd-red)" />
+            ) : (
+              <Package size={22} color="var(--sd-red)" />
+            )}
+            <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
+              {activeSubView === "categories" ? "Categories & Subcategories" : "Products Catalog & Stock"}
+            </h2>
+          </div>
+          <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "3px" }}>
+            {activeSubView === "categories"
+              ? "Manage master product categories and split them into subcategories for wholesale billing."
+              : "Categories, subcategories, GST HSN codes, wholesale pricing, and compressed product photos."}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenAdd}
-          className="btn-primary"
-          style={{ padding: "8px 16px", fontSize: "0.82rem" }}
-        >
-          <Plus size={15} />
-          <span>Add New Spice</span>
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Sub-view Switcher Toggle */}
+          <div style={{
+            display: "inline-flex",
+            background: "var(--sd-zinc-100)",
+            padding: "4px",
+            borderRadius: "12px",
+            border: "1px solid var(--sd-zinc-200)",
+            gap: "3px"
+          }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubView("products")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                fontWeight: activeSubView === "products" ? 800 : 600,
+                background: activeSubView === "products" ? "var(--sd-black)" : "transparent",
+                color: activeSubView === "products" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                border: "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: activeSubView === "products" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <Package size={14} />
+              <span>Products ({products.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubView("categories")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                fontWeight: activeSubView === "categories" ? 800 : 600,
+                background: activeSubView === "categories" ? "var(--sd-black)" : "transparent",
+                color: activeSubView === "categories" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                border: "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: activeSubView === "categories" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <Layers size={14} />
+              <span>Categories ({categories.filter(c => c.id !== 'all').length})</span>
+            </button>
+          </div>
+
+          {activeSubView === "products" && (
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+            >
+              <Plus size={15} />
+              <span>Add New Spice</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Sub-view 1: Categories Section inside Products */}
+      <div style={{ display: activeSubView === "categories" ? "block" : "none" }}>
+        <CategoriesManager isNested={true} />
+      </div>
+
+      {/* Sub-view 2: Products Catalog Section */}
+      <div style={{ display: activeSubView === "products" ? "block" : "none" }}>
 
       {/* Search & Categories */}
       <div style={{ marginBottom: "18px" }}>
@@ -576,7 +663,7 @@ export default function ProductsManager() {
         </div>
 
         {/* Categories */}
-        <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px" }}>
+        <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px", alignItems: "center" }}>
           {categories.map(cat => (
             <button
               key={cat.id}
@@ -590,6 +677,28 @@ export default function ProductsManager() {
               {cat.name}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setActiveSubView("categories")}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "20px",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              background: "#FFFFFF",
+              color: "var(--sd-zinc-700)",
+              border: "1px dashed var(--sd-zinc-300)",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              whiteSpace: "nowrap",
+              flexShrink: 0
+            }}
+          >
+            <Layers size={12} color="var(--sd-zinc-500)" />
+            <span>+ Manage Categories</span>
+          </button>
         </div>
 
         {/* Subcategories */}
@@ -1635,6 +1744,7 @@ export default function ProductsManager() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Toast Notification */}
       {toastMsg && (

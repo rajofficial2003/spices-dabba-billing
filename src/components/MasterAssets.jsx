@@ -1,7 +1,6 @@
 import React from "react";
-import { Package, Layers, Store, Boxes } from "lucide-react";
+import { Package, Store, Boxes } from "lucide-react";
 import ProductsManager from "./ProductsManager";
-import CategoriesManager from "./CategoriesManager";
 import CustomersManager from "./CustomersManager";
 import { usePOS } from "../context/POSContext";
 
@@ -10,7 +9,9 @@ export default function MasterAssets({
   onSubTabChange, 
   onStartBillForCustomer 
 }) {
-  const { products, categories, customers } = usePOS();
+  const { products, customers } = usePOS();
+
+  const isProductsActive = activeSubTab === "products" || activeSubTab === "categories";
 
   return (
     <div className="master-assets-container">
@@ -34,11 +35,11 @@ export default function MasterAssets({
               </h1>
             </div>
             <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "3px" }}>
-              Unified catalog for Products, Categories, and Customers.
+              Unified catalog for Products, Categories, and Wholesale Customers.
             </p>
           </div>
 
-          {/* Segmented Sub-Tab Switcher */}
+          {/* Segmented Sub-Tab Switcher: Products vs Customers */}
           <div style={{
             display: "inline-flex",
             background: "var(--sd-zinc-100)",
@@ -52,14 +53,14 @@ export default function MasterAssets({
             <button
               type="button"
               onClick={() => onSubTabChange("products")}
-              className={`pos-mobile-toggle-btn ${activeSubTab === "products" ? "active" : ""}`}
+              className={`pos-mobile-toggle-btn ${isProductsActive ? "active" : ""}`}
               style={{
                 padding: "8px 16px",
                 borderRadius: "10px",
                 fontSize: "0.82rem",
-                fontWeight: activeSubTab === "products" ? 800 : 700,
-                background: activeSubTab === "products" ? "var(--sd-black)" : "transparent",
-                color: activeSubTab === "products" ? "var(--sd-white)" : "var(--sd-zinc-600)",
+                fontWeight: isProductsActive ? 800 : 700,
+                background: isProductsActive ? "var(--sd-black)" : "transparent",
+                color: isProductsActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
                 border: "none",
                 cursor: "pointer",
                 display: "inline-flex",
@@ -67,36 +68,11 @@ export default function MasterAssets({
                 gap: "6px",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s ease",
-                boxShadow: activeSubTab === "products" ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+                boxShadow: isProductsActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
               }}
             >
               <Package size={15} />
               <span>Products ({products.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onSubTabChange("categories")}
-              className={`pos-mobile-toggle-btn ${activeSubTab === "categories" ? "active" : ""}`}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "10px",
-                fontSize: "0.82rem",
-                fontWeight: activeSubTab === "categories" ? 800 : 700,
-                background: activeSubTab === "categories" ? "var(--sd-black)" : "transparent",
-                color: activeSubTab === "categories" ? "var(--sd-white)" : "var(--sd-zinc-600)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease",
-                boxShadow: activeSubTab === "categories" ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
-              }}
-            >
-              <Layers size={15} />
-              <span>Categories ({categories.length})</span>
             </button>
 
             <button
@@ -128,12 +104,8 @@ export default function MasterAssets({
       </div>
 
       {/* Sub-Views Content with DOM caching so images and inputs never reload */}
-      <div style={{ display: activeSubTab === "products" ? "block" : "none" }}>
-        <ProductsManager />
-      </div>
-
-      <div style={{ display: activeSubTab === "categories" ? "block" : "none" }}>
-        <CategoriesManager />
+      <div style={{ display: isProductsActive ? "block" : "none" }}>
+        <ProductsManager initialSubView={activeSubTab === "categories" ? "categories" : "products"} />
       </div>
 
       <div style={{ display: activeSubTab === "customers" ? "block" : "none" }}>

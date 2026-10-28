@@ -14,7 +14,7 @@ import {
   XCircle
 } from "lucide-react";
 
-export default function CategoriesManager() {
+export default function CategoriesManager({ isNested = false }) {
   const { 
     categories, 
     products, 
@@ -209,29 +209,31 @@ export default function CategoriesManager() {
   };
 
   return (
-    <div className="responsive-page-container">
+    <div className={isNested ? "" : "responsive-page-container"}>
       {/* Header Banner */}
       <div style={{
         display: "flex",
         flexWrap: "wrap",
-        justifyContent: "space-between",
+        justifyContent: isNested ? "flex-end" : "space-between",
         alignItems: "center",
-        gap: "16px",
-        marginBottom: "20px",
-        paddingBottom: "16px",
-        borderBottom: "1px solid var(--sd-zinc-200)"
+        gap: "14px",
+        marginBottom: "16px",
+        paddingBottom: isNested ? "0" : "16px",
+        borderBottom: isNested ? "none" : "1px solid var(--sd-zinc-200)"
       }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Layers size={22} color="var(--sd-black)" />
-            <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-              Main Categories & Subcategories
-            </h2>
+        {!isNested && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Layers size={22} color="var(--sd-black)" />
+              <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
+                Main Categories & Subcategories
+              </h2>
+            </div>
+            <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "4px" }}>
+              Manage master product categories and split them into subcategories for wholesale spot billing & ERP cataloging.
+            </p>
           </div>
-          <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "4px" }}>
-            Manage master product categories and split them into subcategories for wholesale spot billing & ERP cataloging.
-          </p>
-        </div>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           {/* Status quick tabs: All, Active, Inactive */}

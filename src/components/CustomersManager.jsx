@@ -494,11 +494,9 @@ export default function CustomersManager({ onStartBillForCustomer }) {
                 border: "1px solid var(--sd-zinc-200)",
                 cursor: "pointer",
                 display: "inline-flex",
-                alignItems: "center",
-                gap: "5px"
+                alignItems: "center"
               }}
             >
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: cat.color || "#2563EB" }} />
               <span>{cat.name} ({count})</span>
             </button>
           );
@@ -1428,7 +1426,6 @@ export default function CustomersManager({ onStartBillForCustomer }) {
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ width: 10, height: 10, borderRadius: "50%", background: cat.color || "#2563EB", flexShrink: 0 }} />
                             <div>
                               <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--sd-black)" }}>
                                 {cat.name}

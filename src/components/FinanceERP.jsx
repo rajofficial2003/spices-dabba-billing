@@ -72,10 +72,10 @@ const QUICK_SPICE_TEMPLATES = [
 
 export default function FinanceERP() {
   const { 
-    categories = [],
     orders = [], 
     expenses = [], 
     rawMaterials = [],
+    categories = [],
     expenseCategories = [],
     addRawMaterial,
     addExpense, 
@@ -225,7 +225,9 @@ export default function FinanceERP() {
   // OTHER EXPENSE FORM STATE
   // ==========================================
   const [otherExpenseData, setOtherExpenseData] = useState({
-    category: "Petrol & Fuel",
+    category: "",
+    categoryName: "",
+    subcategory: "",
     title: "",
     amount: "",
     date: new Date().toISOString().split("T")[0],
@@ -233,6 +235,11 @@ export default function FinanceERP() {
     paidTo: "",
     notes: ""
   });
+
+  const otherExpenseCategoryObj = categories.find(c => c.id === otherExpenseData.category || c.name === otherExpenseData.category);
+  const otherExpenseSubcategories = (otherExpenseCategoryObj?.subcategories || [])
+    .filter(s => typeof s === "string" || s.isActive !== false)
+    .map(s => typeof s === "string" ? s : s.name);
 
   // Proof Image Upload State (shared by both modals)
   const [selectedFile, setSelectedFile] = useState(null);
@@ -270,14 +277,10 @@ export default function FinanceERP() {
   const totalBillingIncome = completedOrders.reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0);
   
   // Raw Material Purchases vs Other Expenses (Date filtered)
-  const rawMaterialBills = dateFilteredExpenses.filter(e => 
-    e.expenseType === "raw_material" || (!e.expenseType && e.category === "Raw Materials")
-  );
+  const rawMaterialBills = dateFilteredExpenses.filter(e => e.expenseType === "raw_material" || e.category === "Raw Materials");
   const rawMaterialsTotal = rawMaterialBills.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   
-  const otherExpensesList = dateFilteredExpenses.filter(e => 
-    e.expenseType === "other" || (e.expenseType !== "raw_material" && e.category !== "Raw Materials")
-  );
+  const otherExpensesList = dateFilteredExpenses.filter(e => e.expenseType !== "raw_material" && e.category !== "Raw Materials");
   const otherExpensesTotal = otherExpensesList.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
   const totalAllExpenses = rawMaterialsTotal + otherExpensesTotal;
@@ -584,12 +587,14 @@ export default function FinanceERP() {
   const handleOpenOtherExpenseModal = () => {
     setEditingExpenseId(null);
     setExistingProofUrl(null);
-    const activeCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
-    const defaultCat = activeCats.length > 0 
-      ? activeCats[0].name 
-      : (expenseCategories.length > 0 ? expenseCategories[0].name : "Operational Expense");
+    const validCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
+    const defaultCat = validCats[0] || null;
+    const rawFirstSub = defaultCat?.subcategories?.[0];
+    const defaultSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
     setOtherExpenseData({
-      category: defaultCat,
+      category: defaultCat?.id || (defaultCat?.name || ""),
+      categoryName: defaultCat?.name || "",
+      subcategory: defaultSub,
       title: "",
       amount: "",
       date: new Date().toISOString().split("T")[0],
@@ -606,12 +611,12 @@ export default function FinanceERP() {
   const handleStartEditOtherExpense = (exp) => {
     setEditingExpenseId(exp.id);
     setExistingProofUrl(exp.proofUrl || null);
-    const activeCats = categories.filter(c => c.id !== "all" && c.isActive !== false);
-    const defaultCat = activeCats.length > 0 
-      ? activeCats[0].name 
-      : (expenseCategories[0]?.name || "Operational Expense");
+    const catObj = categories.find(c => c.id === exp.category || c.name === exp.category || c.id === exp.categoryId || c.name === exp.categoryName);
+    const subcatVal = typeof exp.subcategory === "string" ? exp.subcategory : (exp.subcategory?.name || "");
     setOtherExpenseData({
-      category: exp.category || defaultCat,
+      category: catObj ? catObj.id : (exp.category || ""),
+      categoryName: catObj ? catObj.name : (exp.categoryName || exp.category || ""),
+      subcategory: subcatVal,
       title: exp.title || "",
       amount: exp.amount || "",
       date: exp.date || new Date().toISOString().split("T")[0],
@@ -725,9 +730,18 @@ export default function FinanceERP() {
     setFormError("");
 
     try {
+      const catObj = categories.find(c => c.id === otherExpenseData.category || c.name === otherExpenseData.category);
+      const categoryName = catObj ? catObj.name : (otherExpenseData.categoryName || otherExpenseData.category || "General");
+      const subcategoryStr = typeof otherExpenseData.subcategory === "string"
+        ? otherExpenseData.subcategory.trim()
+        : (otherExpenseData.subcategory?.name || "");
+
       const payload = {
         expenseType: "other",
-        category: otherExpenseData.category,
+        category: categoryName,
+        categoryId: catObj ? catObj.id : otherExpenseData.category,
+        categoryName: categoryName,
+        subcategory: subcategoryStr,
         title: otherExpenseData.title.trim(),
         amount: Number(otherExpenseData.amount),
         date: otherExpenseData.date,
@@ -783,16 +797,13 @@ export default function FinanceERP() {
   });
 
   const filteredOtherExpenses = otherExpensesList.filter(exp => {
-    if (categoryFilter !== "all") {
-      const isDirectMatch = exp.category === categoryFilter;
-      const isSubMatch = exp.category?.startsWith(`${categoryFilter} - `);
-      if (!isDirectMatch && !isSubMatch) return false;
-    }
+    if (categoryFilter !== "all" && exp.category !== categoryFilter && exp.categoryName !== categoryFilter && exp.categoryId !== categoryFilter) return false;
     const q = searchQuery.toLowerCase();
     const titleMatch = (exp.title || "").toLowerCase().includes(q);
-    const catMatch = (exp.category || "").toLowerCase().includes(q);
+    const catMatch = (exp.category || "").toLowerCase().includes(q) || (exp.categoryName || "").toLowerCase().includes(q);
+    const subcatMatch = (typeof exp.subcategory === "string" ? exp.subcategory : (exp.subcategory?.name || "")).toLowerCase().includes(q);
     const paidToMatch = (exp.paidTo || "").toLowerCase().includes(q);
-    return titleMatch || catMatch || paidToMatch;
+    return titleMatch || catMatch || subcatMatch || paidToMatch;
   });
 
   return (
@@ -1509,49 +1520,51 @@ export default function FinanceERP() {
                 All Categories ({otherExpensesList.length})
               </button>
 
-              {/* Dynamic Filter Pills: Main categories, operational categories, and recorded expense categories */}
-              {[
-                ...categories
-                  .filter(c => c.id !== "all" && c.isActive !== false)
-                  .map(c => ({ id: c.id, name: c.name, color: "var(--sd-red)" })),
-                ...expenseCategories.filter(ec => !categories.some(c => c.name === ec.name)),
-                ...Array.from(new Set(otherExpensesList.map(e => e.category).filter(Boolean)))
-                  .filter(catName => 
-                    !categories.some(c => c.name === catName) &&
-                    !expenseCategories.some(ec => ec.name === catName) &&
-                    !categories.some(c => (c.subcategories || []).some(s => `${c.name} - ${typeof s === "string" ? s : s.name}` === catName))
-                  )
-                  .map(catName => ({ id: catName, name: catName, color: "#6366F1" }))
-              ].map((cat) => {
-                const count = otherExpensesList.filter(e => 
-                  e.category === cat.name || e.category?.startsWith(`${cat.name} - `)
-                ).length;
-                const isSelected = categoryFilter === cat.name;
+              {(() => {
+                const pillCats = [];
+                const seen = new Set();
+                categories.filter(c => c.id !== "all" && c.isActive !== false).forEach(c => {
+                  if (!seen.has(c.name)) {
+                    seen.add(c.name);
+                    pillCats.push({ key: c.id, name: c.name, color: c.color });
+                  }
+                });
+                otherExpensesList.forEach(e => {
+                  const n = e.categoryName || e.category;
+                  if (n && !seen.has(n)) {
+                    seen.add(n);
+                    pillCats.push({ key: n, name: n });
+                  }
+                });
+                return pillCats.map((cat) => {
+                  const count = otherExpensesList.filter(e => (e.category === cat.name || e.categoryName === cat.name || e.categoryId === cat.key)).length;
+                  const isSelected = categoryFilter === cat.name || categoryFilter === cat.key;
 
-                return (
-                  <button
-                    key={cat.id || cat.name}
-                    type="button"
-                    onClick={() => setCategoryFilter(cat.name)}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "20px",
-                      fontSize: "0.78rem",
-                      fontWeight: isSelected ? 800 : 600,
-                      background: isSelected ? "var(--sd-black)" : "#FFFFFF",
-                      color: isSelected ? "#FFFFFF" : "var(--sd-zinc-700)",
-                      border: "1px solid var(--sd-zinc-200)",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px"
-                    }}
-                  >
-                    <Tag size={12} color={isSelected ? "#FFFFFF" : (cat.color || "var(--sd-red)")} />
-                    <span>{cat.name} ({count})</span>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setCategoryFilter(isSelected ? "all" : cat.name)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "20px",
+                        fontSize: "0.78rem",
+                        fontWeight: isSelected ? 800 : 600,
+                        background: isSelected ? "var(--sd-black)" : "#FFFFFF",
+                        color: isSelected ? "#FFFFFF" : "var(--sd-zinc-700)",
+                        border: "1px solid var(--sd-zinc-200)",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px"
+                      }}
+                    >
+                      <Tag size={12} color={isSelected ? "#FFFFFF" : (cat.color || "var(--sd-red)")} />
+                      <span>{cat.name} ({count})</span>
+                    </button>
+                  );
+                });
+              })()}
             </div>
 
             {/* Dynamic Category Management Trigger */}
@@ -1658,8 +1671,21 @@ export default function FinanceERP() {
                             padding: "2px 8px",
                             borderRadius: "6px"
                           }}>
-                            {exp.category}
+                            {exp.categoryName || exp.category}
                           </span>
+                          {exp.subcategory && (
+                            <span style={{
+                              background: "#EFF6FF",
+                              color: "#1E40AF",
+                              border: "1px solid #BFDBFE",
+                              fontSize: "0.70rem",
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: "6px"
+                            }}>
+                              {typeof exp.subcategory === "string" ? exp.subcategory : exp.subcategory?.name}
+                            </span>
+                          )}
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px", fontSize: "0.75rem", color: "var(--sd-zinc-500)", flexWrap: "wrap" }}>
@@ -2782,93 +2808,91 @@ export default function FinanceERP() {
               )}
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)" }}>
-                      Expense Category *
+                {/* Category & Subcategory Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
+                      Category *
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowCategoryManagerModal(true)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "var(--sd-red)",
-                        fontSize: "0.72rem",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        padding: "0",
-                        textDecoration: "underline"
+                    <select
+                      value={otherExpenseData.category}
+                      onChange={(e) => {
+                        const newCatVal = e.target.value;
+                        const catObj = categories.find(c => c.id === newCatVal || c.name === newCatVal);
+                        const rawFirstSub = catObj?.subcategories?.[0];
+                        const firstSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
+                        setOtherExpenseData({
+                          ...otherExpenseData,
+                          category: newCatVal,
+                          categoryName: catObj?.name || newCatVal,
+                          subcategory: firstSub
+                        });
                       }}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--sd-zinc-300)",
+                        fontSize: "0.85rem",
+                        background: "#FFFFFF",
+                        outline: "none"
+                      }}
+                      required
                     >
-                      + Manage Categories
-                    </button>
+                      <option value="" disabled>-- Select Category --</option>
+                      {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} {cat.tamilName ? `(${cat.tamilName})` : ''}
+                        </option>
+                      ))}
+                      {otherExpenseData.category && !categories.some(c => c.id === otherExpenseData.category || c.name === otherExpenseData.category) && (
+                        <option value={otherExpenseData.category}>
+                          {otherExpenseData.categoryName || otherExpenseData.category}
+                        </option>
+                      )}
+                    </select>
                   </div>
 
-                  <select
-                    value={otherExpenseData.category}
-                    onChange={(e) => {
-                      if (e.target.value === "__NEW_CAT__") {
-                        setShowCategoryManagerModal(true);
-                      } else {
-                        setOtherExpenseData({ ...otherExpenseData, category: e.target.value });
-                      }
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "9px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--sd-zinc-300)",
-                      fontSize: "0.85rem",
-                      background: "#FFFFFF",
-                      outline: "none"
-                    }}
-                  >
-                    {/* System Categories with Subcategories */}
-                    {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => {
-                      const activeSubs = (cat.subcategories || [])
-                        .filter(s => typeof s === "string" || s.isActive !== false)
-                        .map(s => typeof s === "string" ? s : s.name)
-                        .filter(Boolean);
-
-                      return (
-                        <optgroup 
-                          key={cat.id || cat.name} 
-                          label={`${cat.name}${cat.tamilName ? ` (${cat.tamilName})` : ''}`}
-                        >
-                          <option value={cat.name}>
-                            {cat.name} (Main Category)
-                          </option>
-                          {activeSubs.map(subName => (
-                            <option key={`${cat.id || cat.name}-${subName}`} value={`${cat.name} - ${subName}`}>
-                              ↳ {subName}
-                            </option>
-                          ))}
-                        </optgroup>
-                      );
-                    })}
-
-                    {/* Operational Categories */}
-                    {expenseCategories.length > 0 && (
-                      <optgroup label="Operational & Overhead Categories">
-                        {expenseCategories.map(c => (
-                          <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
+                      Subcategory
+                    </label>
+                    {otherExpenseSubcategories.length > 0 ? (
+                      <select
+                        value={typeof otherExpenseData.subcategory === "string" ? otherExpenseData.subcategory : (otherExpenseData.subcategory?.name || "")}
+                        onChange={(e) => setOtherExpenseData({ ...otherExpenseData, subcategory: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "9px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--sd-zinc-300)",
+                          fontSize: "0.85rem",
+                          background: "#FFFFFF",
+                          outline: "none"
+                        }}
+                      >
+                        <option value="">-- Select Subcategory --</option>
+                        {otherExpenseSubcategories.map(s => (
+                          <option key={s} value={s}>{s}</option>
                         ))}
-                      </optgroup>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="e.g. Whole Spices, Packing..."
+                        value={typeof otherExpenseData.subcategory === "string" ? otherExpenseData.subcategory : (otherExpenseData.subcategory?.name || "")}
+                        onChange={(e) => setOtherExpenseData({ ...otherExpenseData, subcategory: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "9px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--sd-zinc-300)",
+                          fontSize: "0.85rem",
+                          outline: "none"
+                        }}
+                      />
                     )}
-
-                    {/* Fallback if current category isn't in lists */}
-                    {otherExpenseData.category && 
-                      !categories.some(c => c.name === otherExpenseData.category) &&
-                      !categories.some(c => (c.subcategories || []).some(s => `${c.name} - ${typeof s === "string" ? s : s.name}` === otherExpenseData.category || (typeof s === "string" ? s : s.name) === otherExpenseData.category)) &&
-                      !expenseCategories.some(c => c.name === otherExpenseData.category) && (
-                        <option value={otherExpenseData.category}>{otherExpenseData.category}</option>
-                    )}
-
-                    <option value="__NEW_CAT__" style={{ fontWeight: 800, color: "var(--sd-red)" }}>
-                      + Add New Category...
-                    </option>
-                  </select>
+                  </div>
                 </div>
 
                 <div>

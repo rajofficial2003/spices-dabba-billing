@@ -41,6 +41,8 @@ export default function SuppliersManager({ subViewToggle = null }) {
     gstin: "",
     address: "",
     city: "Theni",
+    state: "Tamil Nadu",
+    pincode: "",
     notes: "",
     isActive: true
   };
@@ -61,8 +63,10 @@ export default function SuppliersManager({ subViewToggle = null }) {
       contactPerson: sup.contactPerson || "",
       phone: sup.phone || "",
       gstin: sup.gstin || "",
-      address: sup.address || "",
-      city: sup.city || "",
+      address: sup.address || (typeof sup.billingAddress === 'object' ? sup.billingAddress.address : "") || "",
+      city: sup.city || (typeof sup.billingAddress === 'object' ? sup.billingAddress.city : "Theni") || "Theni",
+      state: sup.state || (typeof sup.billingAddress === 'object' ? sup.billingAddress.state : "Tamil Nadu") || "Tamil Nadu",
+      pincode: sup.pincode || (typeof sup.billingAddress === 'object' ? sup.billingAddress.pincode : "") || "",
       notes: sup.notes || "",
       isActive: sup.isActive !== false
     });
@@ -106,6 +110,8 @@ export default function SuppliersManager({ subViewToggle = null }) {
         gstin: formData.gstin.trim().toUpperCase(),
         address: formData.address.trim(),
         city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim(),
         notes: formData.notes.trim(),
         isActive: formData.isActive !== false
       };
@@ -145,6 +151,8 @@ export default function SuppliersManager({ subViewToggle = null }) {
            (s.contactPerson && s.contactPerson.toLowerCase().includes(q)) ||
            (s.phone && s.phone.includes(q)) ||
            (s.city && s.city.toLowerCase().includes(q)) ||
+           (s.state && s.state.toLowerCase().includes(q)) ||
+           (s.pincode && s.pincode.includes(q)) ||
            (s.gstin && s.gstin.toLowerCase().includes(q)) ||
            (s.address && s.address.toLowerCase().includes(q));
   });
@@ -369,11 +377,11 @@ export default function SuppliersManager({ subViewToggle = null }) {
                   )}
 
                   {/* Location / Address */}
-                  {(sup.address || sup.city) && (
+                  {(sup.address || sup.city || sup.state || sup.pincode) && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "6px", fontSize: "0.76rem" }}>
                       <MapPin size={13} style={{ color: "var(--sd-zinc-400)", flexShrink: 0, marginTop: "2px" }} />
                       <span style={{ color: "var(--sd-zinc-700)" }}>
-                        {[sup.address, sup.city].filter(Boolean).join(", ")}
+                        {[sup.address, sup.city, sup.state, sup.pincode ? `PIN: ${sup.pincode}` : null].filter(Boolean).join(", ")}
                       </span>
                     </div>
                   )}
@@ -559,41 +567,88 @@ export default function SuppliersManager({ subViewToggle = null }) {
                   </div>
                 </div>
 
-                {/* GSTIN & City */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div>
-                    <label className="input-label">GSTIN (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 33AAAAA0000A1Z5"
-                      value={formData.gstin}
-                      onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                      className="text-input"
-                      maxLength={15}
-                    />
-                  </div>
-                  <div>
-                    <label className="input-label">City / Mandi Yard</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Bodinayakanur / Theni"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="text-input"
-                    />
-                  </div>
+                {/* GSTIN */}
+                <div>
+                  <label className="input-label">GSTIN (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 33AAAAA0000A1Z5"
+                    value={formData.gstin}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    className="text-input"
+                    maxLength={15}
+                  />
                 </div>
 
-                {/* Address */}
-                <div>
-                  <label className="input-label">Address (Optional)</label>
-                  <textarea
-                    rows="2"
-                    placeholder="e.g. Bazaar Street, Spices Yard"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="text-input"
-                  />
+                {/* Address Section - Matching Register Customer Form */}
+                <div style={{
+                  background: "var(--sd-zinc-50)",
+                  border: "1px solid var(--sd-zinc-200)",
+                  borderRadius: "12px",
+                  padding: "14px",
+                  marginTop: "2px"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+                    <Building2 size={16} color="var(--sd-black)" />
+                    <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-black)" }}>
+                      Address
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: "8px" }}>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
+                      Address (Street / Door No / Area)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 12, Bazaar Street, Spices Yard"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="text-input"
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Theni"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="text-input"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
+                        State
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Tamil Nadu"
+                        value={formData.state}
+                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                        className="text-input"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
+                        Pincode
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 625513"
+                        value={formData.pincode}
+                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                        className="text-input"
+                        maxLength={6}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Notes */}

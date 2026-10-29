@@ -13,17 +13,10 @@ import {
   AlertCircle, 
   Sparkles, 
   Calculator, 
-  ChevronRight, 
-  Info, 
   X, 
-  Layers, 
   Boxes, 
-  FileText, 
-  Flame, 
-  ArrowUpDown, 
   Check 
 } from "lucide-react";
-import { formatCurrency } from "../utils/formatters";
 
 export default function MixersManager() {
   const { 
@@ -77,17 +70,6 @@ export default function MixersManager() {
     });
     return map;
   }, [rawMaterials]);
-
-  // Calculate 1 KG Raw Material Cost for a mixer
-  const calculateMixerCost = (mixer) => {
-    if (!mixer || !mixer.ingredients) return 0;
-    return mixer.ingredients.reduce((total, ing) => {
-      const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
-      const rate = Number(rm?.standardRate) || 0;
-      const cost = ((Number(ing.grams) || 0) / 1000) * rate;
-      return total + cost;
-    }, 0);
-  };
 
   // Open Form for New Mixer
   const handleOpenNew = () => {
@@ -351,35 +333,30 @@ export default function MixersManager() {
     });
   }, [mixers, searchQuery, filterMode]);
 
-  // Overall Statistics
+  // Overall Statistics (Operational recipe metrics without any price/cost data)
   const stats = useMemo(() => {
     const totalCount = mixers.length;
     let balancedCount = 0;
-    let totalCostSum = 0;
+    let totalIngredientsUsed = 0;
 
     mixers.forEach(m => {
       const grams = (m.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0);
       if (grams === 1000) balancedCount++;
-      totalCostSum += calculateMixerCost(m);
+      totalIngredientsUsed += (m.ingredients?.length || 0);
     });
 
-    const avgCost = totalCount > 0 ? (totalCostSum / totalCount) : 0;
+    const avgIngredients = totalCount > 0 ? (totalIngredientsUsed / totalCount).toFixed(1) : 0;
 
     return {
       totalCount,
       balancedCount,
       rawMaterialsCount: rawMaterials.length,
-      avgCost
+      avgIngredients
     };
-  }, [mixers, rawMaterials, rawMaterialsMap]);
+  }, [mixers, rawMaterials]);
 
-  // Form Current Total Grams and Cost
+  // Form Current Total Grams
   const formTotalGrams = formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0);
-  const formCost1Kg = formData.ingredients.reduce((total, ing) => {
-    const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
-    const rate = Number(rm?.standardRate) || 0;
-    return total + ((Number(ing.grams) || 0) / 1000) * rate;
-  }, 0);
 
   return (
     <div className="responsive-page-container" style={{ paddingBottom: "60px" }}>
@@ -467,7 +444,7 @@ export default function MixersManager() {
         </button>
       </div>
 
-      {/* Stats Cards Row */}
+      {/* Stats Cards Row (Operational formulation metrics only) */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
@@ -505,7 +482,7 @@ export default function MixersManager() {
           <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#10B981", marginTop: "4px" }}>
             {stats.balancedCount} / {stats.totalCount}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Exact 1 KG batch recipes</span>
+          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Exact 1.000 KG formulations</span>
         </div>
 
         <div style={{
@@ -533,13 +510,13 @@ export default function MixersManager() {
           boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Avg 1 KG Raw Cost</span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Formula Base</span>
             <Scale size={16} color="#8B5CF6" />
           </div>
           <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--sd-black)", marginTop: "4px" }}>
-            {formatCurrency(stats.avgCost)}
+            1.000 KG
           </div>
-          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Based on catalog rates</span>
+          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Avg {stats.avgIngredients} spices per mix</span>
         </div>
       </div>
 
@@ -692,7 +669,6 @@ export default function MixersManager() {
           {filteredMixers.map(mixer => {
             const totalGrams = (mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0);
             const isBalanced = totalGrams === 1000;
-            const cost1Kg = calculateMixerCost(mixer);
 
             return (
               <div 
@@ -749,7 +725,7 @@ export default function MixersManager() {
                   )}
                 </div>
 
-                {/* 1 KG Base Badge & Cost Tag */}
+                {/* 1 KG Standard Base Formulation Tag */}
                 <div style={{
                   background: "var(--sd-zinc-50)",
                   border: "1px solid var(--sd-zinc-200)",
@@ -761,19 +737,19 @@ export default function MixersManager() {
                 }}>
                   <div>
                     <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>
-                      Standard Formulation
+                      Standard Formulation Base
                     </div>
                     <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--sd-black)" }}>
-                      1.000 KG (1000g)
+                      1.000 KG (1000 Grams)
                     </div>
                   </div>
 
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>
-                      Raw Spice Cost / 1KG
+                      Raw Spices
                     </div>
-                    <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--sd-red)" }}>
-                      {formatCurrency(cost1Kg)}
+                    <div style={{ fontSize: "0.88rem", fontWeight: 900, color: "var(--sd-black)" }}>
+                      {mixer.ingredients?.length || 0} Ingredients
                     </div>
                   </div>
                 </div>
@@ -797,53 +773,47 @@ export default function MixersManager() {
                     borderRadius: "8px",
                     background: "#FAFAFA"
                   }}>
-                    {(mixer.ingredients || []).map((ing, idx) => {
-                      const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
-                      const rate = Number(rm?.standardRate) || 0;
-                      const cost = ((Number(ing.grams) || 0) / 1000) * rate;
-
-                      return (
-                        <div 
-                          key={idx}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "6px 10px",
-                            borderBottom: idx === mixer.ingredients.length - 1 ? "none" : "1px solid var(--sd-zinc-100)",
-                            fontSize: "0.75rem"
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
-                            <span style={{
-                              width: "6px",
-                              height: "6px",
-                              borderRadius: "50%",
-                              background: idx % 3 === 0 ? "var(--sd-red)" : idx % 3 === 1 ? "#3B82F6" : "#10B981"
-                            }} />
-                            <span style={{ fontWeight: 600, color: "var(--sd-black)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {ing.rawMaterialName}
-                            </span>
-                          </div>
-
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                            <span style={{ fontWeight: 700, color: "var(--sd-zinc-800)" }}>
-                              {ing.grams}g
-                            </span>
-                            <span style={{
-                              background: "rgba(0,0,0,0.06)",
-                              padding: "1px 6px",
-                              borderRadius: "4px",
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              color: "var(--sd-zinc-700)"
-                            }}>
-                              {ing.percentage || ((ing.grams / 10).toFixed(1))}%
-                            </span>
-                          </div>
+                    {(mixer.ingredients || []).map((ing, idx) => (
+                      <div 
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "6px 10px",
+                          borderBottom: idx === mixer.ingredients.length - 1 ? "none" : "1px solid var(--sd-zinc-100)",
+                          fontSize: "0.75rem"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+                          <span style={{
+                            width: "6px",
+                            height: "6px",
+                            borderRadius: "50%",
+                            background: idx % 3 === 0 ? "var(--sd-red)" : idx % 3 === 1 ? "#3B82F6" : "#10B981"
+                          }} />
+                          <span style={{ fontWeight: 600, color: "var(--sd-black)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {ing.rawMaterialName}
+                          </span>
                         </div>
-                      );
-                    })}
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                          <span style={{ fontWeight: 700, color: "var(--sd-zinc-800)" }}>
+                            {ing.grams}g
+                          </span>
+                          <span style={{
+                            background: "rgba(0,0,0,0.06)",
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            color: "var(--sd-zinc-700)"
+                          }}>
+                            {ing.percentage || ((ing.grams / 10).toFixed(1))}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1194,13 +1164,13 @@ export default function MixersManager() {
                       <option value="">-- Choose Raw Material to Add --</option>
                       {rawMaterials.map(rm => (
                         <option key={rm.id} value={rm.id}>
-                          {rm.name} {rm.tamilName ? `(${rm.tamilName})` : ""} - ₹{rm.standardRate || 0}/Kg
+                          {rm.name} {rm.tamilName ? `(${rm.tamilName})` : ""}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div style={{ width: "110px" }}>
+                  <div style={{ width: "120px" }}>
                     <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "3px" }}>
                       Grams (for 1KG)
                     </label>
@@ -1243,7 +1213,7 @@ export default function MixersManager() {
                   </button>
                 </div>
 
-                {/* Added Ingredients Table */}
+                {/* Added Ingredients Table (Without any rates or prices) */}
                 {formData.ingredients.length === 0 ? (
                   <div style={{
                     padding: "24px",
@@ -1264,19 +1234,15 @@ export default function MixersManager() {
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                       <thead>
                         <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "1px solid var(--sd-zinc-200)", textAlign: "left" }}>
-                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material</th>
-                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "90px" }}>Rate / Kg</th>
-                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "100px" }}>Grams (g)</th>
-                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "70px" }}>Ratio %</th>
-                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "90px" }}>Cost (₹)</th>
+                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material Spice</th>
+                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "120px" }}>Weight in Grams</th>
+                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "90px" }}>Ratio %</th>
                           <th style={{ padding: "8px 10px", textAlign: "center", width: "40px" }}></th>
                         </tr>
                       </thead>
                       <tbody>
                         {formData.ingredients.map((ing, idx) => {
                           const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
-                          const rate = Number(rm?.standardRate) || 0;
-                          const cost = ((Number(ing.grams) || 0) / 1000) * rate;
 
                           return (
                             <tr key={idx} style={{ borderBottom: "1px solid var(--sd-zinc-150)" }}>
@@ -1289,35 +1255,30 @@ export default function MixersManager() {
                                 )}
                               </td>
 
-                              <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-zinc-600)" }}>
-                                ₹{rate}
-                              </td>
-
                               <td style={{ padding: "8px 10px", textAlign: "right" }}>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="1"
-                                  value={ing.grams}
-                                  onChange={(e) => handleUpdateIngredientGrams(idx, e.target.value)}
-                                  style={{
-                                    width: "80px",
-                                    padding: "4px 6px",
-                                    borderRadius: "6px",
-                                    border: "1px solid var(--sd-zinc-300)",
-                                    fontSize: "0.78rem",
-                                    textAlign: "right",
-                                    fontWeight: 700
-                                  }}
-                                />
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={ing.grams}
+                                    onChange={(e) => handleUpdateIngredientGrams(idx, e.target.value)}
+                                    style={{
+                                      width: "75px",
+                                      padding: "4px 6px",
+                                      borderRadius: "6px",
+                                      border: "1px solid var(--sd-zinc-300)",
+                                      fontSize: "0.78rem",
+                                      textAlign: "right",
+                                      fontWeight: 700
+                                    }}
+                                  />
+                                  <span style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", fontWeight: 700 }}>g</span>
+                                </div>
                               </td>
 
-                              <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, color: "var(--sd-zinc-700)" }}>
+                              <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 800, color: "var(--sd-zinc-800)" }}>
                                 {ing.percentage}%
-                              </td>
-
-                              <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 800, color: "var(--sd-black)" }}>
-                                ₹{cost.toFixed(2)}
                               </td>
 
                               <td style={{ padding: "8px 10px", textAlign: "center" }}>
@@ -1342,16 +1303,12 @@ export default function MixersManager() {
                       </tbody>
                       <tfoot>
                         <tr style={{ background: "var(--sd-zinc-50)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-200)" }}>
-                          <td style={{ padding: "8px 10px", color: "var(--sd-black)" }}>Total 1 KG Base</td>
-                          <td style={{ padding: "8px 10px" }}></td>
+                          <td style={{ padding: "8px 10px", color: "var(--sd-black)" }}>Total 1 KG Base Formulation</td>
                           <td style={{ padding: "8px 10px", textAlign: "right", color: formTotalGrams === 1000 ? "#059669" : "#DC2626" }}>
                             {formTotalGrams}g
                           </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right" }}>
+                          <td style={{ padding: "8px 10px", textAlign: "right", color: formTotalGrams === 1000 ? "#059669" : "#DC2626" }}>
                             {((formTotalGrams / 1000) * 100).toFixed(1)}%
-                          </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-red)" }}>
-                            ₹{formCost1Kg.toFixed(2)}
                           </td>
                           <td></td>
                         </tr>
@@ -1514,7 +1471,7 @@ export default function MixersManager() {
               </div>
             </div>
 
-            {/* Modal Body / Printable Grinding Slip */}
+            {/* Modal Body / Printable Grinding Slip (Zero Price Mentions) */}
             <div style={{ overflowY: "auto", padding: "20px", flex: 1 }} className="printable-grinding-slip">
               {/* Batch Size Selector Controls (No-Print) */}
               <div className="no-print" style={{
@@ -1616,27 +1573,24 @@ export default function MixersManager() {
                 </div>
               </div>
 
-              {/* Scaled Ingredients Table */}
+              {/* Scaled Ingredients Table (No Prices/Rates/Costs) */}
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", marginBottom: "16px" }}>
                 <thead>
                   <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "2px solid var(--sd-zinc-300)", textAlign: "left" }}>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>#</th>
+                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "35px" }}>#</th>
                     <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material Spice</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "100px" }}>1 KG Ratio</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "130px" }}>Batch Weight Req.</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "100px" }}>Batch Cost</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "center", width: "70px" }}>Checked</th>
+                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "120px" }}>1 KG Ratio</th>
+                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "160px" }}>Batch Weight Required</th>
+                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "center", width: "80px" }}>Checked</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(scalerMixer.ingredients || []).map((ing, idx) => {
                     const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
-                    const rate = Number(rm?.standardRate) || 0;
                     
                     // Scaled weight
                     const scaledGrams = (Number(ing.grams) || 0) * batchKg;
                     const scaledKg = scaledGrams / 1000;
-                    const itemBatchCost = scaledKg * rate;
 
                     return (
                       <tr key={idx} style={{ borderBottom: "1px solid var(--sd-zinc-200)" }}>
@@ -1652,19 +1606,16 @@ export default function MixersManager() {
                         <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-zinc-600)" }}>
                           {ing.grams}g ({ing.percentage}%)
                         </td>
-                        <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 900, color: "var(--sd-black)", fontSize: "0.85rem" }}>
+                        <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 900, color: "var(--sd-black)", fontSize: "0.9rem" }}>
                           {scaledKg >= 1 ? `${scaledKg.toFixed(3)} KG` : `${scaledGrams}g`}
-                        </td>
-                        <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, color: "var(--sd-zinc-700)" }}>
-                          ₹{itemBatchCost.toFixed(2)}
                         </td>
                         <td style={{ padding: "8px 10px", textAlign: "center" }}>
                           <span style={{
                             display: "inline-block",
-                            width: "14px",
-                            height: "14px",
-                            border: "1px solid var(--sd-zinc-400)",
-                            borderRadius: "3px"
+                            width: "16px",
+                            height: "16px",
+                            border: "1.5px solid var(--sd-zinc-400)",
+                            borderRadius: "4px"
                           }} />
                         </td>
                       </tr>
@@ -1674,24 +1625,18 @@ export default function MixersManager() {
                 <tfoot>
                   {(() => {
                     const totalBatchGrams = (scalerMixer.ingredients || []).reduce((s, i) => s + ((Number(i.grams) || 0) * batchKg), 0);
-                    const totalBatchCost = (scalerMixer.ingredients || []).reduce((total, ing) => {
-                      const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
-                      const rate = Number(rm?.standardRate) || 0;
-                      return total + ((Number(ing.grams) || 0) * batchKg / 1000) * rate;
-                    }, 0);
 
                     return (
                       <tr style={{ background: "var(--sd-zinc-100)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-400)" }}>
                         <td colSpan={3} style={{ padding: "10px", color: "var(--sd-black)" }}>
                           TOTAL BATCH OUTPUT ({batchKg} KG BATCH)
                         </td>
-                        <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-black)", fontSize: "0.95rem" }}>
+                        <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-black)", fontSize: "1rem" }}>
                           {(totalBatchGrams / 1000).toFixed(3)} KG
                         </td>
-                        <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-red)", fontSize: "0.95rem" }}>
-                          ₹{totalBatchCost.toFixed(2)}
+                        <td style={{ padding: "10px", textAlign: "center", color: "#059669", fontSize: "0.75rem" }}>
+                          VERIFIED
                         </td>
-                        <td></td>
                       </tr>
                     );
                   })()}

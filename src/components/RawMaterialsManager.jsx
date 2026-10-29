@@ -473,14 +473,14 @@ export default function RawMaterialsManager() {
                     gap: "5px",
                     fontSize: "0.75rem",
                     fontWeight: 800,
-                    color: "#9A3412",
+                    color: "#6B1414",
                     background: "#FFEDD5",
                     padding: "4px 10px",
                     borderRadius: "6px",
                     border: "1px solid #FED7AA",
                     fontFamily: "monospace"
                   }}>
-                    <Hash size={13} color="#9A3412" />
+                    <Hash size={13} color="#6B1414" />
                     <span>HSN: <strong>{rm.hsnCode || "0910 91 00"}</strong></span>
                   </div>
 
@@ -690,7 +690,7 @@ export default function RawMaterialsManager() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 900, color: "#9A3412", marginBottom: "4px" }}>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 900, color: "#6B1414", marginBottom: "4px" }}>
                       HSN Code (GST Compliance) *
                     </label>
                     <input

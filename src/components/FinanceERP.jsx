@@ -840,7 +840,7 @@ export default function FinanceERP() {
               type="button"
               onClick={handleOpenRawMaterialModal}
               style={{
-                background: "#9A3412",
+                background: "#6B1414",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "10px",
@@ -851,7 +851,7 @@ export default function FinanceERP() {
                 alignItems: "center",
                 gap: "7px",
                 cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(154,52,18,0.25)"
+                boxShadow: "0 2px 8px rgba(107,20,20,0.25)"
               }}
             >
               <Boxes size={16} />
@@ -921,14 +921,14 @@ export default function FinanceERP() {
             boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#9A3412", textTransform: "uppercase" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#6B1414", textTransform: "uppercase" }}>
                 Raw Materials Procured
               </span>
               <div style={{ background: "#FFEDD5", color: "#C2410C", padding: "6px", borderRadius: "8px" }}>
                 <Boxes size={16} />
               </div>
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#9A3412", marginTop: "8px" }}>
+            <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#6B1414", marginTop: "8px" }}>
               {formatCurrency(rawMaterialsTotal)}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)", marginTop: "4px" }}>
@@ -1062,7 +1062,7 @@ export default function FinanceERP() {
             <span style={{
               fontSize: "0.75rem",
               fontWeight: 800,
-              color: "#9A3412",
+              color: "#6B1414",
               background: "#FFF7ED",
               border: "1px solid #FFEDD5",
               borderRadius: "8px",
@@ -1103,7 +1103,7 @@ export default function FinanceERP() {
               borderRadius: "9px",
               fontSize: "0.84rem",
               fontWeight: activeSection === "raw_materials" ? 800 : 700,
-              background: activeSection === "raw_materials" ? "#9A3412" : "transparent",
+              background: activeSection === "raw_materials" ? "#6B1414" : "transparent",
               color: activeSection === "raw_materials" ? "#FFFFFF" : "var(--sd-zinc-600)",
               border: "none",
               cursor: "pointer",
@@ -1111,7 +1111,7 @@ export default function FinanceERP() {
               alignItems: "center",
               gap: "7px",
               transition: "all 0.15s ease",
-              boxShadow: activeSection === "raw_materials" ? "0 2px 6px rgba(154,52,18,0.3)" : "none"
+              boxShadow: activeSection === "raw_materials" ? "0 2px 6px rgba(107,20,20,0.3)" : "none"
             }}
           >
             <Boxes size={16} />
@@ -1176,7 +1176,7 @@ export default function FinanceERP() {
               padding: "50px 20px",
               textAlign: "center"
             }}>
-              <Boxes size={42} color="#9A3412" style={{ margin: "0 auto 12px auto" }} />
+              <Boxes size={42} color="#6B1414" style={{ margin: "0 auto 12px auto" }} />
               <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
                 {searchQuery ? "No matching raw material purchase bills found" : "No Raw Material Purchases Recorded"}
               </h3>
@@ -1187,7 +1187,7 @@ export default function FinanceERP() {
                 type="button"
                 onClick={handleOpenRawMaterialModal}
                 style={{
-                  background: "#9A3412",
+                  background: "#6B1414",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "10px",
@@ -1232,7 +1232,7 @@ export default function FinanceERP() {
                           height: "44px",
                           borderRadius: "10px",
                           background: "#FFEDD5",
-                          color: "#9A3412",
+                          color: "#6B1414",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1287,7 +1287,7 @@ export default function FinanceERP() {
                           <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)", display: "block" }}>
                             Bill Total
                           </span>
-                          <span style={{ fontSize: "1.25rem", fontWeight: 900, color: "#9A3412" }}>
+                          <span style={{ fontSize: "1.25rem", fontWeight: 900, color: "#6B1414" }}>
                             {formatCurrency(bill.amount)}
                           </span>
                         </div>
@@ -1443,7 +1443,7 @@ export default function FinanceERP() {
                                   <td style={{ padding: "8px", fontWeight: 700, color: "var(--sd-black)" }}>
                                     {itm.name}
                                   </td>
-                                  <td style={{ padding: "8px", fontFamily: "monospace", color: "#9A3412", fontWeight: 800 }}>
+                                  <td style={{ padding: "8px", fontFamily: "monospace", color: "#6B1414", fontWeight: 800 }}>
                                     {itm.hsnCode || "0910 91 00"}
                                   </td>
                                   <td style={{ padding: "8px", color: "var(--sd-zinc-700)" }}>
@@ -1452,7 +1452,7 @@ export default function FinanceERP() {
                                   <td style={{ padding: "8px", color: "var(--sd-zinc-700)" }}>
                                     {formatCurrency(itm.unitPrice)} / {itm.unit || "Kg"}
                                   </td>
-                                  <td style={{ padding: "8px", textAlign: "right", fontWeight: 800, color: "#9A3412" }}>
+                                  <td style={{ padding: "8px", textAlign: "right", fontWeight: 800, color: "#6B1414" }}>
                                     {formatCurrency(itm.total || (itm.quantity * itm.unitPrice))}
                                   </td>
                                 </tr>
@@ -1836,8 +1836,8 @@ export default function FinanceERP() {
             }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Boxes size={20} color="#9A3412" />
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 900, color: "#9A3412", margin: 0 }}>
+                  <Boxes size={20} color="#6B1414" />
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 900, color: "#6B1414", margin: 0 }}>
                     {editingExpenseId ? "Edit Raw Material Purchase Bill" : "Record Raw Material Purchase Bill"}
                   </h3>
                 </div>
@@ -1906,7 +1906,7 @@ export default function FinanceERP() {
                     onClick={handleSeedStandardSpices}
                     disabled={isSubmitting}
                     style={{
-                      background: "#9A3412",
+                      background: "#6B1414",
                       color: "#FFFFFF",
                       border: "none",
                       padding: "6px 12px",
@@ -2057,7 +2057,7 @@ export default function FinanceERP() {
                     onClick={handleAddRawItemRow}
                     style={{
                       background: "#FFEDD5",
-                      color: "#9A3412",
+                      color: "#6B1414",
                       border: "1px solid #FED7AA",
                       borderRadius: "8px",
                       padding: "5px 12px",
@@ -2108,7 +2108,7 @@ export default function FinanceERP() {
                               style={{
                                 background: "transparent",
                                 border: "none",
-                                color: "#9A3412",
+                                color: "#6B1414",
                                 fontSize: "0.7rem",
                                 fontWeight: 800,
                                 cursor: "pointer",
@@ -2148,7 +2148,7 @@ export default function FinanceERP() {
                                 {rm.name} {rm.tamilName ? `(${rm.tamilName})` : ""} - HSN: {rm.hsnCode || "0910"}
                               </option>
                             ))}
-                            <option value="__NEW__" style={{ fontWeight: 800, color: "#9A3412", background: "#FFEDD5" }}>
+                            <option value="__NEW__" style={{ fontWeight: 800, color: "#6B1414", background: "#FFEDD5" }}>
                               + Add New Raw Material to Catalog...
                             </option>
                           </select>
@@ -2156,7 +2156,7 @@ export default function FinanceERP() {
 
                         {/* Column 2: HSN Code (Pre-filled from Product Management) */}
                         <div>
-                          <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 800, color: "#9A3412", marginBottom: "3px" }}>
+                          <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 800, color: "#6B1414", marginBottom: "3px" }}>
                             HSN Code *
                           </label>
                           <input
@@ -2265,7 +2265,7 @@ export default function FinanceERP() {
                             background: "var(--sd-zinc-100)",
                             fontSize: "0.85rem",
                             fontWeight: 800,
-                            color: "#9A3412",
+                            color: "#6B1414",
                             textAlign: "right"
                           }}>
                             {formatCurrency(rowTotal)}
@@ -2310,7 +2310,7 @@ export default function FinanceERP() {
                   <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-black)" }}>
                     Calculated Bill Total ({rawBillItems.length} items):
                   </span>
-                  <span style={{ fontSize: "1.35rem", fontWeight: 900, color: "#9A3412" }}>
+                  <span style={{ fontSize: "1.35rem", fontWeight: 900, color: "#6B1414" }}>
                     {formatCurrency(rawBillGrandTotal)}
                   </span>
                 </div>
@@ -2517,13 +2517,13 @@ export default function FinanceERP() {
                   style={{
                     padding: "9px 24px",
                     borderRadius: "8px",
-                    background: "#9A3412",
+                    background: "#6B1414",
                     color: "#FFFFFF",
                     border: "none",
                     fontWeight: 800,
                     fontSize: "0.84rem",
                     cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(154,52,18,0.3)"
+                    boxShadow: "0 2px 8px rgba(107,20,20,0.3)"
                   }}
                 >
                   {isSubmitting 
@@ -2567,7 +2567,7 @@ export default function FinanceERP() {
               background: "#FFF7ED",
               borderBottom: "1px solid #FFEDD5"
             }}>
-              <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#9A3412" }}>
+              <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#6B1414" }}>
                 Add Raw Material Product to Catalog
               </h4>
               <button
@@ -2625,7 +2625,7 @@ export default function FinanceERP() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#9A3412", marginBottom: "3px" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#6B1414", marginBottom: "3px" }}>
                       HSN Code (GST Compliance) *
                     </label>
                     <input
@@ -2718,7 +2718,7 @@ export default function FinanceERP() {
                   style={{
                     padding: "8px 16px",
                     borderRadius: "6px",
-                    background: "#9A3412",
+                    background: "#6B1414",
                     color: "#FFFFFF",
                     border: "none",
                     fontSize: "0.8rem",

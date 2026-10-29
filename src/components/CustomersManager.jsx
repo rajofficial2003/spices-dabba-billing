@@ -1390,9 +1390,16 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                 </label>
                 <input
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  pattern="[0-9]*"
+                  maxLength={10}
                   placeholder="e.g. 9842145678"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setFormData({ ...formData, phone: onlyDigits });
+                  }}
                   className="text-input"
                   required
                 />
@@ -2002,7 +2009,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                     Helpline / Phone
                   </label>
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="tel"
                     placeholder="e.g. 044-22250000"
                     value={courierFormData.phone}
                     onChange={(e) => setCourierFormData({ ...courierFormData, phone: e.target.value })}

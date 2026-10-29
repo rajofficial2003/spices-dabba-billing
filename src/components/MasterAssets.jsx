@@ -31,6 +31,7 @@ export default function MasterAssets({
   }, [activeSubTab]);
 
   const isProductsActive = activeSubTab === "products" || activeSubTab === "categories";
+  const isCustomersActive = activeSubTab === "customers" || activeSubTab === "customer-categories";
   const isFinanceActive = activeSubTab === "finance" || activeSubTab === "suppliers" || activeSubTab === "expense-categories" || activeSubTab === "raw-materials";
 
   return (
@@ -98,14 +99,14 @@ export default function MasterAssets({
             <button
               type="button"
               onClick={() => onSubTabChange("customers")}
-              className={`pos-mobile-toggle-btn ${activeSubTab === "customers" ? "active" : ""}`}
+              className={`pos-mobile-toggle-btn ${isCustomersActive ? "active" : ""}`}
               style={{
                 padding: "8px 16px",
                 borderRadius: "10px",
                 fontSize: "0.82rem",
-                fontWeight: activeSubTab === "customers" ? 800 : 700,
-                background: activeSubTab === "customers" ? "var(--sd-black)" : "transparent",
-                color: activeSubTab === "customers" ? "var(--sd-white)" : "var(--sd-zinc-600)",
+                fontWeight: isCustomersActive ? 800 : 700,
+                background: isCustomersActive ? "var(--sd-black)" : "transparent",
+                color: isCustomersActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
                 border: "none",
                 cursor: "pointer",
                 display: "inline-flex",
@@ -113,7 +114,7 @@ export default function MasterAssets({
                 gap: "6px",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s ease",
-                boxShadow: activeSubTab === "customers" ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+                boxShadow: isCustomersActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
               }}
             >
               <Store size={15} />
@@ -153,8 +154,11 @@ export default function MasterAssets({
         <ProductsManager initialSubView={activeSubTab === "categories" ? "categories" : "products"} />
       </div>
 
-      <div style={{ display: activeSubTab === "customers" ? "block" : "none" }}>
-        <CustomersManager onStartBillForCustomer={onStartBillForCustomer} />
+      <div style={{ display: isCustomersActive ? "block" : "none" }}>
+        <CustomersManager 
+          onStartBillForCustomer={onStartBillForCustomer} 
+          initialSubView={activeSubTab === "customer-categories" ? "categories" : "customers"}
+        />
       </div>
 
       {/* Finance Section: Expense Categories, Suppliers & Raw Materials */}

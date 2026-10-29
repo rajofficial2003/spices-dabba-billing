@@ -35,7 +35,7 @@ const formatAddress = (addr) => {
   return parts.join(", ");
 };
 
-export default function CustomersManager({ onStartBillForCustomer }) {
+export default function CustomersManager({ onStartBillForCustomer, initialSubView = "customers" }) {
   const { 
     customers, 
     customerCategories = [],
@@ -48,6 +48,16 @@ export default function CustomersManager({ onStartBillForCustomer }) {
     showConfirmModal
   } = usePOS();
 
+  const [activeSubView, setActiveSubView] = useState(initialSubView || "customers");
+  const [catSearchQuery, setCatSearchQuery] = useState("");
+  const [showCatModal, setShowCatModal] = useState(false);
+
+  React.useEffect(() => {
+    if (initialSubView) {
+      setActiveSubView(initialSubView);
+    }
+  }, [initialSubView]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // 'all', 'active', 'inactive'
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -56,7 +66,6 @@ export default function CustomersManager({ onStartBillForCustomer }) {
   const [errorMsg, setErrorMsg] = useState("");
 
   // Customer Category Manager States
-  const [showCatManagerModal, setShowCatManagerModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatTier, setNewCatTier] = useState("R");
   const [editingCatId, setEditingCatId] = useState(null);
@@ -236,7 +245,7 @@ export default function CustomersManager({ onStartBillForCustomer }) {
 
   // Customer Category Management Handlers
   const handleAddCategorySubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!newCatName.trim()) return;
     try {
       const added = await addCustomerCategory({ 
@@ -246,6 +255,7 @@ export default function CustomersManager({ onStartBillForCustomer }) {
       setFormData(prev => ({ ...prev, category: added.id || added.name, pricingTier: newCatTier }));
       setNewCatName("");
       setNewCatTier("R");
+      setShowCatModal(false);
     } catch (err) {
       alert("Error adding customer category: " + err.message);
     }
@@ -259,10 +269,19 @@ export default function CustomersManager({ onStartBillForCustomer }) {
         defaultPricingTier: editingCatTier 
       });
       setEditingCatId(null);
+      setShowCatModal(false);
     } catch (err) {
       alert("Error updating customer category: " + err.message);
     }
   };
+
+  const filteredCustomerCategories = customerCategories.filter(cat => {
+    const q = catSearchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const nameMatch = (cat.name || "").toLowerCase().includes(q);
+    const tierMatch = (cat.defaultPricingTier || "").toLowerCase().includes(q);
+    return nameMatch || tierMatch;
+  });
 
   const handleDeleteCategoryClick = async (id, name) => {
     const ok = await showConfirmModal({
@@ -323,57 +342,120 @@ export default function CustomersManager({ onStartBillForCustomer }) {
         borderBottom: "1px solid var(--sd-zinc-200)"
       }}>
         <div>
-          <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-            Customers Directory
-          </h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {activeSubView === "categories" ? (
+              <Layers size={22} color="var(--sd-red)" />
+            ) : (
+              <Store size={22} color="var(--sd-red)" />
+            )}
+            <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
+              {activeSubView === "categories" ? "Customer Categories" : "Customers Directory"}
+            </h2>
+          </div>
           <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "2px" }}>
-            Registered wholesale customers, contacts, addresses, and spot billing.
+            {activeSubView === "categories"
+              ? "Define wholesale pricing tiers (SS, D, R, C) and customer shop categories."
+              : "Registered wholesale customers, contacts, addresses, and spot billing."}
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={() => setShowCatManagerModal(true)}
-            style={{
-              background: "#FFFFFF",
-              color: "var(--sd-zinc-800)",
-              border: "1.5px solid var(--sd-zinc-300)",
-              borderRadius: "8px",
-              padding: "8px 14px",
-              fontSize: "0.82rem",
-              fontWeight: 800,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            <Layers size={16} color="var(--sd-zinc-600)" />
-            <span>Customer Categories ({customerCategories.length})</span>
-          </button>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Sub-view Switcher Toggle */}
+          <div style={{
+            display: "inline-flex",
+            background: "var(--sd-zinc-100)",
+            padding: "4px",
+            borderRadius: "12px",
+            border: "1px solid var(--sd-zinc-200)",
+            gap: "3px"
+          }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubView("customers")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                fontWeight: activeSubView === "customers" ? 800 : 600,
+                background: activeSubView === "customers" ? "var(--sd-black)" : "transparent",
+                color: activeSubView === "customers" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                border: "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: activeSubView === "customers" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <Store size={14} />
+              <span>Customers ({customers.length})</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleOpenAdd}
-            className="btn-primary"
-            style={{ padding: "8px 16px", fontSize: "0.82rem" }}
-          >
-            <Plus size={15} />
-            <span>Add Customer</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubView("categories")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                fontWeight: activeSubView === "categories" ? 800 : 600,
+                background: activeSubView === "categories" ? "var(--sd-black)" : "transparent",
+                color: activeSubView === "categories" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                border: "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: activeSubView === "categories" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <Layers size={14} />
+              <span>Categories ({customerCategories.length})</span>
+            </button>
+          </div>
+
+          {activeSubView === "customers" ? (
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
+            >
+              <Plus size={15} />
+              <span>Add Customer</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingCatId(null);
+                setNewCatName("");
+                setNewCatTier("R");
+                setShowCatModal(true);
+              }}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
+            >
+              <Plus size={15} />
+              <span>Add Customer Category</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Search and Status Filter Bar */}
-      <div style={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "12px",
-        marginBottom: "14px"
-      }}>
+      {/* VIEW 1: CUSTOMERS DIRECTORY */}
+      <div style={{ display: activeSubView === "customers" ? "block" : "none" }}>
+        {/* Search and Status Filter Bar */}
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          marginBottom: "14px"
+        }}>
         {/* Search Input */}
         <div style={{ position: "relative", flex: "1 1 280px", maxWidth: "420px" }}>
           <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
@@ -738,6 +820,178 @@ export default function CustomersManager({ onStartBillForCustomer }) {
           })}
         </div>
       )}
+      </div>
+
+      {/* VIEW 2: CUSTOMER CATEGORIES CATALOG */}
+      <div style={{ display: activeSubView === "categories" ? "block" : "none" }}>
+        {/* Search and Count Bar */}
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          marginBottom: "18px"
+        }}>
+          <div style={{ position: "relative", flex: "1 1 280px", maxWidth: "420px" }}>
+            <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
+            <input
+              type="text"
+              placeholder="Search customer category by name or tier..."
+              value={catSearchQuery}
+              onChange={(e) => setCatSearchQuery(e.target.value)}
+              className="text-input"
+              style={{ paddingLeft: "38px" }}
+            />
+          </div>
+
+          <div style={{
+            background: "var(--sd-zinc-100)",
+            color: "var(--sd-zinc-700)",
+            padding: "6px 12px",
+            borderRadius: "8px",
+            fontSize: "0.78rem",
+            fontWeight: 700,
+            border: "1px solid var(--sd-zinc-200)"
+          }}>
+            Total Categories: <strong>{customerCategories.length}</strong>
+          </div>
+        </div>
+
+        {/* Categories Cards Grid */}
+        {filteredCustomerCategories.length === 0 ? (
+          <div className="bw-card" style={{ padding: "48px 24px", textAlign: "center", color: "var(--sd-zinc-500)" }}>
+            <Layers size={44} strokeWidth={1.5} color="var(--sd-zinc-300)" style={{ margin: "0 auto 10px" }} />
+            <h3 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 700 }}>No customer categories found</h3>
+            <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-400)", marginTop: "3px", marginBottom: "16px" }}>
+              {catSearchQuery ? "No categories matched your search." : "Define customer categories (Supermarket, Hotel, Wholesaler) with pricing tiers."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingCatId(null);
+                setNewCatName("");
+                setNewCatTier("R");
+                setShowCatModal(true);
+              }}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+            >
+              <Plus size={15} />
+              <span>Add First Category</span>
+            </button>
+          </div>
+        ) : (
+          <div className="responsive-cards-grid">
+            {filteredCustomerCategories.map(cat => {
+              const count = customers.filter(c => c.category === cat.id || c.category === cat.name || c.categoryName === cat.name).length;
+              const tier = cat.defaultPricingTier || "R";
+              const tierLabel = tier === 'SS' ? 'Super Stockist (SS)' : tier === 'D' ? 'Dealer (D)' : tier === 'C' ? 'Consumer (C)' : 'Retailer (R)';
+              const tierStyle = tier === 'SS' ? { bg: '#EEF2FF', text: '#4F46E5', border: '#C7D2FE' }
+                : tier === 'D' ? { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0' }
+                : tier === 'C' ? { bg: '#F5F3FF', text: '#7C3AED', border: '#DDD6FE' }
+                : { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE' };
+
+              return (
+                <div
+                  key={cat.id || cat.name}
+                  className="bw-card"
+                  style={{
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    border: "1px solid var(--sd-zinc-200)"
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "8px" }}>
+                      <h3 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--sd-black)", margin: 0, wordBreak: "break-word" }}>
+                        {cat.name}
+                      </h3>
+                      <span style={{
+                        background: tierStyle.bg,
+                        color: tierStyle.text,
+                        border: `1px solid ${tierStyle.border}`,
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        whiteSpace: "nowrap"
+                      }}>
+                        Rate: {tierLabel}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--sd-zinc-600)" }}>
+                      <Users size={14} color="var(--sd-zinc-500)" />
+                      <span><strong>{count}</strong> {count === 1 ? "customer registered" : "customers registered"}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "6px",
+                    paddingTop: "10px",
+                    borderTop: "1px solid var(--sd-zinc-100)"
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryFilter(cat.id || cat.name);
+                        setActiveSubView("customers");
+                      }}
+                      className="btn-secondary"
+                      style={{
+                        padding: "5px 10px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        flex: 1
+                      }}
+                    >
+                      View {count} Customers
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCatId(cat.id);
+                        setEditingCatName(cat.name);
+                        setEditingCatTier(cat.defaultPricingTier || "R");
+                        setShowCatModal(true);
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: "5px 8px" }}
+                      title="Edit Category"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCategoryClick(cat.id, cat.name)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--sd-zinc-400)",
+                        padding: "4px"
+                      }}
+                      title="Delete Category"
+                    >
+                      <Trash2 size={14} color="var(--sd-red)" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Modal - only closes on Cancel / Close button click */}
       {showModal && (
@@ -858,7 +1112,12 @@ export default function CustomersManager({ onStartBillForCustomer }) {
                     </label>
                     <button
                       type="button"
-                      onClick={() => setShowCatManagerModal(true)}
+                      onClick={() => {
+                        setEditingCatId(null);
+                        setNewCatName("");
+                        setNewCatTier("R");
+                        setShowCatModal(true);
+                      }}
                       style={{
                         background: "transparent",
                         border: "none",
@@ -870,14 +1129,17 @@ export default function CustomersManager({ onStartBillForCustomer }) {
                         textDecoration: "underline"
                       }}
                     >
-                      + Manage Categories
+                      + Add Category
                     </button>
                   </div>
                   <select
                     value={formData.category}
                     onChange={(e) => {
                       if (e.target.value === "__NEW_CAT__") {
-                        setShowCatManagerModal(true);
+                        setEditingCatId(null);
+                        setNewCatName("");
+                        setNewCatTier("R");
+                        setShowCatModal(true);
                         return;
                       }
                       const newCatId = e.target.value;
@@ -1225,293 +1487,108 @@ export default function CustomersManager({ onStartBillForCustomer }) {
         </div>
       )}
 
-      {/* Customer Categories Management Modal */}
-      {showCatManagerModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "16px"
-        }}>
-          <div style={{
-            background: "#FFFFFF",
-            borderRadius: "16px",
-            width: "100%",
-            maxWidth: "540px",
-            maxHeight: "90vh",
-            display: "flex",
-            flexDirection: "column",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
-            overflow: "hidden"
-          }}>
-            {/* Header */}
+      {/* Customer Category Add / Edit Modal */}
+      {showCatModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "460px" }}>
             <div style={{
               padding: "16px 20px",
-              background: "var(--sd-black)",
-              color: "#FFFFFF",
+              borderBottom: "1px solid var(--sd-zinc-200)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Layers size={20} color="#F59E0B" />
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>Manage Customer Categories</h3>
-                  <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)" }}>
-                    Define shop types (Retailer, Wholesaler, Super Stockist, Hotel, etc.)
-                  </div>
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Layers size={18} color="var(--sd-red)" />
+                <h3 className="font-heading" style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>
+                  {editingCatId ? "Edit Customer Category" : "Add Customer Category"}
+                </h3>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  setShowCatManagerModal(false);
+                  setShowCatModal(false);
                   setEditingCatId(null);
                 }}
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#FFFFFF",
                   cursor: "pointer",
+                  color: "var(--sd-zinc-500)",
                   padding: "4px"
                 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Body */}
-            <div style={{ padding: "18px 20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
-              {/* Add New Category Box */}
-              <div style={{
-                background: "var(--sd-zinc-50)",
-                border: "1.5px dashed var(--sd-zinc-300)",
-                borderRadius: "12px",
-                padding: "14px"
-              }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--sd-black)", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Plus size={14} color="var(--sd-red)" />
-                  <span>Create New Customer Category</span>
-                </div>
-                <form onSubmit={handleAddCategorySubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: "8px" }}>
-                    <div>
-                      <input
-                        type="text"
-                        placeholder="e.g. Modern Trade / Supermarket"
-                        value={newCatName}
-                        onChange={(e) => setNewCatName(e.target.value)}
-                        className="text-input"
-                        style={{ fontSize: "0.82rem", padding: "7px 10px" }}
-                        autoFocus
-                      />
-                    </div>
-                    <div>
-                      <select
-                        value={newCatTier}
-                        onChange={(e) => setNewCatTier(e.target.value)}
-                        className="text-input"
-                        style={{ fontSize: "0.82rem", padding: "7px 10px" }}
-                      >
-                        <option value="R">Tier: Retailer (R)</option>
-                        <option value="SS">Tier: Super Stockist (SS)</option>
-                        <option value="D">Tier: Dealer (D)</option>
-                        <option value="C">Tier: Consumer (C)</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <button
-                      type="submit"
-                      disabled={!newCatName.trim()}
-                      className="btn-accent"
-                      style={{ padding: "6px 14px", fontSize: "0.8rem", opacity: newCatName.trim() ? 1 : 0.5 }}
-                    >
-                      <Plus size={14} />
-                      <span>Add Category</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Existing Categories List */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (editingCatId) {
+                  await handleUpdateCategorySubmit(editingCatId);
+                } else {
+                  await handleAddCategorySubmit(e);
+                }
+              }}
+              style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}
+            >
               <div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-600)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
-                  Active Categories ({customerCategories.length})
-                </div>
-
-                {customerCategories.length === 0 ? (
-                  <div style={{ padding: "20px", textAlign: "center", color: "var(--sd-zinc-500)", fontSize: "0.82rem" }}>
-                    No customer categories created yet. Add one above.
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    {customerCategories.map(cat => {
-                      const count = customers.filter(c => c.category === cat.id || c.category === cat.name || c.categoryName === cat.name).length;
-                      const isEditing = editingCatId === cat.id;
-
-                      if (isEditing) {
-                        return (
-                          <div
-                            key={cat.id || cat.name}
-                            style={{
-                              padding: "10px",
-                              background: "#FFFBEB",
-                              border: "1.5px solid #F59E0B",
-                              borderRadius: "10px",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "8px"
-                            }}
-                          >
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: "8px" }}>
-                              <input
-                                type="text"
-                                value={editingCatName}
-                                onChange={(e) => setEditingCatName(e.target.value)}
-                                className="text-input"
-                                style={{ fontSize: "0.82rem", padding: "6px 10px" }}
-                              />
-                              <select
-                                value={editingCatTier}
-                                onChange={(e) => setEditingCatTier(e.target.value)}
-                                className="text-input"
-                                style={{ fontSize: "0.82rem", padding: "6px 10px" }}
-                              >
-                                <option value="R">Tier: Retailer (R)</option>
-                                <option value="SS">Tier: Super Stockist (SS)</option>
-                                <option value="D">Tier: Dealer (D)</option>
-                                <option value="C">Tier: Consumer (C)</option>
-                              </select>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
-                              <button
-                                type="button"
-                                onClick={() => setEditingCatId(null)}
-                                className="btn-secondary"
-                                style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateCategorySubmit(cat.id)}
-                                className="btn-accent"
-                                style={{ padding: "4px 12px", fontSize: "0.75rem" }}
-                              >
-                                Save Changes
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          key={cat.id || cat.name}
-                          style={{
-                            padding: "9px 12px",
-                            background: "#FFFFFF",
-                            border: "1px solid var(--sd-zinc-200)",
-                            borderRadius: "10px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: "8px"
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <div>
-                              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--sd-black)" }}>
-                                {cat.name}
-                              </div>
-                              <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "2px" }}>
-                                <span style={{
-                                  fontSize: "0.68rem",
-                                  fontWeight: 700,
-                                  background: "var(--sd-zinc-100)",
-                                  color: "var(--sd-zinc-700)",
-                                  padding: "1px 6px",
-                                  borderRadius: "4px"
-                                }}>
-                                  Default Tier: {cat.defaultPricingTier || "R"}
-                                </span>
-                                <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>
-                                  • {count} {count === 1 ? "customer" : "customers"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCatId(cat.id);
-                                setEditingCatName(cat.name);
-                                setEditingCatTier(cat.defaultPricingTier || "R");
-                              }}
-                              title="Edit Category"
-                              style={{
-                                background: "none",
-                                border: "none",
-                                padding: "6px",
-                                cursor: "pointer",
-                                color: "var(--sd-zinc-600)",
-                                borderRadius: "6px"
-                              }}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCategoryClick(cat.id, cat.name)}
-                              title="Delete Category"
-                              style={{
-                                background: "none",
-                                border: "none",
-                                padding: "6px",
-                                cursor: "pointer",
-                                color: "var(--sd-red)",
-                                borderRadius: "6px"
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <label className="input-label" style={{ fontWeight: 700, marginBottom: "4px" }}>
+                  Category Name <span className="input-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Modern Trade / Supermarket, Hotel"
+                  value={editingCatId ? editingCatName : newCatName}
+                  onChange={(e) => editingCatId ? setEditingCatName(e.target.value) : setNewCatName(e.target.value)}
+                  className="text-input"
+                  required
+                  autoFocus
+                />
               </div>
-            </div>
 
-            {/* Footer */}
-            <div style={{
-              padding: "12px 20px",
-              background: "var(--sd-zinc-50)",
-              borderTop: "1px solid var(--sd-zinc-200)",
-              display: "flex",
-              justifyContent: "flex-end"
-            }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCatManagerModal(false);
-                  setEditingCatId(null);
-                }}
-                className="btn-primary"
-                style={{ padding: "6px 18px", fontSize: "0.82rem" }}
-              >
-                Done
-              </button>
-            </div>
+              <div>
+                <label className="input-label" style={{ fontWeight: 700, marginBottom: "4px" }}>
+                  Default Pricing Tier <span className="input-required">*</span>
+                </label>
+                <select
+                  value={editingCatId ? editingCatTier : newCatTier}
+                  onChange={(e) => editingCatId ? setEditingCatTier(e.target.value) : setNewCatTier(e.target.value)}
+                  className="text-input"
+                  style={{ fontWeight: 700 }}
+                >
+                  <option value="R">Retailer Rate (R)</option>
+                  <option value="SS">Super Stockist Rate (SS)</option>
+                  <option value="D">Dealer Rate (D)</option>
+                  <option value="C">Consumer Rate (C)</option>
+                </select>
+                <p style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)", marginTop: "4px", margin: "4px 0 0 0" }}>
+                  Customers registered under this category will automatically get this wholesale price tier during billing.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCatModal(false);
+                    setEditingCatId(null);
+                  }}
+                  className="btn-secondary"
+                  style={{ padding: "8px 16px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ padding: "8px 18px" }}
+                >
+                  {editingCatId ? "Save Changes" : "Create Category"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

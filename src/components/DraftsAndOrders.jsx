@@ -16,18 +16,46 @@ import {
   X,
   Filter,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Truck
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import DateRangePicker from "./DateRangePicker";
+
+const formatAddress = (addr) => {
+  if (!addr) return "";
+  if (typeof addr === "string") return addr.trim();
+  const parts = [
+    addr.address?.trim(),
+    addr.city?.trim(),
+    addr.state?.trim(),
+    addr.pincode?.trim() ? (addr.pincode.trim().startsWith("-") ? addr.pincode.trim() : `- ${addr.pincode.trim()}`) : ""
+  ].filter(Boolean);
+  return parts.join(", ");
+};
 
 export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
   const { 
     orders, 
     deleteOrder, 
     markOrderPaymentStatus,
+    courierPartners = [],
+    updateOrderShippingDetails,
     showConfirmModal
   } = usePOS();
+
+  // Dispatch & Courier Tracking Edit State
+  const [shippingModalOrder, setShippingModalOrder] = useState(null);
+  const [shippingForm, setShippingForm] = useState({
+    courierCompany: "",
+    isCustomCourier: false,
+    customCourierName: "",
+    trackingId: "",
+    dispatchDate: "",
+    shippingNotes: ""
+  });
+  const [shippingError, setShippingError] = useState("");
+  const [shippingSaving, setShippingSaving] = useState(false);
 
   const [filterTab, setFilterTab] = useState("completed");
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,6 +127,55 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
       if (!endDate) {
         setEndDate(todayStr);
       }
+    }
+  };
+
+  const handleOpenShippingModal = (order) => {
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const existingCourier = order.courierCompany || order.shippingDetails?.courierCompany || "";
+    const isKnown = courierPartners.some(c => c.name.toLowerCase() === existingCourier.toLowerCase());
+
+    setShippingModalOrder(order);
+    setShippingForm({
+      courierCompany: isKnown || !existingCourier ? existingCourier : "OTHER",
+      isCustomCourier: !isKnown && !!existingCourier,
+      customCourierName: !isKnown ? existingCourier : "",
+      trackingId: order.trackingId || order.shippingDetails?.trackingId || "",
+      dispatchDate: order.dispatchDate || order.shippingDetails?.dispatchDate || todayStr,
+      shippingNotes: order.shippingNotes || order.shippingDetails?.shippingNotes || ""
+    });
+    setShippingError("");
+  };
+
+  const handleSaveShipping = async (e) => {
+    e.preventDefault();
+    if (!shippingModalOrder) return;
+
+    let finalCourier = shippingForm.courierCompany;
+    if (shippingForm.courierCompany === "OTHER" || shippingForm.isCustomCourier) {
+      finalCourier = shippingForm.customCourierName.trim();
+      if (!finalCourier) {
+        setShippingError("Please enter the courier company name.");
+        return;
+      }
+    }
+
+    setShippingSaving(true);
+    setShippingError("");
+    try {
+      if (updateOrderShippingDetails) {
+        await updateOrderShippingDetails(shippingModalOrder.id, {
+          courierCompany: finalCourier,
+          trackingId: shippingForm.trackingId.trim(),
+          dispatchDate: shippingForm.dispatchDate,
+          shippingNotes: shippingForm.shippingNotes.trim()
+        });
+      }
+      setShippingModalOrder(null);
+    } catch (err) {
+      setShippingError(err.message || "Failed to update shipping details");
+    } finally {
+      setShippingSaving(false);
     }
   };
 
@@ -430,6 +507,34 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                   </span>
                 </div>
 
+                {/* Courier & Tracking Summary Badge (if already assigned) */}
+                {(order.courierCompany || order.shippingDetails?.courierCompany || order.trackingId || order.shippingDetails?.trackingId) && (
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "6px",
+                    background: "#EFF6FF",
+                    border: "1px solid #BFDBFE",
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    fontSize: "0.72rem",
+                    marginBottom: "8px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "5px", color: "#1E40AF", fontWeight: 700 }}>
+                      <Truck size={12} color="#2563EB" />
+                      <span>{order.courierCompany || order.shippingDetails?.courierCompany || "Courier"}</span>
+                    </div>
+                    {(order.trackingId || order.shippingDetails?.trackingId) ? (
+                      <span style={{ fontFamily: "monospace", fontWeight: 800, color: "#1D4ED8", background: "#DBEAFE", padding: "1px 6px", borderRadius: "3px" }}>
+                        #{order.trackingId || order.shippingDetails?.trackingId}
+                      </span>
+                    ) : (
+                      <span style={{ color: "#6B7280", fontStyle: "italic" }}>No tracking ID</span>
+                    )}
+                  </div>
+                )}
+
                 {/* Items Summary preview */}
                 <div style={{
                   background: "var(--sd-zinc-50)",
@@ -527,6 +632,17 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                         >
                           <FileText size={13} />
                           <span>Invoice</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenShippingModal(order)}
+                          className="btn-secondary"
+                          style={{ padding: "5px 10px", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "5px" }}
+                          title="Edit courier and tracking details"
+                        >
+                          <Truck size={13} color="var(--sd-red)" />
+                          <span>{(order.courierCompany || order.shippingDetails?.courierCompany) ? "Edit Courier" : "Dispatch / Courier"}</span>
                         </button>
 
                         {isPendingCredit && (
@@ -689,6 +805,195 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* DISPATCH & COURIER TRACKING EDIT MODAL */}
+      {shippingModalOrder && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "480px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{
+              background: "var(--sd-white)",
+              color: "var(--sd-black)",
+              padding: "16px 20px",
+              borderTopLeftRadius: "18px",
+              borderTopRightRadius: "18px",
+              borderBottom: "1px solid var(--sd-zinc-200)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              position: "sticky",
+              top: 0,
+              zIndex: 10
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Truck size={18} color="var(--sd-red)" />
+                <h3 className="font-heading" style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>
+                  Order Dispatch & Tracking
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShippingModalOrder(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveShipping} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Order Context Banner */}
+              <div style={{
+                background: "var(--sd-zinc-50)",
+                border: "1px solid var(--sd-zinc-200)",
+                borderRadius: "8px",
+                padding: "10px 12px",
+                fontSize: "0.82rem"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <span style={{ fontWeight: 800, color: "var(--sd-black)" }}>
+                    {shippingModalOrder.customer?.shopName || "Retailer Customer"}
+                  </span>
+                  <span style={{ fontFamily: "monospace", fontWeight: 800, color: "var(--sd-red)" }}>
+                    #{shippingModalOrder.invoiceNumber || "BILL"}
+                  </span>
+                </div>
+                <div style={{ fontSize: "0.76rem", color: "var(--sd-zinc-500)", lineHeight: "1.35" }}>
+                  <strong>Destination:</strong> {
+                    formatAddress(shippingModalOrder.shippingAddress || shippingModalOrder.customer?.shippingAddress) ||
+                    formatAddress(shippingModalOrder.customer?.billingAddress) ||
+                    shippingModalOrder.customer?.address ||
+                    "Direct delivery"
+                  }
+                </div>
+              </div>
+
+              {shippingError && (
+                <div style={{
+                  padding: "10px 12px",
+                  background: "var(--sd-red-subtle)",
+                  color: "var(--sd-red)",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  border: "1px solid var(--sd-red-border)"
+                }}>
+                  {shippingError}
+                </div>
+              )}
+
+              {/* Courier Partner Selection */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Courier Company / Transporter <span style={{ color: "var(--sd-red)" }}>*</span>
+                </label>
+                <select
+                  value={shippingForm.courierCompany}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setShippingForm(prev => ({
+                      ...prev,
+                      courierCompany: val,
+                      isCustomCourier: val === "OTHER"
+                    }));
+                  }}
+                  className="text-input"
+                  required
+                >
+                  <option value="">-- Select Courier Partner --</option>
+                  {courierPartners.filter(c => c.isActive !== false).map(c => (
+                    <option key={c.id} value={c.name}>
+                      {c.name} {c.code ? `(${c.code})` : ""}
+                    </option>
+                  ))}
+                  <option value="OTHER">+ Other Courier / Transporter (Enter custom)</option>
+                </select>
+              </div>
+
+              {/* Custom Courier input if OTHER is selected */}
+              {(shippingForm.courierCompany === "OTHER" || shippingForm.isCustomCourier) && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                    Enter Courier Company Name <span style={{ color: "var(--sd-red)" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Navata Road Transport, KPN Parcel, Local Auto"
+                    value={shippingForm.customCourierName}
+                    onChange={(e) => setShippingForm(prev => ({ ...prev, customCourierName: e.target.value }))}
+                    className="text-input"
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Tracking / Docket Number */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Tracking ID / Docket / Consignment Number <span style={{ color: "var(--sd-red)" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. TPC84739201, STC9482710"
+                  value={shippingForm.trackingId}
+                  onChange={(e) => setShippingForm(prev => ({ ...prev, trackingId: e.target.value }))}
+                  className="text-input"
+                  style={{ fontFamily: "monospace", fontWeight: 700 }}
+                  required
+                />
+              </div>
+
+              {/* Dispatch Date */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Dispatch Date
+                </label>
+                <input
+                  type="date"
+                  value={shippingForm.dispatchDate}
+                  onChange={(e) => setShippingForm(prev => ({ ...prev, dispatchDate: e.target.value }))}
+                  className="text-input"
+                />
+              </div>
+
+              {/* Delivery Notes / Transporter Remarks */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Dispatch Remarks / Notes (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Dispatched from Salem warehouse, expected delivery in 24 hours"
+                  value={shippingForm.shippingNotes}
+                  onChange={(e) => setShippingForm(prev => ({ ...prev, shippingNotes: e.target.value }))}
+                  className="text-input"
+                  style={{ resize: "vertical" }}
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShippingModalOrder(null)}
+                  disabled={shippingSaving}
+                  className="btn-secondary"
+                  style={{ padding: "8px 16px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={shippingSaving}
+                  className="btn-primary"
+                  style={{ padding: "8px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Truck size={14} />
+                  <span>{shippingSaving ? "Saving..." : "Save Tracking Details"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

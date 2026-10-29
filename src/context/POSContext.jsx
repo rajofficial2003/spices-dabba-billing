@@ -108,6 +108,25 @@ export function POSProvider({ children }) {
     }
   });
 
+  // Dynamic Courier Partners State (The Professional Couriers, ST Courier, DTDC, etc.)
+  const DEFAULT_COURIER_PARTNERS = [
+    { id: "courier_tpc", name: "The Professional Couriers", code: "TPC", trackingUrl: "https://www.tpcindia.com", phone: "044-22250000", isActive: true },
+    { id: "courier_st", name: "ST Courier", code: "STC", trackingUrl: "https://stcourier.com/track", phone: "044-40004000", isActive: true },
+    { id: "courier_dtdc", name: "DTDC Express", code: "DTDC", trackingUrl: "https://www.dtdc.in/tracking.asp", phone: "080-25365032", isActive: true },
+    { id: "courier_indiapost", name: "India Post (Speed Post)", code: "IPOST", trackingUrl: "https://www.indiapost.gov.in", phone: "18002666868", isActive: true },
+    { id: "courier_bluedart", name: "Blue Dart", code: "BLUEDART", trackingUrl: "https://www.bluedart.com/tracking", phone: "18602331234", isActive: true },
+    { id: "courier_trackon", name: "Trackon Couriers", code: "TRACKON", trackingUrl: "https://trackon.in", phone: "011-45593500", isActive: true },
+    { id: "courier_direct", name: "Direct / Local Transport", code: "LOCAL", trackingUrl: "", phone: "", isActive: true }
+  ];
+  const [courierPartners, setCourierPartners] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sdb_courier_partners");
+      return saved ? JSON.parse(saved) : DEFAULT_COURIER_PARTNERS;
+    } catch {
+      return DEFAULT_COURIER_PARTNERS;
+    }
+  });
+
   // Dynamic Suppliers Directory State
   const DEFAULT_SUPPLIERS = [
     { 
@@ -191,6 +210,10 @@ export function POSProvider({ children }) {
   }, [suppliers]);
 
   useEffect(() => {
+    localStorage.setItem("sdb_courier_partners", JSON.stringify(courierPartners));
+  }, [courierPartners]);
+
+  useEffect(() => {
     localStorage.setItem("sdb_orders", JSON.stringify(orders));
   }, [orders]);
 
@@ -250,6 +273,7 @@ export function POSProvider({ children }) {
     let unsubscribeExpenseCategories = () => {};
     let unsubscribeCustomerCategories = () => {};
     let unsubscribeSuppliers = () => {};
+    let unsubscribeCouriers = () => {};
 
     try {
       // 1. Products listener
@@ -359,6 +383,20 @@ export function POSProvider({ children }) {
         console.warn("Firestore suppliers listener note:", err.message);
       });
 
+      // 10. Dynamic Courier Partners listener
+      const courierCol = collection(db, "billing_courier_partners");
+      unsubscribeCouriers = onSnapshot(courierCol, (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+          setCourierPartners(list);
+        } else {
+          setCourierPartners(DEFAULT_COURIER_PARTNERS);
+        }
+      }, (err) => {
+        console.warn("Firestore couriers listener note:", err.message);
+      });
+
     } catch (error) {
       console.warn("Firebase listener initialization error:", error);
       setLoading(false);
@@ -374,6 +412,7 @@ export function POSProvider({ children }) {
       unsubscribeExpenseCategories();
       unsubscribeCustomerCategories();
       unsubscribeSuppliers();
+      unsubscribeCouriers();
     };
   }, []);
 
@@ -1332,6 +1371,86 @@ export function POSProvider({ children }) {
     setSuppliers(prev => prev.filter(s => s.id !== supId));
   };
 
+  // DYNAMIC COURIER PARTNERS CRUD
+  const addCourierPartner = async (courierData) => {
+    if (!courierData.name?.trim()) throw new Error("Courier Company Name is required!");
+    const id = courierData.id || `courier_${Date.now()}`;
+    const newCourier = {
+      id,
+      name: courierData.name.trim(),
+      code: (courierData.code || "").trim().toUpperCase(),
+      trackingUrl: (courierData.trackingUrl || "").trim(),
+      phone: (courierData.phone || "").trim(),
+      notes: (courierData.notes || "").trim(),
+      isActive: courierData.isActive !== false,
+      timestamp: Date.now()
+    };
+    try {
+      await setDoc(doc(db, "billing_courier_partners", id), {
+        ...newCourier,
+        createdAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Courier partner save note:", e.message);
+    }
+    setCourierPartners(prev => [...prev.filter(c => c.id !== id), newCourier]);
+    return newCourier;
+  };
+
+  const updateCourierPartner = async (courierId, updatedFields) => {
+    try {
+      await updateDoc(doc(db, "billing_courier_partners", courierId), {
+        ...updatedFields,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Courier partner update note:", e.message);
+    }
+    setCourierPartners(prev => prev.map(c => c.id === courierId ? { ...c, ...updatedFields } : c));
+  };
+
+  const deleteCourierPartner = async (courierId) => {
+    try {
+      await deleteDoc(doc(db, "billing_courier_partners", courierId));
+    } catch (e) {
+      console.warn("Courier partner delete note:", e.message);
+    }
+    setCourierPartners(prev => prev.filter(c => c.id !== courierId));
+  };
+
+  // UPDATE ORDER SHIPPING / DISPATCH & TRACKING DETAILS
+  const updateOrderShippingDetails = async (orderId, shippingData) => {
+    const courierCompany = (shippingData.courierCompany || "").trim();
+    const trackingId = (shippingData.trackingId || "").trim();
+    const dispatchDate = shippingData.dispatchDate || "";
+    const shippingNotes = (shippingData.shippingNotes || "").trim();
+
+    const updatedFields = {
+      courierCompany,
+      trackingId,
+      dispatchDate,
+      shippingNotes,
+      shippingDetails: {
+        courierCompany,
+        trackingId,
+        dispatchDate,
+        shippingNotes,
+        updatedAt: Date.now()
+      }
+    };
+
+    try {
+      await updateDoc(doc(db, "billing_orders", orderId), {
+        ...updatedFields,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Order shipping update note:", e.message);
+    }
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatedFields } : o));
+    return updatedFields;
+  };
+
   return (
     <POSContext.Provider
       value={{
@@ -1437,6 +1556,13 @@ export function POSProvider({ children }) {
         addSupplier,
         updateSupplier,
         deleteSupplier,
+
+        // Dynamic Courier Partners & Shipping Tracking
+        courierPartners,
+        addCourierPartner,
+        updateCourierPartner,
+        deleteCourierPartner,
+        updateOrderShippingDetails,
 
         // Global Delete / Action Confirm Modal
         showConfirmModal

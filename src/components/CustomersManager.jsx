@@ -19,7 +19,8 @@ import {
   XCircle,
   Tag,
   User,
-  Layers
+  Layers,
+  ExternalLink
 } from "lucide-react";
 import { formatCurrency, cleanPhoneNumber } from "../utils/formatters";
 
@@ -45,6 +46,10 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     addCustomerCategory,
     updateCustomerCategory,
     deleteCustomerCategory,
+    courierPartners = [],
+    addCourierPartner,
+    updateCourierPartner,
+    deleteCourierPartner,
     showConfirmModal
   } = usePOS();
 
@@ -71,6 +76,84 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
   const [editingCatId, setEditingCatId] = useState(null);
   const [editingCatName, setEditingCatName] = useState("");
   const [editingCatTier, setEditingCatTier] = useState("R");
+
+  // Courier Partners Manager States
+  const [courierSearchQuery, setCourierSearchQuery] = useState("");
+  const [showCourierModal, setShowCourierModal] = useState(false);
+  const [editingCourier, setEditingCourier] = useState(null);
+  const [courierErrorMsg, setCourierErrorMsg] = useState("");
+  const initialCourierFormData = {
+    name: "",
+    code: "",
+    trackingUrl: "",
+    phone: "",
+    notes: "",
+    isActive: true
+  };
+  const [courierFormData, setCourierFormData] = useState(initialCourierFormData);
+
+  const handleOpenAddCourier = () => {
+    setEditingCourier(null);
+    setCourierFormData(initialCourierFormData);
+    setCourierErrorMsg("");
+    setShowCourierModal(true);
+  };
+
+  const handleOpenEditCourier = (courier) => {
+    setEditingCourier(courier);
+    setCourierFormData({
+      name: courier.name || "",
+      code: courier.code || "",
+      trackingUrl: courier.trackingUrl || "",
+      phone: courier.phone || "",
+      notes: courier.notes || "",
+      isActive: courier.isActive !== false
+    });
+    setCourierErrorMsg("");
+    setShowCourierModal(true);
+  };
+
+  const handleSaveCourier = async (e) => {
+    e.preventDefault();
+    if (!courierFormData.name?.trim()) {
+      setCourierErrorMsg("Courier Company Name is required!");
+      return;
+    }
+    try {
+      if (editingCourier) {
+        await updateCourierPartner(editingCourier.id, courierFormData);
+      } else {
+        await addCourierPartner(courierFormData);
+      }
+      setShowCourierModal(false);
+      setEditingCourier(null);
+    } catch (err) {
+      setCourierErrorMsg(err.message || "Failed to save courier partner");
+    }
+  };
+
+  const handleDeleteCourierClick = async (courierId, courierName) => {
+    const ok = await showConfirmModal({
+      title: "Delete Courier Partner",
+      message: `Are you sure you want to remove "${courierName}" from your courier partners list?`,
+      confirmText: "Delete Courier",
+      isDanger: true
+    });
+    if (ok) {
+      deleteCourierPartner(courierId);
+    }
+  };
+
+  const filteredCourierPartners = courierPartners.filter(c => {
+    if (!courierSearchQuery.trim()) return true;
+    const q = courierSearchQuery.toLowerCase();
+    return (
+      (c.name && c.name.toLowerCase().includes(q)) ||
+      (c.code && c.code.toLowerCase().includes(q)) ||
+      (c.phone && c.phone.includes(q)) ||
+      (c.notes && c.notes.toLowerCase().includes(q))
+    );
+  });
 
   const initialFormData = {
     businessName: "",
@@ -414,6 +497,29 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               <Layers size={14} />
               <span>Categories ({customerCategories.length})</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubView("couriers")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                fontWeight: activeSubView === "couriers" ? 800 : 600,
+                background: activeSubView === "couriers" ? "var(--sd-black)" : "transparent",
+                color: activeSubView === "couriers" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                border: "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: activeSubView === "couriers" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <Truck size={14} />
+              <span>Couriers ({courierPartners.length})</span>
+            </button>
           </div>
 
           {activeSubView === "customers" ? (
@@ -426,7 +532,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               <Plus size={15} />
               <span>Add Customer</span>
             </button>
-          ) : (
+          ) : activeSubView === "categories" ? (
             <button
               type="button"
               onClick={() => {
@@ -440,6 +546,16 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
             >
               <Plus size={15} />
               <span>Add Customer Category</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenAddCourier}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
+            >
+              <Plus size={15} />
+              <span>Add Courier Partner</span>
             </button>
           )}
         </div>
@@ -982,6 +1098,215 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                         padding: "4px"
                       }}
                       title="Delete Category"
+                    >
+                      <Trash2 size={14} color="var(--sd-red)" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* VIEW 3: COURIER PARTNERS / COMPANIES CATALOG */}
+      <div style={{ display: activeSubView === "couriers" ? "block" : "none" }}>
+        {/* Search and Count Bar */}
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          marginBottom: "18px"
+        }}>
+          <div style={{ position: "relative", flex: "1 1 280px", maxWidth: "420px" }}>
+            <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
+            <input
+              type="text"
+              placeholder="Search courier company by name, code, phone..."
+              value={courierSearchQuery}
+              onChange={(e) => setCourierSearchQuery(e.target.value)}
+              className="text-input"
+              style={{ paddingLeft: "38px" }}
+            />
+          </div>
+
+          <div style={{
+            background: "var(--sd-zinc-100)",
+            color: "var(--sd-zinc-700)",
+            padding: "6px 12px",
+            borderRadius: "8px",
+            fontSize: "0.78rem",
+            fontWeight: 700,
+            border: "1px solid var(--sd-zinc-200)"
+          }}>
+            Total Couriers: <strong>{courierPartners.length}</strong> • Active: <strong>{courierPartners.filter(c => c.isActive !== false).length}</strong>
+          </div>
+        </div>
+
+        {/* Courier Cards Grid */}
+        {filteredCourierPartners.length === 0 ? (
+          <div className="bw-card" style={{ padding: "48px 24px", textAlign: "center", color: "var(--sd-zinc-500)" }}>
+            <Truck size={44} strokeWidth={1.5} color="var(--sd-zinc-300)" style={{ margin: "0 auto 10px" }} />
+            <h3 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 700 }}>No courier partners found</h3>
+            <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-400)", marginTop: "3px", marginBottom: "16px" }}>
+              {courierSearchQuery ? "No couriers matched your search." : "Register courier services (Professional Couriers, ST Courier, DTDC) to manage shipments."}
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenAddCourier}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+            >
+              <Plus size={15} />
+              <span>Add First Courier</span>
+            </button>
+          </div>
+        ) : (
+          <div className="responsive-cards-grid">
+            {filteredCourierPartners.map(courier => {
+              const isAct = courier.isActive !== false;
+
+              return (
+                <div
+                  key={courier.id}
+                  className="bw-card"
+                  style={{
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    border: "1px solid var(--sd-zinc-200)",
+                    opacity: isAct ? 1 : 0.75
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{
+                          width: "34px",
+                          height: "34px",
+                          borderRadius: "8px",
+                          background: isAct ? "var(--sd-red-subtle)" : "var(--sd-zinc-100)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0
+                        }}>
+                          <Truck size={18} color={isAct ? "var(--sd-red)" : "var(--sd-zinc-500)"} />
+                        </div>
+                        <div>
+                          <h3 className="font-heading" style={{ fontSize: "1.02rem", fontWeight: 800, color: "var(--sd-black)", margin: 0, wordBreak: "break-word" }}>
+                            {courier.name}
+                          </h3>
+                          {courier.code && (
+                            <span style={{
+                              display: "inline-block",
+                              background: "var(--sd-zinc-100)",
+                              color: "var(--sd-zinc-700)",
+                              fontSize: "0.68rem",
+                              fontWeight: 800,
+                              padding: "1px 6px",
+                              borderRadius: "4px",
+                              marginTop: "2px",
+                              fontFamily: "monospace"
+                            }}>
+                              CODE: {courier.code}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <span style={{
+                        background: isAct ? "#ECFDF5" : "#F4F4F5",
+                        color: isAct ? "#059669" : "#71717A",
+                        border: `1px solid ${isAct ? "#A7F3D0" : "#E4E4E7"}`,
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        whiteSpace: "nowrap"
+                      }}>
+                        {isAct ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "0.78rem", color: "var(--sd-zinc-600)", marginTop: "10px" }}>
+                      {courier.phone && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <Phone size={13} color="var(--sd-zinc-400)" />
+                          <span>Helpline: <strong>{courier.phone}</strong></span>
+                        </div>
+                      )}
+
+                      {courier.trackingUrl && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <ExternalLink size={13} color="var(--sd-red)" />
+                          <a 
+                            href={courier.trackingUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ color: "var(--sd-red)", fontWeight: 700, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          >
+                            Online Tracking Portal
+                          </a>
+                        </div>
+                      )}
+
+                      {courier.notes && (
+                        <div style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)", fontStyle: "italic", marginTop: "2px" }}>
+                          {courier.notes}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "6px",
+                    paddingTop: "10px",
+                    borderTop: "1px solid var(--sd-zinc-100)"
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => updateCourierPartner(courier.id, { isActive: !isAct })}
+                      className="btn-secondary"
+                      style={{
+                        padding: "5px 10px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        flex: 1
+                      }}
+                    >
+                      {isAct ? "Set Inactive" : "Set Active"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCourier(courier)}
+                      className="btn-secondary"
+                      style={{ padding: "5px 8px" }}
+                      title="Edit Courier Partner"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCourierClick(courier.id, courier.name)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--sd-zinc-400)",
+                        padding: "4px"
+                      }}
+                      title="Delete Courier Partner"
                     >
                       <Trash2 size={14} color="var(--sd-red)" />
                     </button>
@@ -1586,6 +1911,164 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   style={{ padding: "8px 18px" }}
                 >
                   {editingCatId ? "Save Changes" : "Create Category"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD / EDIT COURIER PARTNER MODAL */}
+      {showCourierModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "460px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{
+              background: "var(--sd-white)",
+              color: "var(--sd-black)",
+              padding: "16px 20px",
+              borderTopLeftRadius: "18px",
+              borderTopRightRadius: "18px",
+              borderBottom: "1px solid var(--sd-zinc-200)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              position: "sticky",
+              top: 0,
+              zIndex: 10
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Truck size={18} color="var(--sd-red)" />
+                <h3 className="font-heading" style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>
+                  {editingCourier ? "Edit Courier Partner" : "Register Courier Partner"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCourierModal(false);
+                  setEditingCourier(null);
+                }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCourier} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              {courierErrorMsg && (
+                <div style={{
+                  padding: "10px 12px",
+                  background: "var(--sd-red-subtle)",
+                  color: "var(--sd-red)",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  border: "1px solid var(--sd-red-border)"
+                }}>
+                  {courierErrorMsg}
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Courier Company Name <span style={{ color: "var(--sd-red)" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. The Professional Couriers, ST Courier, DTDC"
+                  value={courierFormData.name}
+                  onChange={(e) => setCourierFormData({ ...courierFormData, name: e.target.value })}
+                  className="text-input"
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                    Short Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. TPC, STC, DTDC"
+                    value={courierFormData.code}
+                    onChange={(e) => setCourierFormData({ ...courierFormData, code: e.target.value.toUpperCase() })}
+                    className="text-input"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                    Helpline / Phone
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 044-22250000"
+                    value={courierFormData.phone}
+                    onChange={(e) => setCourierFormData({ ...courierFormData, phone: e.target.value })}
+                    className="text-input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Online Tracking Portal URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="e.g. https://www.tpcindia.com"
+                  value={courierFormData.trackingUrl}
+                  onChange={(e) => setCourierFormData({ ...courierFormData, trackingUrl: e.target.value })}
+                  className="text-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Remarks / Service Notes
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Tamil Nadu overnight dispatch partner, pickup at 6 PM"
+                  value={courierFormData.notes}
+                  onChange={(e) => setCourierFormData({ ...courierFormData, notes: e.target.value })}
+                  className="text-input"
+                  style={{ resize: "vertical" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                <input
+                  type="checkbox"
+                  id="courierActiveCheckbox"
+                  checked={courierFormData.isActive}
+                  onChange={(e) => setCourierFormData({ ...courierFormData, isActive: e.target.checked })}
+                  style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--sd-red)" }}
+                />
+                <label htmlFor="courierActiveCheckbox" style={{ fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>
+                  Active Courier Partner (available for order dispatch selection)
+                </label>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCourierModal(false);
+                    setEditingCourier(null);
+                  }}
+                  className="btn-secondary"
+                  style={{ padding: "8px 16px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ padding: "8px 18px" }}
+                >
+                  {editingCourier ? "Save Changes" : "Register Courier"}
                 </button>
               </div>
             </form>

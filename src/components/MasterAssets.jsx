@@ -31,7 +31,7 @@ export default function MasterAssets({
   }, [activeSubTab]);
 
   const isProductsActive = activeSubTab === "products" || activeSubTab === "categories";
-  const isCustomersActive = activeSubTab === "customers" || activeSubTab === "customer-categories";
+  const isCustomersActive = activeSubTab === "customers" || activeSubTab === "customer-categories" || activeSubTab === "couriers";
   const isFinanceActive = activeSubTab === "finance" || activeSubTab === "suppliers" || activeSubTab === "expense-categories" || activeSubTab === "raw-materials";
 
   return (
@@ -157,7 +157,7 @@ export default function MasterAssets({
       <div style={{ display: isCustomersActive ? "block" : "none" }}>
         <CustomersManager 
           onStartBillForCustomer={onStartBillForCustomer} 
-          initialSubView={activeSubTab === "customer-categories" ? "categories" : "customers"}
+          initialSubView={activeSubTab === "customer-categories" ? "categories" : activeSubTab === "couriers" ? "couriers" : "customers"}
         />
       </div>
 

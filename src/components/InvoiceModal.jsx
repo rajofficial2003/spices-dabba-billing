@@ -149,6 +149,13 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `📅 Date: ${new Date().toLocaleDateString("en-IN")}\n`;
     msg += `🏪 *Shop:* ${order.customer?.shopName || "Retailer"}\n`;
     msg += `📱 Phone: ${order.customer?.phone || "-"}\n`;
+
+    const courierName = order.courierCompany || order.shippingDetails?.courierCompany;
+    const trackingNum = order.trackingId || order.shippingDetails?.trackingId;
+    if (courierName || trackingNum) {
+      msg += `🚚 Dispatch: ${courierName || "Courier"}${trackingNum ? ` [Docket: ${trackingNum}]` : ""}\n`;
+    }
+
     msg += `--------------------------------\n`;
     msg += `*ITEMIZED BREAKDOWN:*\n`;
 
@@ -402,6 +409,55 @@ export default function InvoiceModal({ order, onClose }) {
               {customer.phone && (
                 <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
                   Phone: {customer.phone}
+                </div>
+              )}
+
+              {/* Courier Partner & Docket / Tracking Number */}
+              {(order.courierCompany || order.shippingDetails?.courierCompany || order.trackingId || order.shippingDetails?.trackingId) && (
+                <div style={{
+                  marginTop: "8px",
+                  padding: "6px 8px",
+                  background: "#FFFFFF",
+                  borderRadius: "5px",
+                  border: "1px solid #D4D4D8",
+                  fontSize: "0.76rem"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 800, color: "#71717A", display: "block" }}>
+                        COURIER / TRANSPORTER:
+                      </span>
+                      <strong style={{ color: "#8B1E1E", fontSize: "0.84rem" }}>
+                        {order.courierCompany || order.shippingDetails?.courierCompany || "Courier Partner"}
+                      </strong>
+                    </div>
+
+                    {(order.trackingId || order.shippingDetails?.trackingId) && (
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 800, color: "#71717A", display: "block" }}>
+                          TRACKING / DOCKET #:
+                        </span>
+                        <span style={{
+                          fontFamily: "monospace",
+                          fontWeight: 800,
+                          color: "#09090b",
+                          background: "#F4F4F5",
+                          padding: "1px 6px",
+                          borderRadius: "4px",
+                          border: "1px solid #E4E4E7",
+                          display: "inline-block"
+                        }}>
+                          {order.trackingId || order.shippingDetails?.trackingId}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {(order.dispatchDate || order.shippingDetails?.dispatchDate) && (
+                    <div style={{ fontSize: "0.70rem", color: "#71717A", marginTop: "3px" }}>
+                      Dispatch Date: <strong>{order.dispatchDate || order.shippingDetails?.dispatchDate}</strong>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

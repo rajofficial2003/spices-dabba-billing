@@ -839,20 +839,7 @@ export default function FinanceERP() {
             <button
               type="button"
               onClick={handleOpenRawMaterialModal}
-              style={{
-                background: "#6B1414",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "10px",
-                padding: "9px 18px",
-                fontSize: "0.84rem",
-                fontWeight: 800,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(107,20,20,0.25)"
-              }}
+              className="btn-raw-bill"
             >
               <Boxes size={16} />
               <span>Record Raw Material Bill</span>
@@ -861,20 +848,7 @@ export default function FinanceERP() {
             <button
               type="button"
               onClick={handleOpenOtherExpenseModal}
-              style={{
-                background: "var(--sd-black)",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "10px",
-                padding: "9px 18px",
-                fontSize: "0.84rem",
-                fontWeight: 800,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-              }}
+              className="btn-primary"
             >
               <Receipt size={16} />
               <span>Record Other Expense</span>
@@ -889,12 +863,11 @@ export default function FinanceERP() {
           gap: "12px"
         }}>
           {/* Card 1: Billing Inflow */}
-          <div style={{
+          <div className="bw-card" style={{
             background: "#FFFFFF",
             borderRadius: "12px",
             border: "1px solid var(--sd-zinc-200)",
-            padding: "16px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+            padding: "16px"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>
@@ -913,18 +886,17 @@ export default function FinanceERP() {
           </div>
 
           {/* Card 2: Raw Materials Outflow */}
-          <div style={{
+          <div className="bw-card" style={{
             background: "#FFFFFF",
             borderRadius: "12px",
-            border: "1px solid #FED7AA",
-            padding: "16px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+            border: "1px solid #FECACA",
+            padding: "16px"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#6B1414", textTransform: "uppercase" }}>
                 Raw Materials Procured
               </span>
-              <div style={{ background: "#FFEDD5", color: "#C2410C", padding: "6px", borderRadius: "8px" }}>
+              <div style={{ background: "#FEE2E2", color: "#6B1414", padding: "6px", borderRadius: "8px" }}>
                 <Boxes size={16} />
               </div>
             </div>
@@ -937,12 +909,11 @@ export default function FinanceERP() {
           </div>
 
           {/* Card 3: Other Operational Expenses */}
-          <div style={{
+          <div className="bw-card" style={{
             background: "#FFFFFF",
             borderRadius: "12px",
             border: "1px solid #FECDD3",
-            padding: "16px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+            padding: "16px"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#9F1239", textTransform: "uppercase" }}>
@@ -961,12 +932,11 @@ export default function FinanceERP() {
           </div>
 
           {/* Card 4: Net Operating Margin */}
-          <div style={{
+          <div className="bw-card" style={{
             background: netProfit >= 0 ? "#F0FDF4" : "#FEF2F2",
             borderRadius: "12px",
             border: `1px solid ${netProfit >= 0 ? "#BBF7D0" : "#FCA5A5"}`,
-            padding: "16px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+            padding: "16px"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: netProfit >= 0 ? "#166534" : "#991B1B", textTransform: "uppercase" }}>
@@ -1098,6 +1068,7 @@ export default function FinanceERP() {
           <button
             type="button"
             onClick={() => { setActiveSection("raw_materials"); setSearchQuery(""); }}
+            className={activeSection === "raw_materials" ? "tab-raw-active" : ""}
             style={{
               padding: "8px 18px",
               borderRadius: "9px",
@@ -1110,8 +1081,7 @@ export default function FinanceERP() {
               display: "inline-flex",
               alignItems: "center",
               gap: "7px",
-              transition: "all 0.15s ease",
-              boxShadow: activeSection === "raw_materials" ? "0 2px 6px rgba(107,20,20,0.3)" : "none"
+              transition: "all 0.15s ease"
             }}
           >
             <Boxes size={16} />
@@ -1121,6 +1091,7 @@ export default function FinanceERP() {
           <button
             type="button"
             onClick={() => { setActiveSection("other_expenses"); setSearchQuery(""); }}
+            className={activeSection === "other_expenses" ? "tab-other-active" : ""}
             style={{
               padding: "8px 18px",
               borderRadius: "9px",
@@ -1133,8 +1104,7 @@ export default function FinanceERP() {
               display: "inline-flex",
               alignItems: "center",
               gap: "7px",
-              transition: "all 0.15s ease",
-              boxShadow: activeSection === "other_expenses" ? "0 2px 6px rgba(0,0,0,0.2)" : "none"
+              transition: "all 0.15s ease"
             }}
           >
             <Receipt size={16} />
@@ -1186,16 +1156,7 @@ export default function FinanceERP() {
               <button
                 type="button"
                 onClick={handleOpenRawMaterialModal}
-                style={{
-                  background: "#6B1414",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: "10px",
-                  padding: "9px 18px",
-                  fontSize: "0.82rem",
-                  fontWeight: 800,
-                  cursor: "pointer"
-                }}
+                className="btn-raw-bill"
               >
                 Record First Raw Material Bill
               </button>
@@ -2514,17 +2475,8 @@ export default function FinanceERP() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  style={{
-                    padding: "9px 24px",
-                    borderRadius: "8px",
-                    background: "#6B1414",
-                    color: "#FFFFFF",
-                    border: "none",
-                    fontWeight: 800,
-                    fontSize: "0.84rem",
-                    cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(107,20,20,0.3)"
-                  }}
+                  className="btn-raw-bill"
+                  style={{ padding: "9px 24px" }}
                 >
                   {isSubmitting 
                     ? (editingExpenseId ? "Updating Bill..." : "Recording Bill...") 
@@ -2715,15 +2667,11 @@ export default function FinanceERP() {
                 </button>
                 <button
                   type="submit"
+                  className="btn-raw-bill"
                   style={{
                     padding: "8px 16px",
                     borderRadius: "6px",
-                    background: "#6B1414",
-                    color: "#FFFFFF",
-                    border: "none",
-                    fontSize: "0.8rem",
-                    fontWeight: 800,
-                    cursor: "pointer"
+                    fontSize: "0.8rem"
                   }}
                 >
                   Save & Select

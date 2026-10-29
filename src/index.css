@@ -184,6 +184,63 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   box-shadow: 0 4px 14px rgba(139, 30, 30, 0.35);
 }
 
+/* Purchase & Raw Material Primary Button (Theme #6B1414 with Overview-style hover) */
+.btn-raw-bill {
+  background-color: #6B1414;
+  color: var(--sd-white);
+  border: 1px solid #6B1414;
+  font-weight: 800;
+  padding: 9px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 0.84rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(107, 20, 20, 0.25);
+}
+
+.btn-raw-bill:hover {
+  background-color: #4A0D0D;
+  border-color: #4A0D0D;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(107, 20, 20, 0.35);
+}
+
+.btn-raw-bill:active {
+  transform: translateY(0);
+}
+
+/* Raw Material Sub-tab active button with hover */
+.tab-raw-active {
+  background-color: #6B1414 !important;
+  color: #FFFFFF !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 6px rgba(107, 20, 20, 0.3) !important;
+}
+
+.tab-raw-active:hover {
+  background-color: #4A0D0D !important;
+  box-shadow: 0 4px 12px rgba(107, 20, 20, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Other Expenses tab active button with hover */
+.tab-other-active {
+  background-color: var(--sd-black) !important;
+  color: #FFFFFF !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.tab-other-active:hover {
+  background-color: var(--sd-black-hover) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
 .btn-secondary {
   background-color: var(--sd-white);
   color: var(--sd-black);

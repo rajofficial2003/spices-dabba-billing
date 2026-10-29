@@ -22,9 +22,9 @@ function POSApp() {
     setLastGeneratedInvoice 
   } = usePOS();
 
-  // Navigation handler that seamlessly routes master sub-tabs (customers, products, categories, suppliers)
+  // Navigation handler that seamlessly routes master sub-tabs (customers, products, categories, suppliers, raw-materials)
   const handleNavigate = (tab, subTab = null) => {
-    if (tab === "customers" || tab === "products" || tab === "categories" || tab === "suppliers" || tab === "expense-categories") {
+    if (tab === "customers" || tab === "products" || tab === "categories" || tab === "suppliers" || tab === "expense-categories" || tab === "raw-materials") {
       setActiveTab("assets");
       setAssetsSubTab(tab);
     } else if (tab === "assets") {
@@ -58,7 +58,7 @@ function POSApp() {
   // Pre-cache and retain visited tabs in DOM so images and state don't reload
   React.useEffect(() => {
     setVisitedTabs(prev => {
-      const tabToRecord = (activeTab === "products" || activeTab === "categories" || activeTab === "customers") ? "assets" : activeTab;
+      const tabToRecord = (activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "suppliers" || activeTab === "expense-categories" || activeTab === "raw-materials") ? "assets" : activeTab;
       if (prev.has(tabToRecord)) return prev;
       const next = new Set(prev);
       next.add(tabToRecord);
@@ -92,7 +92,7 @@ function POSApp() {
         )}
 
         {visitedTabs.has("assets") && (
-          <div style={{ display: (activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers") ? "block" : "none" }}>
+          <div style={{ display: (activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "suppliers" || activeTab === "expense-categories" || activeTab === "raw-materials") ? "block" : "none" }}>
             <MasterAssets 
               activeSubTab={assetsSubTab}
               onSubTabChange={(sub) => setAssetsSubTab(sub)}

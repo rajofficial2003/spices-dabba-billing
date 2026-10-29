@@ -4,6 +4,7 @@ import ProductsManager from "./ProductsManager";
 import CustomersManager from "./CustomersManager";
 import ExpenseCategoriesManager from "./ExpenseCategoriesManager";
 import SuppliersManager from "./SuppliersManager";
+import RawMaterialsManager from "./RawMaterialsManager";
 import { usePOS } from "../context/POSContext";
 
 export default function MasterAssets({ 
@@ -11,22 +12,26 @@ export default function MasterAssets({
   onSubTabChange, 
   onStartBillForCustomer 
 }) {
-  const { products, customers, suppliers = [], expenseCategories = [] } = usePOS();
+  const { products, customers, suppliers = [], expenseCategories = [], rawMaterials = [] } = usePOS();
 
-  const [financeSubView, setFinanceSubView] = useState(
-    activeSubTab === "suppliers" ? "suppliers" : "categories"
-  );
+  const [financeSubView, setFinanceSubView] = useState(() => {
+    if (activeSubTab === "suppliers") return "suppliers";
+    if (activeSubTab === "raw-materials") return "raw-materials";
+    return "categories";
+  });
 
   React.useEffect(() => {
     if (activeSubTab === "suppliers") {
       setFinanceSubView("suppliers");
     } else if (activeSubTab === "expense-categories") {
       setFinanceSubView("categories");
+    } else if (activeSubTab === "raw-materials") {
+      setFinanceSubView("raw-materials");
     }
   }, [activeSubTab]);
 
   const isProductsActive = activeSubTab === "products" || activeSubTab === "categories";
-  const isFinanceActive = activeSubTab === "finance" || activeSubTab === "suppliers" || activeSubTab === "expense-categories";
+  const isFinanceActive = activeSubTab === "finance" || activeSubTab === "suppliers" || activeSubTab === "expense-categories" || activeSubTab === "raw-materials";
 
   return (
     <div className="master-assets-container">
@@ -152,129 +157,109 @@ export default function MasterAssets({
         <CustomersManager onStartBillForCustomer={onStartBillForCustomer} />
       </div>
 
-      {/* Finance Section: Expense Categories & Suppliers */}
+      {/* Finance Section: Expense Categories, Suppliers & Raw Materials */}
       <div style={{ display: isFinanceActive ? "block" : "none" }}>
-        {/* Finance Sub-view 1: Expense Categories */}
-        <div style={{ display: financeSubView === "categories" ? "block" : "none" }}>
-          <ExpenseCategoriesManager
-            subViewToggle={
-              <div style={{
-                display: "inline-flex",
-                background: "var(--sd-zinc-100)",
-                padding: "4px",
-                borderRadius: "12px",
-                border: "1px solid var(--sd-zinc-200)",
-                gap: "3px"
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setFinanceSubView("categories")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                    fontWeight: 800,
-                    background: "var(--sd-black)",
-                    color: "#FFFFFF",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  <Tag size={14} />
-                  <span>Expense Categories ({expenseCategories.length})</span>
-                </button>
+        {(() => {
+          const financeToggle = (
+            <div style={{
+              display: "inline-flex",
+              background: "var(--sd-zinc-100)",
+              padding: "4px",
+              borderRadius: "12px",
+              border: "1px solid var(--sd-zinc-200)",
+              gap: "3px",
+              flexWrap: "wrap"
+            }}>
+              <button
+                type="button"
+                onClick={() => setFinanceSubView("categories")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: financeSubView === "categories" ? 800 : 600,
+                  background: financeSubView === "categories" ? "var(--sd-black)" : "transparent",
+                  color: financeSubView === "categories" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: financeSubView === "categories" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                <Tag size={14} />
+                <span>Expense Categories ({expenseCategories.length})</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => setFinanceSubView("suppliers")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
-                    background: "transparent",
-                    color: "var(--sd-zinc-700)",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  <Building2 size={14} />
-                  <span>Suppliers ({suppliers.length})</span>
-                </button>
+              <button
+                type="button"
+                onClick={() => setFinanceSubView("suppliers")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: financeSubView === "suppliers" ? 800 : 600,
+                  background: financeSubView === "suppliers" ? "var(--sd-black)" : "transparent",
+                  color: financeSubView === "suppliers" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: financeSubView === "suppliers" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                <Building2 size={14} />
+                <span>Suppliers ({suppliers.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFinanceSubView("raw-materials")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: financeSubView === "raw-materials" ? 800 : 600,
+                  background: financeSubView === "raw-materials" ? "var(--sd-black)" : "transparent",
+                  color: financeSubView === "raw-materials" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: financeSubView === "raw-materials" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                <Boxes size={14} />
+                <span>Raw Materials ({rawMaterials.length})</span>
+              </button>
+            </div>
+          );
+
+          return (
+            <>
+              {/* Finance Sub-view 1: Expense Categories */}
+              <div style={{ display: financeSubView === "categories" ? "block" : "none" }}>
+                <ExpenseCategoriesManager subViewToggle={financeToggle} />
               </div>
-            }
-          />
-        </div>
 
-        {/* Finance Sub-view 2: Suppliers */}
-        <div style={{ display: financeSubView === "suppliers" ? "block" : "none" }}>
-          <SuppliersManager
-            subViewToggle={
-              <div style={{
-                display: "inline-flex",
-                background: "var(--sd-zinc-100)",
-                padding: "4px",
-                borderRadius: "12px",
-                border: "1px solid var(--sd-zinc-200)",
-                gap: "3px"
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setFinanceSubView("categories")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
-                    background: "transparent",
-                    color: "var(--sd-zinc-700)",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  <Tag size={14} />
-                  <span>Expense Categories ({expenseCategories.length})</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFinanceSubView("suppliers")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                    fontWeight: 800,
-                    background: "var(--sd-black)",
-                    color: "#FFFFFF",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  <Building2 size={14} />
-                  <span>Suppliers ({suppliers.length})</span>
-                </button>
+              {/* Finance Sub-view 2: Suppliers */}
+              <div style={{ display: financeSubView === "suppliers" ? "block" : "none" }}>
+                <SuppliersManager subViewToggle={financeToggle} />
               </div>
-            }
-          />
-        </div>
+
+              {/* Finance Sub-view 3: Raw Materials */}
+              <div style={{ display: financeSubView === "raw-materials" ? "block" : "none" }}>
+                <RawMaterialsManager subViewToggle={financeToggle} />
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

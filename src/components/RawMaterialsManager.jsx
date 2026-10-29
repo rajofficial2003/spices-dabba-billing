@@ -32,7 +32,7 @@ const QUICK_RAW_TEMPLATES = [
   { name: "Asafoetida (Perungayam)", tamilName: "பெருங்காயம்", hsnCode: "1301 90 13", unit: "Kg", standardRate: 1100 }
 ];
 
-export default function RawMaterialsManager() {
+export default function RawMaterialsManager({ subViewToggle = null }) {
   const { 
     rawMaterials, 
     addRawMaterial, 
@@ -231,7 +231,9 @@ export default function RawMaterialsManager() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {subViewToggle}
+
           {rawMaterials.length === 0 && (
             <button
               type="button"

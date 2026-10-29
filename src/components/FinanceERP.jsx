@@ -842,7 +842,7 @@ export default function FinanceERP() {
               className="btn-raw-bill"
             >
               <Boxes size={16} />
-              <span>Record Raw Material Bill</span>
+              <span>Purchase Expenses</span>
             </button>
 
             <button
@@ -851,7 +851,7 @@ export default function FinanceERP() {
               className="btn-primary"
             >
               <Receipt size={16} />
-              <span>Record Other Expense</span>
+              <span>Operational Expenses</span>
             </button>
           </div>
         </div>

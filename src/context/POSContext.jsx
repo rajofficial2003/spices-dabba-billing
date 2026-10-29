@@ -385,13 +385,23 @@ export function POSProvider({ children }) {
 
       // 10. Dynamic Courier Partners listener
       const courierCol = collection(db, "billing_courier_partners");
-      unsubscribeCouriers = onSnapshot(courierCol, (snapshot) => {
+      unsubscribeCouriers = onSnapshot(courierCol, async (snapshot) => {
         if (!snapshot.empty) {
           const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
           setCourierPartners(list);
         } else {
           setCourierPartners(DEFAULT_COURIER_PARTNERS);
+          try {
+            for (const cp of DEFAULT_COURIER_PARTNERS) {
+              await setDoc(doc(db, "billing_courier_partners", cp.id), {
+                ...cp,
+                timestamp: Date.now()
+              }, { merge: true });
+            }
+          } catch (seedErr) {
+            console.warn("Courier auto-seed note:", seedErr.message);
+          }
         }
       }, (err) => {
         console.warn("Firestore couriers listener note:", err.message);

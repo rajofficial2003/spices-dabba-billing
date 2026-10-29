@@ -1264,46 +1264,28 @@ export default function ProductsManager({ initialSubView = "products" }) {
                     </span>
                   </div>
 
-                  {/* 1-Click Quick Add Presets */}
-                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px" }}>
-                    <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--sd-zinc-400)" }}>+ Quick:</span>
-                    {["50 g", "100 g", "250 g", "500 g", "1 kg"].map(size => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => handleAddVariantRow(size)}
-                        style={{
-                          background: "var(--sd-white)",
-                          border: "1px solid var(--sd-zinc-300)",
-                          borderRadius: "6px",
-                          padding: "2px 7px",
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          color: "var(--sd-zinc-800)",
-                          cursor: "pointer"
-                        }}
-                      >
-                        +{size}
-                      </button>
-                    ))}
+                  {/* Add Variant Button */}
+                  <div>
                     <button
                       type="button"
-                      onClick={() => handleAddVariantRow("Custom")}
+                      onClick={() => handleAddVariantRow("100 g")}
                       style={{
                         background: "var(--sd-black)",
                         border: "1px solid var(--sd-black)",
-                        borderRadius: "6px",
-                        padding: "2px 8px",
-                        fontSize: "0.72rem",
+                        borderRadius: "8px",
+                        padding: "5px 12px",
+                        fontSize: "0.76rem",
                         fontWeight: 700,
                         color: "var(--sd-white)",
                         cursor: "pointer",
-                        display: "flex",
+                        display: "inline-flex",
                         alignItems: "center",
-                        gap: "3px"
+                        gap: "5px",
+                        transition: "all 0.15s ease"
                       }}
                     >
-                      <Plus size={11} /> Add Variant
+                      <Plus size={13} />
+                      <span>Add Variant</span>
                     </button>
                   </div>
                 </div>

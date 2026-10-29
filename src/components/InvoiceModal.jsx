@@ -32,6 +32,19 @@ function numberToWords(num) {
   return str.trim() ? `${str.trim()} Rupees Only` : 'Zero Rupees';
 }
 
+// Helper to format customer billing / shipping address
+function formatAddress(addr) {
+  if (!addr) return "";
+  if (typeof addr === "string") return addr.trim();
+  const parts = [
+    addr.address?.trim(),
+    addr.city?.trim(),
+    addr.state?.trim(),
+    addr.pincode?.trim() ? (addr.pincode.trim().startsWith("-") ? addr.pincode.trim() : `- ${addr.pincode.trim()}`) : ""
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
 export default function InvoiceModal({ order, onClose }) {
   const { BUSINESS_INFO } = usePOS();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -115,6 +128,13 @@ export default function InvoiceModal({ order, onClose }) {
   const finalGrandTotal = Number(order.grandTotal) > 0 && Number(order.tax) > 0
     ? Number(order.grandTotal)
     : Math.round((Number(order.subtotal || 0) - Number(order.discount || 0) + calculatedTax) * 100) / 100;
+
+  // Address resolution for Billing and Shipping
+  const customer = order.customer || {};
+  const billingAddr = formatAddress(order.billingAddress || customer.billingAddress) || (typeof customer.address === "string" ? customer.address : "") || "";
+  const shippingAddr = formatAddress(order.shippingAddress || customer.shippingAddress);
+  const isSameAddress = customer.sameAsBilling !== false && (!shippingAddr || shippingAddr === billingAddr);
+  const finalShippingAddr = (isSameAddress || !shippingAddr) ? (billingAddr || shippingAddr) : shippingAddr;
 
   // Build WhatsApp share link including HSN codes & GST breakdown
   const generateWhatsAppA4BillLink = () => {
@@ -309,10 +329,10 @@ export default function InvoiceModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* Retailer / Billed To Section */}
+          {/* Retailer / Billed To & Shipping Address Section */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "1.3fr 1fr",
+            gridTemplateColumns: "1fr 1fr",
             gap: "16px",
             background: "#F8F9FA",
             padding: "12px 16px",
@@ -321,37 +341,69 @@ export default function InvoiceModal({ order, onClose }) {
             marginBottom: "16px",
             fontSize: "0.84rem"
           }}>
+            {/* BILLED TO / BUYER */}
             <div>
-              <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b" }}>
-                BILLED TO / RETAILER SHOP:
+              <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
+                BILLED TO / BUYER:
               </div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                {order.customer?.shopName}
+              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
+                {customer.shopName || customer.businessName || "Retailer Customer"}
               </div>
-              {order.customer?.customerName && (
-                <div style={{ color: "#52525B" }}>Contact Person: {order.customer.customerName}</div>
+              {customer.customerName && (
+                <div style={{ color: "#52525B", marginTop: "1px" }}>Contact Person: {customer.customerName}</div>
               )}
-              {order.customer?.address && (
-                <div style={{ color: "#52525B" }}>Address: {order.customer.address}</div>
+              {billingAddr && (
+                <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>Address: {billingAddr}</div>
               )}
-              {order.customer?.phone && (
-                <div style={{ color: "#09090b", fontWeight: 600 }}>Phone: {order.customer.phone}</div>
+              {customer.phone && (
+                <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>Phone: {customer.phone}</div>
+              )}
+              {customer.gstin && (
+                <div style={{ color: "#52525B", marginTop: "2px" }}>
+                  GSTIN: <strong style={{ fontFamily: "monospace", color: "#09090b" }}>{customer.gstin}</strong>
+                </div>
               )}
             </div>
 
+            {/* SHIPPING ADDRESS / DISPATCH TO */}
             <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "16px" }}>
-              <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#52525B" }}>
-                DISPATCH & SUPPLY DETAILS:
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
+                  SHIPPING ADDRESS / DISPATCH TO:
+                </div>
+                {isSameAddress && (billingAddr || finalShippingAddr) && (
+                  <span style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    background: "#E4E4E7",
+                    color: "#27272A",
+                    padding: "1px 6px",
+                    borderRadius: "3px"
+                  }}>
+                    Same as Billing
+                  </span>
+                )}
               </div>
-              <div style={{ marginTop: "4px", color: "#52525B" }}>
-                Place of Supply: <strong>Tamil Nadu (33)</strong>
+              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
+                {customer.shopName || customer.businessName || "Retailer Shop"}
               </div>
-              <div style={{ marginTop: "2px", color: "#52525B" }}>
-                Order Type: <strong>Wholesale Direct Spot Billing</strong>
-              </div>
-              <div style={{ marginTop: "2px", color: "#52525B" }}>
-                Payment Status: <strong style={{ color: order.paymentStatus === "pending" ? "#DC2626" : "#15803D" }}>{(order.paymentStatus || "PAID").toUpperCase()}</strong>
-              </div>
+              {customer.customerName && (
+                <div style={{ color: "#52525B", marginTop: "1px" }}>Contact Person: {customer.customerName}</div>
+              )}
+              {finalShippingAddr ? (
+                <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>
+                  Address: {finalShippingAddr}
+                </div>
+              ) : (
+                <div style={{ color: "#71717A", fontStyle: "italic", marginTop: "2px" }}>
+                  Same as Billing Address
+                </div>
+              )}
+              {customer.phone && (
+                <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
+                  Phone: {customer.phone}
+                </div>
+              )}
             </div>
           </div>
 

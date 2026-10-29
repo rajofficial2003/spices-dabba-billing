@@ -217,21 +217,23 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
         justifyContent: "space-between",
         alignItems: "center",
         gap: "14px",
-        marginBottom: "20px"
+        marginBottom: "20px",
+        paddingBottom: "14px",
+        borderBottom: "1px solid var(--sd-zinc-200)"
       }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Boxes size={22} color="var(--sd-red)" />
-            <h2 className="font-heading" style={{ fontSize: "1.35rem", fontWeight: 900, color: "var(--sd-black)", margin: 0 }}>
-              Raw Materials Catalog / மூலப்பொருள் தயாரிப்பு
+            <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
+              Raw Materials Catalog
             </h2>
           </div>
           <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "3px" }}>
-            Manage whole spices, seeds, grains, and raw ingredients for procurement & stock tracking (No categories required).
+            Manage whole spices, seeds, grains, and raw procurement ingredients.
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {subViewToggle}
 
           {rawMaterials.length === 0 && (
@@ -250,7 +252,8 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
-                cursor: "pointer"
+                cursor: "pointer",
+                whiteSpace: "nowrap"
               }}
             >
               <Sparkles size={15} />
@@ -261,22 +264,10 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
           <button
             type="button"
             onClick={() => handleOpenAdd()}
-            style={{
-              background: "var(--sd-black)",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: "10px",
-              padding: "9px 18px",
-              fontSize: "0.84rem",
-              fontWeight: 800,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.18)"
-            }}
+            className="btn-primary"
+            style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
           >
-            <Plus size={16} />
+            <Plus size={15} />
             <span>Add Raw Material</span>
           </button>
         </div>

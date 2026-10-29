@@ -164,19 +164,21 @@ export default function MasterAssets({
             <div style={{
               display: "inline-flex",
               background: "var(--sd-zinc-100)",
-              padding: "4px",
+              padding: "3px",
               borderRadius: "12px",
               border: "1px solid var(--sd-zinc-200)",
               gap: "3px",
-              flexWrap: "wrap"
+              flexWrap: "nowrap",
+              overflowX: "auto",
+              maxWidth: "100%"
             }}>
               <button
                 type="button"
                 onClick={() => setFinanceSubView("categories")}
                 style={{
-                  padding: "6px 14px",
+                  padding: "6px 12px",
                   borderRadius: "8px",
-                  fontSize: "0.82rem",
+                  fontSize: "0.80rem",
                   fontWeight: financeSubView === "categories" ? 800 : 600,
                   background: financeSubView === "categories" ? "var(--sd-black)" : "transparent",
                   color: financeSubView === "categories" ? "#FFFFFF" : "var(--sd-zinc-700)",
@@ -184,12 +186,13 @@ export default function MasterAssets({
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "5px",
+                  whiteSpace: "nowrap",
                   boxShadow: financeSubView === "categories" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
                   transition: "all 0.15s ease"
                 }}
               >
-                <Tag size={14} />
+                <Tag size={13} />
                 <span>Expense Categories ({expenseCategories.length})</span>
               </button>
 
@@ -197,9 +200,9 @@ export default function MasterAssets({
                 type="button"
                 onClick={() => setFinanceSubView("suppliers")}
                 style={{
-                  padding: "6px 14px",
+                  padding: "6px 12px",
                   borderRadius: "8px",
-                  fontSize: "0.82rem",
+                  fontSize: "0.80rem",
                   fontWeight: financeSubView === "suppliers" ? 800 : 600,
                   background: financeSubView === "suppliers" ? "var(--sd-black)" : "transparent",
                   color: financeSubView === "suppliers" ? "#FFFFFF" : "var(--sd-zinc-700)",
@@ -207,12 +210,13 @@ export default function MasterAssets({
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "5px",
+                  whiteSpace: "nowrap",
                   boxShadow: financeSubView === "suppliers" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
                   transition: "all 0.15s ease"
                 }}
               >
-                <Building2 size={14} />
+                <Building2 size={13} />
                 <span>Suppliers ({suppliers.length})</span>
               </button>
 
@@ -220,9 +224,9 @@ export default function MasterAssets({
                 type="button"
                 onClick={() => setFinanceSubView("raw-materials")}
                 style={{
-                  padding: "6px 14px",
+                  padding: "6px 12px",
                   borderRadius: "8px",
-                  fontSize: "0.82rem",
+                  fontSize: "0.80rem",
                   fontWeight: financeSubView === "raw-materials" ? 800 : 600,
                   background: financeSubView === "raw-materials" ? "var(--sd-black)" : "transparent",
                   color: financeSubView === "raw-materials" ? "#FFFFFF" : "var(--sd-zinc-700)",
@@ -230,12 +234,13 @@ export default function MasterAssets({
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "5px",
+                  whiteSpace: "nowrap",
                   boxShadow: financeSubView === "raw-materials" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
                   transition: "all 0.15s ease"
                 }}
               >
-                <Boxes size={14} />
+                <Boxes size={13} />
                 <span>Raw Materials ({rawMaterials.length})</span>
               </button>
             </div>

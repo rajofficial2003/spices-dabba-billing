@@ -192,104 +192,69 @@ export default function ExpenseCategoriesManager({ subViewToggle = null }) {
         </div>
       ) : (
         <div className="responsive-cards-grid">
-          {filteredCategories.map((cat) => {
-            const usageExpenses = expenses.filter(e => e.category === cat.name || e.category === cat.id);
-            const usageCount = usageExpenses.length;
-            const totalSpent = usageExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-
-            return (
-              <div 
-                key={cat.id}
-                className="bw-card"
-                style={{
-                  padding: "18px 20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  gap: "14px",
-                  background: "var(--sd-white)",
-                  border: "1px solid var(--sd-zinc-200)",
-                  borderRadius: "16px"
-                }}
-              >
-                {/* Header & Title */}
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                    <span style={{
-                      fontSize: "0.68rem",
-                      fontWeight: 800,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.6px",
-                      background: "var(--sd-black)",
-                      color: "var(--sd-white)",
-                      padding: "2px 7px",
-                      borderRadius: "4px"
-                    }}>
-                      EXPENSE CATEGORY
-                    </span>
-
-                    {/* Action buttons */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(cat)}
-                        className="btn-secondary"
-                        title="Edit Category"
-                        style={{ padding: "5px 8px", fontSize: "0.75rem" }}
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(cat)}
-                        className="btn-secondary"
-                        title="Delete Category"
-                        style={{ padding: "5px 8px", fontSize: "0.75rem", color: "var(--sd-red)", borderColor: "#FCA5A5" }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                    <Tag size={17} color="var(--sd-black)" />
-                    <h3 className="font-heading" style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-                      {cat.name}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Spend insights badge */}
+          {filteredCategories.map((cat) => (
+            <div 
+              key={cat.id}
+              className="bw-card"
+              style={{
+                padding: "16px 18px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                background: "var(--sd-white)",
+                border: "1px solid var(--sd-zinc-200)",
+                borderRadius: "14px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                 <div style={{
-                  background: "var(--sd-zinc-50)",
+                  width: "36px",
+                  height: "36px",
                   borderRadius: "10px",
-                  padding: "10px 12px",
-                  border: "1px solid var(--sd-zinc-100)",
+                  background: "var(--sd-zinc-100)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between"
+                  justifyContent: "center",
+                  color: "var(--sd-black)",
+                  flexShrink: 0
                 }}>
-                  <div>
-                    <div style={{ fontSize: "0.7rem", color: "var(--sd-zinc-500)", textTransform: "uppercase", fontWeight: 700 }}>
-                      Recorded Entries
-                    </div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-zinc-800)" }}>
-                      {usageCount} {usageCount === 1 ? "entry" : "entries"}
-                    </div>
-                  </div>
-
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "0.7rem", color: "var(--sd-zinc-500)", textTransform: "uppercase", fontWeight: 700 }}>
-                      Total Spent
-                    </div>
-                    <div style={{ fontSize: "0.92rem", fontWeight: 900, color: usageCount > 0 ? "var(--sd-red)" : "var(--sd-zinc-400)" }}>
-                      ₹{totalSpent.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </div>
-                  </div>
+                  <Tag size={18} />
                 </div>
+                <h3 className="font-heading" style={{
+                  fontSize: "1.02rem",
+                  fontWeight: 800,
+                  color: "var(--sd-black)",
+                  margin: 0,
+                  wordBreak: "break-word"
+                }}>
+                  {cat.name}
+                </h3>
               </div>
-            );
-          })}
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenEdit(cat)}
+                  className="btn-secondary"
+                  title="Edit Category"
+                  style={{ padding: "6px 8px", fontSize: "0.75rem" }}
+                >
+                  <Edit2 size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(cat)}
+                  className="btn-secondary"
+                  title="Delete Category"
+                  style={{ padding: "6px 8px", fontSize: "0.75rem", color: "var(--sd-red)", borderColor: "#FCA5A5" }}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

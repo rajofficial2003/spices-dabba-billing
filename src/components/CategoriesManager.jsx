@@ -424,18 +424,8 @@ export default function CategoriesManager({ isNested = false, addCategoryTrigger
                   )}
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                    <span style={{
-                      fontSize: "0.72rem",
-                      fontWeight: 700,
-                      background: "var(--sd-zinc-100)",
-                      color: "var(--sd-zinc-700)",
-                      padding: "2px 7px",
-                      borderRadius: "4px"
-                    }}>
-                      ID: {cat.id}
-                    </span>
-                    <span style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)" }}>
-                      • {prodsInCat.length} products
+                    <span style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>
+                      {prodsInCat.length} products
                     </span>
                   </div>
                 </div>

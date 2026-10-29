@@ -238,7 +238,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
         >
           <ShoppingBag size={15} />
           <span>
-            BILL ({totalItemsCount} • ₹{grandTotal})
+            Billing ({totalItemsCount} • ₹{grandTotal})
           </span>
         </button>
       </div>
@@ -859,7 +859,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <ShoppingBag size={18} color="var(--sd-black)" />
                   <h2 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 800, margin: 0, color: "var(--sd-black)" }}>
-                    {activeDraftId ? "Draft Order (On-Field)" : "BILL"}
+                    {activeDraftId ? "Draft Order (On-Field)" : "Billing"}
                   </h2>
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", marginTop: "1px", display: "flex", alignItems: "center", gap: "6px" }}>

@@ -10,7 +10,8 @@ import {
   Plus, 
   Clock,
   Boxes,
-  Receipt
+  Receipt,
+  FlaskConical
 } from "lucide-react";
 
 export default function Header({ activeTab, setActiveTab }) {
@@ -166,6 +167,14 @@ export default function Header({ activeTab, setActiveTab }) {
             </button>
 
             <button
+              onClick={() => setActiveTab("mixers")}
+              className={`nav-tab-btn ${activeTab === "mixers" ? "active" : ""}`}
+            >
+              <FlaskConical size={15} />
+              <span>Mixers</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab("assets")}
               className={`nav-tab-btn ${activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" ? "active" : ""}`}
             >
@@ -244,6 +253,15 @@ export default function Header({ activeTab, setActiveTab }) {
         >
           <Receipt size={18} />
           <span>Finance</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("mixers")}
+          className={`mobile-nav-btn ${activeTab === "mixers" ? "active" : ""}`}
+        >
+          <FlaskConical size={18} />
+          <span>Mixers</span>
         </button>
 
         <button

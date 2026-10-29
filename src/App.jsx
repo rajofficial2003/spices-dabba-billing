@@ -9,6 +9,7 @@ import MasterAssets from "./components/MasterAssets";
 import FinanceERP from "./components/FinanceERP";
 import QuickStats from "./components/QuickStats";
 import InvoiceModal from "./components/InvoiceModal";
+import MixersManager from "./components/MixersManager";
 
 function POSApp() {
   const [activeTab, setActiveTab] = useState("stats"); // 'stats' (Overview) default on website load
@@ -104,6 +105,12 @@ function POSApp() {
         {visitedTabs.has("finance") && (
           <div style={{ display: activeTab === "finance" ? "block" : "none" }}>
             <FinanceERP />
+          </div>
+        )}
+
+        {visitedTabs.has("mixers") && (
+          <div style={{ display: activeTab === "mixers" ? "block" : "none" }}>
+            <MixersManager />
           </div>
         )}
 

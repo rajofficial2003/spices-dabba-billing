@@ -127,6 +127,81 @@ export function POSProvider({ children }) {
     }
   });
 
+  // Dynamic Product Mixers & Raw Material Formulation State (Default Base: 1 KG)
+  const DEFAULT_MIXERS = [
+    {
+      id: "mix_sambar",
+      name: "Madras Sambar Powder",
+      tamilName: "பாரம்பரிய சாம்பார் பொடி",
+      baseQuantity: 1, // 1 KG
+      baseUnit: "Kg",
+      productId: "prod_sambar",
+      description: "Authentic South Indian aromatic sambar masala blend (1 KG standard base)",
+      instructions: "Sun-dry raw spices, mild roast coriander & chilli separately, grind to fine mesh.",
+      ingredients: [
+        { rawMaterialId: "rm_coriander", rawMaterialName: "Coriander Seeds (Dhaniya)", grams: 450, percentage: 45 },
+        { rawMaterialId: "rm_chilli", rawMaterialName: "Red Chilli (Guntur)", grams: 300, percentage: 30 },
+        { rawMaterialId: "rm_cumin", rawMaterialName: "Cumin Seeds (Jeera)", grams: 100, percentage: 10 },
+        { rawMaterialId: "rm_pepper", rawMaterialName: "Black Pepper", grams: 50, percentage: 5 },
+        { rawMaterialId: "rm_turmeric", rawMaterialName: "Turmeric Finger (Haldi)", grams: 50, percentage: 5 },
+        { rawMaterialId: "rm_fenugreek", rawMaterialName: "Fenugreek Seeds (Vendhayam)", grams: 30, percentage: 3 },
+        { rawMaterialId: "rm_asafoetida", rawMaterialName: "Asafoetida (Perungayam)", grams: 20, percentage: 2 }
+      ],
+      isActive: true,
+      timestamp: Date.now()
+    },
+    {
+      id: "mix_biryani",
+      name: "Dindigul Thalappakatti Biryani Masala",
+      tamilName: "திண்டுக்கல் பிரியாணி மசாலா",
+      baseQuantity: 1,
+      baseUnit: "Kg",
+      productId: "prod_biryani",
+      description: "Royal Seeraga Samba Biryani aromatic whole spices blend (1 KG base)",
+      instructions: "Slow roast whole spices on gentle heat until fragrant. Coarse grind for long-lasting aroma.",
+      ingredients: [
+        { rawMaterialId: "rm_coriander", rawMaterialName: "Coriander Seeds (Dhaniya)", grams: 300, percentage: 30 },
+        { rawMaterialId: "rm_cumin", rawMaterialName: "Cumin Seeds (Jeera)", grams: 200, percentage: 20 },
+        { rawMaterialId: "rm_fennel", rawMaterialName: "Fennel Seeds (Sombu)", grams: 180, percentage: 18 },
+        { rawMaterialId: "rm_cinnamon", rawMaterialName: "Cinnamon (Pattai)", grams: 120, percentage: 12 },
+        { rawMaterialId: "rm_cloves", rawMaterialName: "Cloves (Lavangam)", grams: 80, percentage: 8 },
+        { rawMaterialId: "rm_cardamom", rawMaterialName: "Cardamom (Elaichi)", grams: 60, percentage: 6 },
+        { rawMaterialId: "rm_pepper", rawMaterialName: "Black Pepper", grams: 60, percentage: 6 }
+      ],
+      isActive: true,
+      timestamp: Date.now()
+    },
+    {
+      id: "mix_chicken",
+      name: "Chettinad Chicken Kulambu Masala",
+      tamilName: "செட்டிநாடு சிக்கன் குழம்பு மசாலா",
+      baseQuantity: 1,
+      baseUnit: "Kg",
+      productId: "prod_chicken",
+      description: "Spicy & peppery traditional Chettinad chicken curry formulation (1 KG base)",
+      instructions: "Medium roast with curry leaves, grind while warm.",
+      ingredients: [
+        { rawMaterialId: "rm_coriander", rawMaterialName: "Coriander Seeds (Dhaniya)", grams: 380, percentage: 38 },
+        { rawMaterialId: "rm_chilli", rawMaterialName: "Red Chilli (Guntur)", grams: 320, percentage: 32 },
+        { rawMaterialId: "rm_pepper", rawMaterialName: "Black Pepper", grams: 120, percentage: 12 },
+        { rawMaterialId: "rm_cumin", rawMaterialName: "Cumin Seeds (Jeera)", grams: 100, percentage: 10 },
+        { rawMaterialId: "rm_fennel", rawMaterialName: "Fennel Seeds (Sombu)", grams: 50, percentage: 5 },
+        { rawMaterialId: "rm_turmeric", rawMaterialName: "Turmeric Finger (Haldi)", grams: 30, percentage: 3 }
+      ],
+      isActive: true,
+      timestamp: Date.now()
+    }
+  ];
+
+  const [mixers, setMixers] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sdb_mixers");
+      return saved ? JSON.parse(saved) : DEFAULT_MIXERS;
+    } catch {
+      return DEFAULT_MIXERS;
+    }
+  });
+
   // Dynamic Suppliers Directory State
   const DEFAULT_SUPPLIERS = [
     { 
@@ -214,6 +289,10 @@ export function POSProvider({ children }) {
   }, [courierPartners]);
 
   useEffect(() => {
+    localStorage.setItem("sdb_mixers", JSON.stringify(mixers));
+  }, [mixers]);
+
+  useEffect(() => {
     localStorage.setItem("sdb_orders", JSON.stringify(orders));
   }, [orders]);
 
@@ -274,6 +353,7 @@ export function POSProvider({ children }) {
     let unsubscribeCustomerCategories = () => {};
     let unsubscribeSuppliers = () => {};
     let unsubscribeCouriers = () => {};
+    let unsubscribeMixers = () => {};
 
     try {
       // 1. Products listener
@@ -407,6 +487,30 @@ export function POSProvider({ children }) {
         console.warn("Firestore couriers listener note:", err.message);
       });
 
+      // 11. Dynamic Mixers & Product Formulation listener
+      const mixersCol = collection(db, "billing_mixers");
+      unsubscribeMixers = onSnapshot(mixersCol, async (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+          setMixers(list);
+        } else {
+          setMixers(DEFAULT_MIXERS);
+          try {
+            for (const mx of DEFAULT_MIXERS) {
+              await setDoc(doc(db, "billing_mixers", mx.id), {
+                ...mx,
+                timestamp: Date.now()
+              }, { merge: true });
+            }
+          } catch (seedErr) {
+            console.warn("Mixers auto-seed note:", seedErr.message);
+          }
+        }
+      }, (err) => {
+        console.warn("Firestore mixers listener note:", err.message);
+      });
+
     } catch (error) {
       console.warn("Firebase listener initialization error:", error);
       setLoading(false);
@@ -423,6 +527,7 @@ export function POSProvider({ children }) {
       unsubscribeCustomerCategories();
       unsubscribeSuppliers();
       unsubscribeCouriers();
+      unsubscribeMixers();
     };
   }, []);
 
@@ -1461,6 +1566,69 @@ export function POSProvider({ children }) {
     return updatedFields;
   };
 
+  // DYNAMIC PRODUCT MIXERS & RAW MATERIAL RATIOS CRUD
+  const addMixer = async (mixerData) => {
+    if (!mixerData.name?.trim()) throw new Error("Mixer Product / Formulation Name is required!");
+    const id = mixerData.id || `mixer_${Date.now()}`;
+    const newMixer = {
+      id,
+      name: mixerData.name.trim(),
+      tamilName: (mixerData.tamilName || "").trim(),
+      baseQuantity: Number(mixerData.baseQuantity) || 1, // Default 1 KG
+      baseUnit: mixerData.baseUnit || "Kg",
+      productId: mixerData.productId || "",
+      description: (mixerData.description || "").trim(),
+      instructions: (mixerData.instructions || "").trim(),
+      ingredients: Array.isArray(mixerData.ingredients) ? mixerData.ingredients : [],
+      isActive: mixerData.isActive !== false,
+      timestamp: Date.now()
+    };
+    try {
+      await setDoc(doc(db, "billing_mixers", id), {
+        ...newMixer,
+        createdAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Mixer save note:", e.message);
+    }
+    setMixers(prev => [...prev.filter(m => m.id !== id), newMixer]);
+    return newMixer;
+  };
+
+  const updateMixer = async (mixerId, updatedFields) => {
+    try {
+      await updateDoc(doc(db, "billing_mixers", mixerId), {
+        ...updatedFields,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Mixer update note:", e.message);
+    }
+    setMixers(prev => prev.map(m => m.id === mixerId ? { ...m, ...updatedFields } : m));
+  };
+
+  const deleteMixer = async (mixerId) => {
+    try {
+      await deleteDoc(doc(db, "billing_mixers", mixerId));
+    } catch (e) {
+      console.warn("Mixer delete note:", e.message);
+    }
+    setMixers(prev => prev.filter(m => m.id !== mixerId));
+  };
+
+  const duplicateMixer = async (mixerId) => {
+    const existing = mixers.find(m => m.id === mixerId);
+    if (!existing) return null;
+    const cloned = {
+      ...existing,
+      id: `mixer_${Date.now()}`,
+      name: `${existing.name} (Copy)`,
+      tamilName: existing.tamilName ? `${existing.tamilName} (நகல்)` : "",
+      timestamp: Date.now()
+    };
+    return await addMixer(cloned);
+  };
+
   return (
     <POSContext.Provider
       value={{
@@ -1573,6 +1741,13 @@ export function POSProvider({ children }) {
         updateCourierPartner,
         deleteCourierPartner,
         updateOrderShippingDetails,
+
+        // Dynamic Product Mixers & Raw Material Formulation
+        mixers,
+        addMixer,
+        updateMixer,
+        deleteMixer,
+        duplicateMixer,
 
         // Global Delete / Action Confirm Modal
         showConfirmModal

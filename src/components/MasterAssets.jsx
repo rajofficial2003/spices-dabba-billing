@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Package, Store, Boxes, DollarSign, Tag, Building2, FlaskConical } from "lucide-react";
+import { Package, Store, Boxes, DollarSign, Tag, Building2 } from "lucide-react";
 import ProductsManager from "./ProductsManager";
 import CustomersManager from "./CustomersManager";
 import ExpenseCategoriesManager from "./ExpenseCategoriesManager";
 import SuppliersManager from "./SuppliersManager";
 import RawMaterialsManager from "./RawMaterialsManager";
-import MixersManager from "./MixersManager";
 import { usePOS } from "../context/POSContext";
 
 export default function MasterAssets({ 
@@ -13,7 +12,7 @@ export default function MasterAssets({
   onSubTabChange, 
   onStartBillForCustomer 
 }) {
-  const { products, customers, suppliers = [], expenseCategories = [], rawMaterials = [], mixers = [] } = usePOS();
+  const { products, customers, suppliers = [], expenseCategories = [], rawMaterials = [] } = usePOS();
 
   const [financeSubView, setFinanceSubView] = useState(() => {
     if (activeSubTab === "suppliers") return "suppliers";
@@ -34,7 +33,6 @@ export default function MasterAssets({
   const isProductsActive = activeSubTab === "products" || activeSubTab === "categories";
   const isCustomersActive = activeSubTab === "customers" || activeSubTab === "customer-categories" || activeSubTab === "couriers";
   const isFinanceActive = activeSubTab === "finance" || activeSubTab === "suppliers" || activeSubTab === "expense-categories" || activeSubTab === "raw-materials";
-  const isMixersActive = activeSubTab === "mixers";
 
   return (
     <div className="master-assets-container">
@@ -147,31 +145,6 @@ export default function MasterAssets({
               <DollarSign size={15} />
               <span>Finance</span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => onSubTabChange("mixers")}
-              className={`pos-mobile-toggle-btn ${isMixersActive ? "active" : ""}`}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "10px",
-                fontSize: "0.82rem",
-                fontWeight: isMixersActive ? 800 : 700,
-                background: isMixersActive ? "var(--sd-black)" : "transparent",
-                color: isMixersActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease",
-                boxShadow: isMixersActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
-              }}
-            >
-              <FlaskConical size={15} />
-              <span>Mixers ({mixers.length})</span>
-            </button>
           </div>
         </div>
       </div>
@@ -186,10 +159,6 @@ export default function MasterAssets({
           onStartBillForCustomer={onStartBillForCustomer} 
           initialSubView={activeSubTab === "customer-categories" ? "categories" : activeSubTab === "couriers" ? "couriers" : "customers"}
         />
-      </div>
-
-      <div style={{ display: isMixersActive ? "block" : "none" }}>
-        <MixersManager />
       </div>
 
       {/* Finance Section: Expense Categories, Suppliers & Raw Materials */}

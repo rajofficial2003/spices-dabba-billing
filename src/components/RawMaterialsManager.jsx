@@ -38,10 +38,14 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
     addRawMaterial, 
     updateRawMaterial, 
     deleteRawMaterial,
-    showConfirmModal
+    showConfirmModal,
+    categories = []
   } = usePOS();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("all");
+
   const [showModal, setShowModal] = useState(false);
   const [editingRM, setEditingRM] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -51,6 +55,8 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
   const [formData, setFormData] = useState({
     name: "",
     tamilName: "",
+    category: "",
+    subcategory: "",
     hsnCode: "0910 91 00",
     unit: "Kg",
     standardRate: "",
@@ -62,12 +68,45 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Category and Subcategory helper computations for Form
+  const formCategoryObj = categories.find(c => c.id === formData.category || c.name === formData.category);
+  const formSubcategories = (formCategoryObj?.subcategories || [])
+    .filter(s => typeof s === "string" || s.isActive !== false)
+    .map(s => typeof s === "string" ? s : s.name);
+
+  // Category and Subcategory helper computations for Page Filter
+  const activeCategoryObj = categories.find(c => c.id === selectedCategory || c.name === selectedCategory);
+  const availableSubcategories = activeCategoryObj && activeCategoryObj.subcategories?.length > 0
+    ? activeCategoryObj.subcategories
+        .filter(s => typeof s === "string" || s.isActive !== false)
+        .map(s => typeof s === "string" ? s : s.name)
+    : [];
+
+  const getCategoryDisplayName = (catIdOrName) => {
+    if (!catIdOrName) return "";
+    const cat = categories.find(c => c.id === catIdOrName || c.name === catIdOrName);
+    return cat ? cat.name : catIdOrName;
+  };
+
+  const getCategoryCount = (catId) => {
+    if (catId === "all") return rawMaterials.length;
+    if (catId === "uncategorized") return rawMaterials.filter(r => !r.category).length;
+    const cat = categories.find(c => c.id === catId);
+    return rawMaterials.filter(r => 
+      r.category === catId || 
+      r.categoryName === catId || 
+      (cat && r.category === cat.name)
+    ).length;
+  };
+
   const handleOpenAdd = (template = null) => {
     setEditingRM(null);
     if (template) {
       setFormData({
         name: template.name,
         tamilName: template.tamilName || "",
+        category: template.category || (selectedCategory !== "all" && selectedCategory !== "uncategorized" ? selectedCategory : ""),
+        subcategory: template.subcategory || (selectedSubcategory !== "all" ? selectedSubcategory : ""),
         hsnCode: template.hsnCode || "0910 91 00",
         unit: template.unit || "Kg",
         standardRate: template.standardRate || "",
@@ -77,6 +116,8 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
       setFormData({
         name: "",
         tamilName: "",
+        category: selectedCategory !== "all" && selectedCategory !== "uncategorized" ? selectedCategory : "",
+        subcategory: selectedSubcategory !== "all" ? selectedSubcategory : "",
         hsnCode: "0910 91 00",
         unit: "Kg",
         standardRate: "",
@@ -92,6 +133,8 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
     setFormData({
       name: rm.name || "",
       tamilName: rm.tamilName || "",
+      category: rm.category || "",
+      subcategory: rm.subcategory || "",
       hsnCode: rm.hsnCode || "0910 91 00",
       unit: rm.unit || "Kg",
       standardRate: rm.standardRate || "",
@@ -112,11 +155,17 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
     setErrorMsg("");
 
     try {
+      const catObj = categories.find(c => c.id === formData.category || c.name === formData.category);
+      const dataToSave = {
+        ...formData,
+        categoryName: catObj?.name || formData.category || ""
+      };
+
       if (editingRM) {
-        await updateRawMaterial(editingRM.id, formData);
+        await updateRawMaterial(editingRM.id, dataToSave);
         showToast("Raw material updated successfully!");
       } else {
-        await addRawMaterial(formData);
+        await addRawMaterial(dataToSave);
         showToast("Raw material added to catalog!");
       }
       setShowModal(false);
@@ -177,11 +226,32 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
   };
 
   const filteredRawMaterials = rawMaterials.filter(rm => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
     const nameMatch = (rm.name || "").toLowerCase().includes(q);
     const tamilMatch = (rm.tamilName || "").toLowerCase().includes(q);
     const hsnMatch = (rm.hsnCode || "").toLowerCase().includes(q);
-    return nameMatch || tamilMatch || hsnMatch;
+    const notesMatch = (rm.notes || "").toLowerCase().includes(q);
+    const matchesSearch = !q || nameMatch || tamilMatch || hsnMatch || notesMatch;
+
+    // Category filter
+    let matchesCategory = true;
+    if (selectedCategory === "all") {
+      matchesCategory = true;
+    } else if (selectedCategory === "uncategorized") {
+      matchesCategory = !rm.category;
+    } else {
+      matchesCategory = rm.category === selectedCategory || 
+                        rm.categoryName === selectedCategory || 
+                        (activeCategoryObj && (rm.category === activeCategoryObj.name || rm.categoryName === activeCategoryObj.name));
+    }
+
+    // Subcategory filter
+    let matchesSubcategory = true;
+    if (selectedSubcategory !== "all") {
+      matchesSubcategory = rm.subcategory === selectedSubcategory;
+    }
+
+    return matchesSearch && matchesCategory && matchesSubcategory;
   });
 
   return (
@@ -319,6 +389,105 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
           </span>
         </div>
       </div>
+
+      {/* Category Filter Pills */}
+      <div style={{
+        display: "flex",
+        gap: "6px",
+        overflowX: "auto",
+        paddingBottom: "4px",
+        alignItems: "center",
+        marginBottom: "10px"
+      }}>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedCategory("all");
+            setSelectedSubcategory("all");
+          }}
+          className={`category-pill ${selectedCategory === "all" ? "active" : ""}`}
+        >
+          All Categories ({rawMaterials.length})
+        </button>
+
+        {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => {
+          const count = getCategoryCount(cat.id);
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => {
+                setSelectedCategory(cat.id);
+                setSelectedSubcategory("all");
+              }}
+              className={`category-pill ${selectedCategory === cat.id ? "active" : ""}`}
+            >
+              {cat.name} {count > 0 ? `(${count})` : ""}
+            </button>
+          );
+        })}
+
+        {rawMaterials.some(r => !r.category) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCategory("uncategorized");
+              setSelectedSubcategory("all");
+            }}
+            className={`category-pill ${selectedCategory === "uncategorized" ? "active" : ""}`}
+            style={{
+              borderStyle: selectedCategory === "uncategorized" ? "solid" : "dashed"
+            }}
+          >
+            Uncategorized ({getCategoryCount("uncategorized")})
+          </button>
+        )}
+      </div>
+
+      {/* Subcategory Filter Pills when active category has subcategories */}
+      {availableSubcategories.length > 0 && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          overflowX: "auto",
+          marginBottom: "14px",
+          padding: "6px 12px",
+          background: "#F8FAFC",
+          borderRadius: "10px",
+          border: "1px solid var(--sd-zinc-200)"
+        }}>
+          <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--sd-zinc-500)", display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+            <Tag size={12} /> Subcategory:
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setSelectedSubcategory("all")}
+            className={`subcategory-pill ${selectedSubcategory === "all" ? "active" : ""}`}
+          >
+            All ({getCategoryCount(selectedCategory)})
+          </button>
+
+          {availableSubcategories.map(sub => {
+            const subCount = rawMaterials.filter(r => 
+              (r.category === selectedCategory || r.categoryName === selectedCategory || (activeCategoryObj && (r.category === activeCategoryObj.name || r.categoryName === activeCategoryObj.name))) &&
+              r.subcategory === sub
+            ).length;
+
+            return (
+              <button
+                key={sub}
+                type="button"
+                onClick={() => setSelectedSubcategory(sub)}
+                className={`subcategory-pill ${selectedSubcategory === sub ? "active" : ""}`}
+              >
+                {sub} {subCount > 0 ? `(${subCount})` : ""}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Quick Add Suggestions if catalog has fewer than 4 items */}
       {rawMaterials.length < 5 && (
@@ -460,6 +629,28 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
                 </div>
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
+                  {/* Category & Subcategory Tag */}
+                  {(rm.categoryName || rm.category || rm.subcategory) && (
+                    <div style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      color: "var(--sd-zinc-800)",
+                      background: "var(--sd-zinc-100)",
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--sd-zinc-300)"
+                    }}>
+                      <Tag size={11} color="var(--sd-zinc-500)" />
+                      <span>{getCategoryDisplayName(rm.category || rm.categoryName)}</span>
+                      {rm.subcategory && (
+                        <span style={{ color: "var(--sd-zinc-500)", fontWeight: 600 }}>&rsaquo; {rm.subcategory}</span>
+                      )}
+                    </div>
+                  )}
+
                   <div style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -679,6 +870,85 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
                       outline: "none"
                     }}
                   />
+                </div>
+
+                {/* Category & Subcategory Selection */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
+                      Main Category
+                    </label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => {
+                        const newCat = e.target.value;
+                        const catObj = categories.find(c => c.id === newCat || c.name === newCat);
+                        const rawFirstSub = catObj?.subcategories?.[0];
+                        const firstSub = typeof rawFirstSub === "string" ? rawFirstSub : (rawFirstSub?.name || "");
+                        setFormData({ 
+                          ...formData, 
+                          category: newCat,
+                          subcategory: firstSub || ""
+                        });
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--sd-zinc-300)",
+                        fontSize: "0.85rem",
+                        background: "#FFFFFF",
+                        outline: "none"
+                      }}
+                    >
+                      <option value="">-- Select Category --</option>
+                      {categories.filter(c => c.id !== "all" && c.isActive !== false).map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
+                      Subcategory
+                    </label>
+                    {formSubcategories.length > 0 ? (
+                      <select
+                        value={formData.subcategory}
+                        onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "9px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--sd-zinc-300)",
+                          fontSize: "0.85rem",
+                          background: "#FFFFFF",
+                          outline: "none"
+                        }}
+                      >
+                        <option value="">-- All / None --</option>
+                        {formSubcategories.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Optional Subcategory"
+                        value={formData.subcategory}
+                        onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "9px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--sd-zinc-300)",
+                          fontSize: "0.85rem",
+                          background: "#FFFFFF",
+                          outline: "none"
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>

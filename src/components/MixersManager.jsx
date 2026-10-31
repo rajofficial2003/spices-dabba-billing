@@ -110,8 +110,7 @@ export default function MixersManager() {
       name: "",
       tamilName: "",
       productId: "",
-      customisedWeight: 40, // default 40g pack
-      description: "Customised 40g pack recipe formulation",
+      description: "",
       ingredients: []
     });
     setSelectedRm(null);
@@ -124,20 +123,15 @@ export default function MixersManager() {
   // Open Form for Editing
   const handleOpenEdit = (mixer) => {
     setEditingMixer(mixer);
-    const existingTotalGrams = (mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0);
-    const customWeight = mixer.customisedWeight || mixer.baseWeightGrams || (existingTotalGrams > 0 ? existingTotalGrams : 40);
-
     setFormData({
       name: mixer.name || "",
       tamilName: mixer.tamilName || "",
       productId: mixer.productId || "",
-      customisedWeight: customWeight,
       description: mixer.description || "",
       ingredients: (mixer.ingredients || []).map(ing => ({
         rawMaterialId: ing.rawMaterialId,
         rawMaterialName: ing.rawMaterialName,
-        grams: Number(ing.grams) || 0,
-        percentage: Number(ing.percentage) || Number((((Number(ing.grams) || 0) / (customWeight || 1)) * 100).toFixed(1))
+        grams: Number(ing.grams) || 0
       }))
     });
     setSelectedRm(null);
@@ -192,8 +186,6 @@ export default function MixersManager() {
       return;
     }
 
-    const targetBase = Number(formData.customisedWeight) || 40;
-
     // Check if already in list
     const existingIndex = formData.ingredients.findIndex(
       ing => ing.rawMaterialId === selectedRm.id || ing.rawMaterialName === selectedRm.name
@@ -203,11 +195,10 @@ export default function MixersManager() {
       // Update existing grams
       setFormData(prev => {
         const updated = [...prev.ingredients];
-        const newGrams = updated[existingIndex].grams + gramsNum;
+        const newGrams = Number((updated[existingIndex].grams + gramsNum).toFixed(2));
         updated[existingIndex] = {
           ...updated[existingIndex],
-          grams: newGrams,
-          percentage: Number(((newGrams / targetBase) * 100).toFixed(1))
+          grams: newGrams
         };
         return { ...prev, ingredients: updated };
       });
@@ -220,8 +211,7 @@ export default function MixersManager() {
           {
             rawMaterialId: selectedRm.id,
             rawMaterialName: selectedRm.name,
-            grams: gramsNum,
-            percentage: Number(((gramsNum / targetBase) * 100).toFixed(1))
+            grams: gramsNum
           }
         ]
       }));
@@ -236,13 +226,11 @@ export default function MixersManager() {
   // Update grams of an existing ingredient
   const handleUpdateIngredientGrams = (index, grams) => {
     const num = Math.max(0, Number(grams) || 0);
-    const targetBase = Number(formData.customisedWeight) || 40;
     setFormData(prev => {
       const updated = [...prev.ingredients];
       updated[index] = {
         ...updated[index],
-        grams: num,
-        percentage: Number(((num / targetBase) * 100).toFixed(1))
+        grams: num
       };
       return { ...prev, ingredients: updated };
     });
@@ -254,41 +242,6 @@ export default function MixersManager() {
       ...prev,
       ingredients: prev.ingredients.filter((_, i) => i !== index)
     }));
-  };
-
-  // Change customised weight (e.g. 40g, 50g, 100g, 1000g)
-  const handleChangeCustomWeight = (newWeight) => {
-    const val = Math.max(1, Number(newWeight) || 40);
-    setFormData(prev => ({
-      ...prev,
-      customisedWeight: val,
-      ingredients: prev.ingredients.map(ing => ({
-        ...ing,
-        percentage: Number(((ing.grams / val) * 100).toFixed(1))
-      }))
-    }));
-  };
-
-  // Auto-normalize ingredients proportionally to match customised weight exactly
-  const handleNormalizeToCustomWeight = () => {
-    const targetBase = Number(formData.customisedWeight) || 40;
-    const totalGrams = formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0);
-    if (totalGrams <= 0) return;
-
-    setFormData(prev => {
-      const normalized = prev.ingredients.map(ing => {
-        const factor = (Number(ing.grams) || 0) / totalGrams;
-        const newGrams = Number((factor * targetBase).toFixed(2));
-        return {
-          ...ing,
-          grams: newGrams,
-          percentage: Number(((newGrams / targetBase) * 100).toFixed(1))
-        };
-      });
-
-      return { ...prev, ingredients: normalized };
-    });
-    showToast(`Normalized ingredients proportionally to ${targetBase}g customised pack!`);
   };
 
   // Save Recipe
@@ -303,17 +256,20 @@ export default function MixersManager() {
       return;
     }
 
-    const customWeight = Number(formData.customisedWeight) || 40;
+    const totalWeight = Number(formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0).toFixed(2)) || 40;
 
     const payload = {
       name: formData.name.trim(),
       tamilName: formData.tamilName.trim(),
       productId: formData.productId || "",
-      customisedWeight: customWeight,
-      baseWeightGrams: customWeight,
+      customisedWeight: totalWeight,
+      baseWeightGrams: totalWeight,
       baseUnit: "g",
       description: formData.description.trim(),
-      ingredients: formData.ingredients,
+      ingredients: formData.ingredients.map(ing => ({
+        ...ing,
+        percentage: Number(((ing.grams / totalWeight) * 100).toFixed(1))
+      })),
       isActive: true,
       timestamp: Date.now()
     };
@@ -528,8 +484,6 @@ export default function MixersManager() {
 
   // Form Current Total Grams
   const formTotalGrams = Number(formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0).toFixed(2));
-  const formCustomWeight = Number(formData.customisedWeight) || 40;
-  const isFormBalanced = Math.abs(formTotalGrams - formCustomWeight) < 0.1;
 
   // Scaler Recipe Parameters
   const scalerPackWeight = scalerMixer 
@@ -1131,7 +1085,7 @@ export default function MixersManager() {
                     {editingMixer ? "Edit Recipe Formulation" : "Create New Recipe Formulation"}
                   </h2>
                   <span style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)" }}>
-                    Customised Weight: <strong>{formCustomWeight} Grams</strong>
+                    Total Recipe Weight: <strong>{formTotalGrams > 0 ? `${formTotalGrams} Grams` : "0g"}</strong> ({formData.ingredients.length} Spices)
                   </span>
                 </div>
               </div>
@@ -1152,7 +1106,7 @@ export default function MixersManager() {
 
             {/* Modal Body */}
             <form onSubmit={handleSaveMixer} style={{ overflowY: "auto", padding: "20px", flex: 1 }}>
-              {/* Product Selection & Customised Weight Configuration */}
+              {/* Product Selection */}
               <div style={{
                 background: "var(--sd-zinc-50)",
                 padding: "14px",
@@ -1190,7 +1144,7 @@ export default function MixersManager() {
                   ))}
                 </select>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px", marginBottom: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
                   <div>
                     <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>
                       Recipe / Product Name *
@@ -1232,68 +1186,6 @@ export default function MixersManager() {
                     />
                   </div>
                 </div>
-
-                {/* Customised Pack Weight Config (in Grams) */}
-                <div style={{
-                  padding: "10px 12px",
-                  background: "#FFFFFF",
-                  borderRadius: "10px",
-                  border: "1px solid var(--sd-zinc-200)",
-                  marginTop: "8px"
-                }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                    <div>
-                      <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-black)", textTransform: "uppercase" }}>
-                        Customised Recipe Weight (in Grams)
-                      </span>
-                      <div style={{ fontSize: "0.7rem", color: "var(--sd-zinc-500)" }}>
-                        Unit pack weight for this recipe formulation (e.g. 40g packet)
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {[40, 50, 100, 250, 500, 1000].map(wt => (
-                        <button
-                          key={wt}
-                          type="button"
-                          onClick={() => handleChangeCustomWeight(wt)}
-                          style={{
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            fontSize: "0.74rem",
-                            fontWeight: formCustomWeight === wt ? 800 : 600,
-                            background: formCustomWeight === wt ? "var(--sd-black)" : "var(--sd-zinc-100)",
-                            color: formCustomWeight === wt ? "#FFFFFF" : "var(--sd-zinc-700)",
-                            border: formCustomWeight === wt ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-200)",
-                            cursor: "pointer"
-                          }}
-                        >
-                          {wt}g
-                        </button>
-                      ))}
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "4px" }}>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={formData.customisedWeight}
-                          onChange={(e) => handleChangeCustomWeight(e.target.value)}
-                          style={{
-                            width: "70px",
-                            padding: "4px 6px",
-                            borderRadius: "6px",
-                            border: "1px solid var(--sd-zinc-300)",
-                            fontSize: "0.8rem",
-                            fontWeight: 800,
-                            textAlign: "right"
-                          }}
-                        />
-                        <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>g</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* RAW MATERIALS IMPORT / SELECTION WITH TYPE-TO-SEARCH DROPDOWN */}
@@ -1304,80 +1196,29 @@ export default function MixersManager() {
                 border: "1px solid var(--sd-zinc-200)",
                 marginBottom: "16px"
               }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
                   <div>
-                    <h4 style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-                      Raw Materials Formulation ({formCustomWeight}g Customised Pack)
+                    <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
+                      Raw Materials Formulation
                     </h4>
                     <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>
                       Type to search & select raw spices from Master Assets &bull; Finance
                     </span>
                   </div>
 
-                  {/* Normalize Button */}
-                  {formData.ingredients.length > 0 && !isFormBalanced && (
-                    <button
-                      type="button"
-                      onClick={handleNormalizeToCustomWeight}
-                      style={{
-                        background: "var(--sd-zinc-100)",
-                        border: "1px solid var(--sd-zinc-300)",
-                        borderRadius: "6px",
-                        padding: "4px 8px",
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        color: "var(--sd-zinc-800)",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}
-                      title={`Proportionately adjust current ingredients so total is exactly ${formCustomWeight}g`}
-                    >
-                      <Sparkles size={11} color="var(--sd-red)" />
-                      <span>Auto-Scale to {formCustomWeight}g</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Balance Progress Bar */}
-                <div style={{
-                  background: "var(--sd-zinc-100)",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  marginBottom: "14px",
-                  border: "1px solid var(--sd-zinc-200)"
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>
-                      Mix Weight Balance: <strong>{formTotalGrams}g / {formCustomWeight}g</strong> ({((formTotalGrams / (formCustomWeight || 1)) * 100).toFixed(1)}%)
-                    </span>
-                    <span style={{
-                      fontSize: "0.72rem",
-                      fontWeight: 800,
-                      color: isFormBalanced ? "#059669" : formTotalGrams < formCustomWeight ? "#D97706" : "#DC2626"
-                    }}>
-                      {isFormBalanced 
-                        ? `✓ Perfectly Balanced ${formCustomWeight}g` 
-                        : formTotalGrams < formCustomWeight 
-                          ? `Need ${(formCustomWeight - formTotalGrams).toFixed(2)}g more` 
-                          : `Exceeds by +${(formTotalGrams - formCustomWeight).toFixed(2)}g`}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    height: "8px",
-                    background: "var(--sd-zinc-200)",
-                    borderRadius: "99px",
-                    overflow: "hidden"
-                  }}>
+                  {formTotalGrams > 0 && (
                     <div style={{
-                      height: "100%",
-                      width: `${Math.min(100, (formTotalGrams / (formCustomWeight || 1)) * 100)}%`,
-                      background: isFormBalanced ? "#10B981" : formTotalGrams < formCustomWeight ? "#F59E0B" : "#EF4444",
-                      transition: "width 0.2s ease"
-                    }} />
-                  </div>
+                      background: "#ECFDF5",
+                      border: "1px solid #A7F3D0",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.76rem",
+                      fontWeight: 800,
+                      color: "#065F46"
+                    }}>
+                      Total Weight: {formTotalGrams}g ({formData.ingredients.length} Spices)
+                    </div>
+                  )}
                 </div>
 
                 {/* Searchable Raw Material Combobox & Grams Add Controls */}
@@ -1516,7 +1357,7 @@ export default function MixersManager() {
                   {/* Grams Input */}
                   <div style={{ width: "130px" }}>
                     <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-700)", display: "block", marginBottom: "4px" }}>
-                      Grams ({formCustomWeight}g Pack)
+                      Grams <span style={{ color: "var(--sd-red)" }}>*</span>
                     </label>
                     <input
                       type="number"
@@ -1569,7 +1410,7 @@ export default function MixersManager() {
                     border: "1px dashed var(--sd-zinc-200)",
                     borderRadius: "10px"
                   }}>
-                    No raw materials added yet. Search and select spices above to construct the {formCustomWeight}g mix ratio.
+                    No raw materials added yet. Search and select spices above to build the recipe formulation.
                   </div>
                 ) : (
                   <div style={{
@@ -1589,6 +1430,7 @@ export default function MixersManager() {
                       <tbody>
                         {formData.ingredients.map((ing, idx) => {
                           const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
+                          const ratioPct = formTotalGrams > 0 ? ((ing.grams / formTotalGrams) * 100).toFixed(1) : "0.0";
 
                           return (
                             <tr key={idx} style={{ borderBottom: "1px solid var(--sd-zinc-150)" }}>
@@ -1624,7 +1466,7 @@ export default function MixersManager() {
                               </td>
 
                               <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 800, color: "var(--sd-zinc-800)" }}>
-                                {ing.percentage || (((ing.grams / formCustomWeight) * 100).toFixed(1))}%
+                                {ratioPct}%
                               </td>
 
                               <td style={{ padding: "8px 10px", textAlign: "center" }}>
@@ -1650,13 +1492,13 @@ export default function MixersManager() {
                       <tfoot>
                         <tr style={{ background: "var(--sd-zinc-50)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-200)" }}>
                           <td style={{ padding: "8px 10px", color: "var(--sd-black)" }}>
-                            Total Customised Pack Formulation
+                            Total Recipe Weight
                           </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", color: isFormBalanced ? "#059669" : "#DC2626" }}>
+                          <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-black)", fontSize: "0.86rem" }}>
                             {formTotalGrams}g
                           </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", color: isFormBalanced ? "#059669" : "#DC2626" }}>
-                            {((formTotalGrams / (formCustomWeight || 1)) * 100).toFixed(1)}%
+                          <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-black)" }}>
+                            100%
                           </td>
                           <td></td>
                         </tr>

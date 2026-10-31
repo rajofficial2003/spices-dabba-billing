@@ -1236,7 +1236,7 @@ export default function MixersManager() {
                   {/* Type-to-search Raw Material Input */}
                   <div style={{ flex: "1 1 260px", position: "relative" }} ref={rmDropdownRef}>
                     <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-700)", display: "block", marginBottom: "4px" }}>
-                      Raw Material (from Master Assets) <span style={{ color: "var(--sd-red)" }}>* Type to search</span>
+                      Raw Material (from Master Assets) <span style={{ color: "var(--sd-zinc-400)", fontWeight: 500 }}>(Type to search)</span>
                     </label>
                     <div style={{ position: "relative" }}>
                       <input

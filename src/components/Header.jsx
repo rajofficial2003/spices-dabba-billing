@@ -171,7 +171,7 @@ export default function Header({ activeTab, setActiveTab }) {
               className={`nav-tab-btn ${activeTab === "mixers" ? "active" : ""}`}
             >
               <FlaskConical size={15} />
-              <span>Mixers</span>
+              <span>Recipe</span>
             </button>
 
             <button
@@ -261,7 +261,7 @@ export default function Header({ activeTab, setActiveTab }) {
           className={`mobile-nav-btn ${activeTab === "mixers" ? "active" : ""}`}
         >
           <FlaskConical size={18} />
-          <span>Mixers</span>
+          <span>Recipe</span>
         </button>
 
         <button

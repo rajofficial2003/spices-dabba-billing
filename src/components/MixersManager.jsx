@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { usePOS } from "../context/POSContext";
 import { 
   FlaskConical, 
@@ -8,6 +8,7 @@ import {
   Trash2, 
   Copy, 
   Printer, 
+  Download, 
   Scale, 
   CheckCircle2, 
   AlertCircle, 
@@ -15,7 +16,9 @@ import {
   Calculator, 
   X, 
   Boxes, 
-  Check 
+  Check, 
+  ChevronDown, 
+  Loader2 
 } from "lucide-react";
 
 export default function MixersManager() {
@@ -39,22 +42,39 @@ export default function MixersManager() {
   const [editingMixer, setEditingMixer] = useState(null);
   const [showScalerModal, setShowScalerModal] = useState(false);
   const [scalerMixer, setScalerMixer] = useState(null);
-  const [batchKg, setBatchKg] = useState(10); // default 10 KG batch
+  
+  // Batch Scaler State (Pack-based scaling with customized pack size)
+  const [numPacks, setNumPacks] = useState(50); // Default 50 packs
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Mixer Form State (Default Base: 1 KG = 1000 Grams)
+  // Recipe Form State (Customised weight in Grams, e.g. 40g, 100g, 1000g)
   const [formData, setFormData] = useState({
     name: "",
     tamilName: "",
     productId: "",
+    customisedWeight: 40, // Default 40g pack
     description: "",
-    instructions: "",
     ingredients: []
   });
 
-  // Selected raw material to add in form
-  const [selectedRmId, setSelectedRmId] = useState("");
-  const [selectedRmGrams, setSelectedRmGrams] = useState(100);
+  // Searchable Raw Material Combobox State
+  const [rmSearchQuery, setRmSearchQuery] = useState("");
+  const [selectedRm, setSelectedRm] = useState(null);
+  const [selectedRmGrams, setSelectedRmGrams] = useState(10);
+  const [isRmDropdownOpen, setIsRmDropdownOpen] = useState(false);
+  const rmDropdownRef = useRef(null);
+
+  // Close raw material dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (rmDropdownRef.current && !rmDropdownRef.current.contains(event.target)) {
+        setIsRmDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -71,40 +91,59 @@ export default function MixersManager() {
     return map;
   }, [rawMaterials]);
 
-  // Open Form for New Mixer
+  // Filter raw materials for searchable dropdown
+  const filteredRawMaterials = useMemo(() => {
+    if (!rmSearchQuery.trim()) return rawMaterials;
+    const q = rmSearchQuery.toLowerCase().trim();
+    return rawMaterials.filter(rm => 
+      (rm.name && rm.name.toLowerCase().includes(q)) ||
+      (rm.tamilName && rm.tamilName.toLowerCase().includes(q)) ||
+      (rm.category && rm.category.toLowerCase().includes(q)) ||
+      (rm.hsn && rm.hsn.toLowerCase().includes(q))
+    );
+  }, [rawMaterials, rmSearchQuery]);
+
+  // Open Form for New Recipe
   const handleOpenNew = () => {
     setEditingMixer(null);
     setFormData({
       name: "",
       tamilName: "",
       productId: "",
-      description: "Standard 1 KG recipe formulation",
-      instructions: "Sun-dry raw spices, roast ingredients separately at moderate temperature, grind to fine mesh.",
+      customisedWeight: 40, // default 40g pack
+      description: "Customised 40g pack recipe formulation",
       ingredients: []
     });
-    setSelectedRmId("");
-    setSelectedRmGrams(100);
+    setSelectedRm(null);
+    setRmSearchQuery("");
+    setSelectedRmGrams(10);
+    setIsRmDropdownOpen(false);
     setShowEditModal(true);
   };
 
   // Open Form for Editing
   const handleOpenEdit = (mixer) => {
     setEditingMixer(mixer);
+    const existingTotalGrams = (mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0);
+    const customWeight = mixer.customisedWeight || mixer.baseWeightGrams || (existingTotalGrams > 0 ? existingTotalGrams : 40);
+
     setFormData({
       name: mixer.name || "",
       tamilName: mixer.tamilName || "",
       productId: mixer.productId || "",
+      customisedWeight: customWeight,
       description: mixer.description || "",
-      instructions: mixer.instructions || "",
       ingredients: (mixer.ingredients || []).map(ing => ({
         rawMaterialId: ing.rawMaterialId,
         rawMaterialName: ing.rawMaterialName,
         grams: Number(ing.grams) || 0,
-        percentage: Number(ing.percentage) || Number(((Number(ing.grams) || 0) / 10).toFixed(1))
+        percentage: Number(ing.percentage) || Number((((Number(ing.grams) || 0) / (customWeight || 1)) * 100).toFixed(1))
       }))
     });
-    setSelectedRmId("");
-    setSelectedRmGrams(100);
+    setSelectedRm(null);
+    setRmSearchQuery("");
+    setSelectedRmGrams(10);
+    setIsRmDropdownOpen(false);
     setShowEditModal(true);
   };
 
@@ -126,14 +165,26 @@ export default function MixersManager() {
     }
   };
 
+  // Handle Raw Material selection from searchable dropdown
+  const handleSelectRm = (rm) => {
+    setSelectedRm(rm);
+    setRmSearchQuery(rm.name);
+    setIsRmDropdownOpen(false);
+  };
+
+  // Clear Raw Material selection
+  const handleClearRm = () => {
+    setSelectedRm(null);
+    setRmSearchQuery("");
+    setIsRmDropdownOpen(true);
+  };
+
   // Add Raw Material to ingredients list
   const handleAddIngredient = () => {
-    if (!selectedRmId) {
-      alert("Please select a Raw Material to add.");
+    if (!selectedRm) {
+      alert("Please select a Raw Material from the dropdown.");
       return;
     }
-    const rm = rawMaterials.find(r => r.id === selectedRmId);
-    if (!rm) return;
 
     const gramsNum = Number(selectedRmGrams) || 0;
     if (gramsNum <= 0) {
@@ -141,9 +192,11 @@ export default function MixersManager() {
       return;
     }
 
+    const targetBase = Number(formData.customisedWeight) || 40;
+
     // Check if already in list
     const existingIndex = formData.ingredients.findIndex(
-      ing => ing.rawMaterialId === rm.id || ing.rawMaterialName === rm.name
+      ing => ing.rawMaterialId === selectedRm.id || ing.rawMaterialName === selectedRm.name
     );
 
     if (existingIndex >= 0) {
@@ -154,7 +207,7 @@ export default function MixersManager() {
         updated[existingIndex] = {
           ...updated[existingIndex],
           grams: newGrams,
-          percentage: Number((newGrams / 10).toFixed(1))
+          percentage: Number(((newGrams / targetBase) * 100).toFixed(1))
         };
         return { ...prev, ingredients: updated };
       });
@@ -165,29 +218,31 @@ export default function MixersManager() {
         ingredients: [
           ...prev.ingredients,
           {
-            rawMaterialId: rm.id,
-            rawMaterialName: rm.name,
+            rawMaterialId: selectedRm.id,
+            rawMaterialName: selectedRm.name,
             grams: gramsNum,
-            percentage: Number((gramsNum / 10).toFixed(1))
+            percentage: Number(((gramsNum / targetBase) * 100).toFixed(1))
           }
         ]
       }));
     }
 
     // Reset selection input
-    setSelectedRmId("");
-    setSelectedRmGrams(100);
+    setSelectedRm(null);
+    setRmSearchQuery("");
+    setSelectedRmGrams(10);
   };
 
   // Update grams of an existing ingredient
   const handleUpdateIngredientGrams = (index, grams) => {
     const num = Math.max(0, Number(grams) || 0);
+    const targetBase = Number(formData.customisedWeight) || 40;
     setFormData(prev => {
       const updated = [...prev.ingredients];
       updated[index] = {
         ...updated[index],
         grams: num,
-        percentage: Number((num / 10).toFixed(1))
+        percentage: Number(((num / targetBase) * 100).toFixed(1))
       };
       return { ...prev, ingredients: updated };
     });
@@ -201,40 +256,46 @@ export default function MixersManager() {
     }));
   };
 
-  // Auto-normalize ingredients to exactly 1000g
-  const handleNormalizeTo1000g = () => {
+  // Change customised weight (e.g. 40g, 50g, 100g, 1000g)
+  const handleChangeCustomWeight = (newWeight) => {
+    const val = Math.max(1, Number(newWeight) || 40);
+    setFormData(prev => ({
+      ...prev,
+      customisedWeight: val,
+      ingredients: prev.ingredients.map(ing => ({
+        ...ing,
+        percentage: Number(((ing.grams / val) * 100).toFixed(1))
+      }))
+    }));
+  };
+
+  // Auto-normalize ingredients proportionally to match customised weight exactly
+  const handleNormalizeToCustomWeight = () => {
+    const targetBase = Number(formData.customisedWeight) || 40;
     const totalGrams = formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0);
     if (totalGrams <= 0) return;
 
     setFormData(prev => {
       const normalized = prev.ingredients.map(ing => {
         const factor = (Number(ing.grams) || 0) / totalGrams;
-        const newGrams = Math.round(factor * 1000);
+        const newGrams = Number((factor * targetBase).toFixed(2));
         return {
           ...ing,
           grams: newGrams,
-          percentage: Number((newGrams / 10).toFixed(1))
+          percentage: Number(((newGrams / targetBase) * 100).toFixed(1))
         };
       });
 
-      // Fix rounding drift so sum is exactly 1000
-      const currentSum = normalized.reduce((s, i) => s + i.grams, 0);
-      const diff = 1000 - currentSum;
-      if (diff !== 0 && normalized.length > 0) {
-        normalized[0].grams += diff;
-        normalized[0].percentage = Number((normalized[0].grams / 10).toFixed(1));
-      }
-
       return { ...prev, ingredients: normalized };
     });
-    showToast("Normalized ingredients proportionally to 1000g (1 KG base)!");
+    showToast(`Normalized ingredients proportionally to ${targetBase}g customised pack!`);
   };
 
-  // Save Mixer
+  // Save Recipe
   const handleSaveMixer = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      alert("Please enter a Mixer / Finished Product Name.");
+      alert("Please enter a Recipe / Finished Product Name.");
       return;
     }
     if (formData.ingredients.length === 0) {
@@ -242,14 +303,16 @@ export default function MixersManager() {
       return;
     }
 
+    const customWeight = Number(formData.customisedWeight) || 40;
+
     const payload = {
       name: formData.name.trim(),
       tamilName: formData.tamilName.trim(),
       productId: formData.productId || "",
-      baseQuantity: 1, // 1 KG standard base
-      baseUnit: "Kg",
+      customisedWeight: customWeight,
+      baseWeightGrams: customWeight,
+      baseUnit: "g",
       description: formData.description.trim(),
-      instructions: formData.instructions.trim(),
       ingredients: formData.ingredients,
       isActive: true,
       timestamp: Date.now()
@@ -258,36 +321,36 @@ export default function MixersManager() {
     try {
       if (editingMixer) {
         await updateMixer(editingMixer.id, payload);
-        showToast(`Mixer "${formData.name}" updated successfully!`);
+        showToast(`Recipe "${formData.name}" updated successfully!`);
       } else {
         await addMixer(payload);
-        showToast(`Mixer "${formData.name}" created successfully!`);
+        showToast(`Recipe "${formData.name}" created successfully!`);
       }
       setShowEditModal(false);
     } catch (err) {
-      console.error("Save Mixer Error:", err);
-      alert("Failed to save mixer: " + err.message);
+      console.error("Save Recipe Error:", err);
+      alert("Failed to save recipe: " + err.message);
     }
   };
 
-  // Open Batch Scaler / Grinding Slip
+  // Open Recipe Ready Batch Scaler
   const handleOpenScaler = (mixer) => {
     setScalerMixer(mixer);
-    setBatchKg(10); // default 10 KG batch
+    setNumPacks(50); // default 50 packs
     setShowScalerModal(true);
   };
 
-  // Delete Mixer with confirm
+  // Delete Recipe with confirm
   const handleDeleteMixer = (mixer) => {
     showConfirmModal({
-      title: "Delete Mixer Formulation",
+      title: "Delete Recipe Formulation",
       message: `Are you sure you want to delete "${mixer.name}"? This recipe formulation will be removed permanently.`,
-      confirmText: "Delete Formula",
+      confirmText: "Delete Recipe",
       isDanger: true,
       onConfirm: async () => {
         try {
           await deleteMixer(mixer.id);
-          showToast(`Formula "${mixer.name}" deleted.`);
+          showToast(`Recipe "${mixer.name}" deleted.`);
         } catch (err) {
           alert("Failed to delete: " + err.message);
         }
@@ -295,22 +358,128 @@ export default function MixersManager() {
     });
   };
 
-  // Duplicate Mixer
+  // Duplicate Recipe
   const handleDuplicateMixer = async (mixer) => {
     try {
       await duplicateMixer(mixer);
-      showToast(`Formula duplicated as "${mixer.name} (Copy)"`);
+      showToast(`Recipe duplicated as "${mixer.name} (Copy)"`);
     } catch (err) {
       alert("Failed to duplicate: " + err.message);
     }
   };
 
-  // Print Grinding Slip
-  const handlePrintSlip = () => {
-    window.print();
+  // Download PDF using html2pdf
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    const slipEl = document.getElementById("recipe-batch-slip-area");
+    if (!slipEl) {
+      setIsGeneratingPdf(false);
+      return;
+    }
+
+    const cleanName = (scalerMixer.name || "Recipe").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `${cleanName}_${numPacks}_Packs_Batch_Slip.pdf`;
+
+    try {
+      if (!window.html2pdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      if (window.html2pdf) {
+        const opt = {
+          margin: [8, 10, 8, 10],
+          filename: filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+        };
+
+        await window.html2pdf().set(opt).from(slipEl).save();
+        showToast("PDF Batch Slip downloaded successfully!");
+        setIsGeneratingPdf(false);
+        return;
+      }
+    } catch (err) {
+      console.warn("Direct html2pdf notice:", err.message);
+    }
+
+    // Fallback: iframe print
+    handlePrintSlip();
+    setIsGeneratingPdf(false);
   };
 
-  // Filtered Mixers
+  // Print Slip using clean isolated iframe (immune to CSS hide rules)
+  const handlePrintSlip = () => {
+    const slipEl = document.getElementById("recipe-batch-slip-area");
+    if (!slipEl) return;
+
+    const printIframe = document.createElement("iframe");
+    printIframe.style.position = "fixed";
+    printIframe.style.right = "0";
+    printIframe.style.bottom = "0";
+    printIframe.style.width = "0";
+    printIframe.style.height = "0";
+    printIframe.style.border = "0";
+    document.body.appendChild(printIframe);
+
+    const doc = printIframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${scalerMixer?.name || "Recipe"} - Factory Batch Slip</title>
+          <style>
+            @page { size: A4 portrait; margin: 12mm 15mm; }
+            * { box-sizing: border-box; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+              color: #18181B; 
+              margin: 0; 
+              padding: 12px; 
+              background: #FFFFFF; 
+            }
+            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+            th, td { border: 1px solid #D4D4D8; padding: 8px 10px; }
+            th { background: #F4F4F5; font-weight: 800; font-size: 12px; }
+            td { font-size: 12px; }
+            .header-banner { border-bottom: 2px solid #18181B; padding-bottom: 10px; margin-bottom: 12px; }
+            .batch-badge { 
+              background: #18181B; 
+              color: #FFFFFF; 
+              padding: 4px 10px; 
+              border-radius: 6px; 
+              font-weight: 800; 
+              font-size: 13px; 
+              display: inline-block; 
+            }
+          </style>
+        </head>
+        <body>
+          ${slipEl.innerHTML}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      printIframe.contentWindow.focus();
+      printIframe.contentWindow.print();
+      setTimeout(() => {
+        if (document.body.contains(printIframe)) {
+          document.body.removeChild(printIframe);
+        }
+      }, 1000);
+    }, 300);
+  };
+
+  // Filtered Recipes
   const filteredMixers = useMemo(() => {
     return mixers.filter(mixer => {
       const q = searchQuery.toLowerCase().trim();
@@ -325,7 +494,8 @@ export default function MixersManager() {
       const matchesSearch = !q || nameMatch || ingredientMatch;
 
       const totalGrams = (mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0);
-      const isBalanced = totalGrams === 1000;
+      const targetWeight = mixer.customisedWeight || mixer.baseWeightGrams || totalGrams;
+      const isBalanced = Math.abs(totalGrams - targetWeight) < 0.1;
 
       if (filterMode === "balanced") return matchesSearch && isBalanced;
       if (filterMode === "imbalanced") return matchesSearch && !isBalanced;
@@ -333,7 +503,7 @@ export default function MixersManager() {
     });
   }, [mixers, searchQuery, filterMode]);
 
-  // Overall Statistics (Operational recipe metrics without any price/cost data)
+  // Overall Statistics (Operational formulation metrics)
   const stats = useMemo(() => {
     const totalCount = mixers.length;
     let balancedCount = 0;
@@ -341,7 +511,8 @@ export default function MixersManager() {
 
     mixers.forEach(m => {
       const grams = (m.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0);
-      if (grams === 1000) balancedCount++;
+      const targetWeight = m.customisedWeight || m.baseWeightGrams || grams;
+      if (Math.abs(grams - targetWeight) < 0.1) balancedCount++;
       totalIngredientsUsed += (m.ingredients?.length || 0);
     });
 
@@ -356,7 +527,16 @@ export default function MixersManager() {
   }, [mixers, rawMaterials]);
 
   // Form Current Total Grams
-  const formTotalGrams = formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0);
+  const formTotalGrams = Number(formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0).toFixed(2));
+  const formCustomWeight = Number(formData.customisedWeight) || 40;
+  const isFormBalanced = Math.abs(formTotalGrams - formCustomWeight) < 0.1;
+
+  // Scaler Recipe Parameters
+  const scalerPackWeight = scalerMixer 
+    ? (Number(scalerMixer.customisedWeight) || Number(scalerMixer.baseWeightGrams) || (scalerMixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0) || 40)
+    : 40;
+  const totalBatchGrams = scalerPackWeight * numPacks;
+  const totalBatchKg = totalBatchGrams / 1000;
 
   return (
     <div className="responsive-page-container" style={{ paddingBottom: "60px" }}>
@@ -410,16 +590,16 @@ export default function MixersManager() {
             </div>
             <div>
               <h1 className="font-heading" style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--sd-black)", margin: 0 }}>
-                Mixers & Formulations
+                Recipe & Formulations
               </h1>
               <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", margin: "2px 0 0 0" }}>
-                Finished product raw material ratios & mixing formulas &bull; Default 1 KG Base
+                Finished product raw material ratios & customized recipe formulations
               </p>
             </div>
           </div>
         </div>
 
-        {/* Action Button: Create New Mixer */}
+        {/* Action Button: Create New Recipe */}
         <button
           type="button"
           onClick={handleOpenNew}
@@ -440,11 +620,11 @@ export default function MixersManager() {
           }}
         >
           <Plus size={16} />
-          <span>+ Create New Mixer</span>
+          <span>+ Create New Recipe</span>
         </button>
       </div>
 
-      {/* Stats Cards Row (Operational formulation metrics only) */}
+      {/* Stats Cards Row */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
@@ -459,7 +639,7 @@ export default function MixersManager() {
           boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Total Mixers</span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Total Recipes</span>
             <FlaskConical size={16} color="var(--sd-red)" />
           </div>
           <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--sd-black)", marginTop: "4px" }}>
@@ -476,13 +656,13 @@ export default function MixersManager() {
           boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Balanced (1000g)</span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Balanced Recipes</span>
             <CheckCircle2 size={16} color="#10B981" />
           </div>
           <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#10B981", marginTop: "4px" }}>
             {stats.balancedCount} / {stats.totalCount}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Exact 1.000 KG formulations</span>
+          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Exact customized weight ratio</span>
         </div>
 
         <div style={{
@@ -499,7 +679,7 @@ export default function MixersManager() {
           <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--sd-black)", marginTop: "4px" }}>
             {stats.rawMaterialsCount}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Available in Master catalog</span>
+          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Available in Master Assets</span>
         </div>
 
         <div style={{
@@ -510,13 +690,13 @@ export default function MixersManager() {
           boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Formula Base</span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Customised Formats</span>
             <Scale size={16} color="#8B5CF6" />
           </div>
           <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--sd-black)", marginTop: "4px" }}>
-            1.000 KG
+            Pack Scaler
           </div>
-          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Avg {stats.avgIngredients} spices per mix</span>
+          <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>Avg {stats.avgIngredients} spices per recipe</span>
         </div>
       </div>
 
@@ -542,7 +722,7 @@ export default function MixersManager() {
           <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
           <input
             type="text"
-            placeholder="Search by mixer name, product, or raw material..."
+            placeholder="Search by recipe name, product, or raw material..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -590,7 +770,7 @@ export default function MixersManager() {
               cursor: "pointer"
             }}
           >
-            All Mixers ({mixers.length})
+            All Recipes ({mixers.length})
           </button>
           <button
             type="button"
@@ -606,7 +786,7 @@ export default function MixersManager() {
               cursor: "pointer"
             }}
           >
-            1000g Balanced ({stats.balancedCount})
+            Balanced ({stats.balancedCount})
           </button>
           <button
             type="button"
@@ -627,7 +807,7 @@ export default function MixersManager() {
         </div>
       </div>
 
-      {/* Mixers Cards Grid */}
+      {/* Recipes Cards Grid */}
       {filteredMixers.length === 0 ? (
         <div style={{
           background: "#FFFFFF",
@@ -638,10 +818,10 @@ export default function MixersManager() {
         }}>
           <FlaskConical size={42} color="var(--sd-zinc-300)" style={{ margin: "0 auto 12px auto" }} />
           <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-            No Mixers Found
+            No Recipes Found
           </h3>
           <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-500)", margin: "6px 0 16px 0" }}>
-            {searchQuery ? "No mixer recipes match your search criteria." : "Create your first spice mixer formula with a 1 KG standard base."}
+            {searchQuery ? "No spice recipes match your search criteria." : "Create your first spice recipe with a customized pack weight (e.g. 40g)."}
           </p>
           <button
             type="button"
@@ -657,7 +837,7 @@ export default function MixersManager() {
               cursor: "pointer"
             }}
           >
-            + Create First Mixer Formula
+            + Create First Recipe
           </button>
         </div>
       ) : (
@@ -667,8 +847,9 @@ export default function MixersManager() {
           gap: "16px"
         }}>
           {filteredMixers.map(mixer => {
-            const totalGrams = (mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0);
-            const isBalanced = totalGrams === 1000;
+            const totalGrams = Number((mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0).toFixed(2));
+            const customWeight = Number(mixer.customisedWeight) || Number(mixer.baseWeightGrams) || totalGrams;
+            const isBalanced = Math.abs(totalGrams - customWeight) < 0.1;
 
             return (
               <div 
@@ -714,7 +895,7 @@ export default function MixersManager() {
                       gap: "4px"
                     }}>
                       {isBalanced ? <Check size={12} /> : <AlertCircle size={12} />}
-                      <span>{totalGrams}g / 1000g</span>
+                      <span>{totalGrams}g / {customWeight}g</span>
                     </span>
                   </div>
 
@@ -725,7 +906,7 @@ export default function MixersManager() {
                   )}
                 </div>
 
-                {/* 1 KG Standard Base Formulation Tag */}
+                {/* Customised Pack Weight Card */}
                 <div style={{
                   background: "var(--sd-zinc-50)",
                   border: "1px solid var(--sd-zinc-200)",
@@ -737,10 +918,10 @@ export default function MixersManager() {
                 }}>
                   <div>
                     <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>
-                      Standard Formulation Base
+                      Customised Weight
                     </div>
                     <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--sd-black)" }}>
-                      1.000 KG (1000 Grams)
+                      {customWeight} Grams {customWeight < 1000 ? `(${customWeight}g Pack)` : `(${(customWeight / 1000).toFixed(3)} KG)`}
                     </div>
                   </div>
 
@@ -761,7 +942,7 @@ export default function MixersManager() {
                       Ingredients ({mixer.ingredients?.length || 0})
                     </span>
                     <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>
-                      Ratio in 1000g
+                      Ratio in {customWeight}g
                     </span>
                   </div>
 
@@ -809,7 +990,7 @@ export default function MixersManager() {
                             fontWeight: 700,
                             color: "var(--sd-zinc-700)"
                           }}>
-                            {ing.percentage || ((ing.grams / 10).toFixed(1))}%
+                            {ing.percentage || (((ing.grams / customWeight) * 100).toFixed(1))}%
                           </span>
                         </div>
                       </div>
@@ -827,7 +1008,7 @@ export default function MixersManager() {
                   paddingTop: "10px",
                   borderTop: "1px solid var(--sd-zinc-150)"
                 }}>
-                  {/* Mixer Ready / Scaler */}
+                  {/* Recipe Ready / Scaler */}
                   <button
                     type="button"
                     onClick={() => handleOpenScaler(mixer)}
@@ -846,10 +1027,10 @@ export default function MixersManager() {
                       justifyContent: "center",
                       gap: "5px"
                     }}
-                    title="Scale batch to 5kg, 10kg, 25kg, 100kg & Print Slip"
+                    title="Scale batch to 50, 100, 250, 500 packs & Download/Print Slip"
                   >
                     <Calculator size={13} color="#FBBF24" />
-                    <span>Mixer Ready</span>
+                    <span>Recipe Ready</span>
                   </button>
 
                   <div style={{ display: "flex", gap: "4px" }}>
@@ -896,7 +1077,7 @@ export default function MixersManager() {
                         color: "#DC2626",
                         cursor: "pointer"
                       }}
-                      title="Delete Mixer"
+                      title="Delete Recipe"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -909,7 +1090,7 @@ export default function MixersManager() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 1: CREATE / EDIT MIXER FORMULATION BUILDER (Default 1 KG Base)      */}
+      {/* MODAL 1: CREATE / EDIT RECIPE FORMULATION BUILDER (Customised Weight)    */}
       {/* ========================================================================= */}
       {showEditModal && (
         <div style={{
@@ -927,7 +1108,7 @@ export default function MixersManager() {
             background: "#FFFFFF",
             borderRadius: "20px",
             width: "100%",
-            maxWidth: "720px",
+            maxWidth: "740px",
             maxHeight: "92vh",
             display: "flex",
             flexDirection: "column",
@@ -947,10 +1128,10 @@ export default function MixersManager() {
                 <FlaskConical size={22} color="var(--sd-red)" />
                 <div>
                   <h2 style={{ fontSize: "1.15rem", fontWeight: 900, color: "var(--sd-black)", margin: 0 }}>
-                    {editingMixer ? "Edit Mixer Formulation" : "Create New Mixer Formulation"}
+                    {editingMixer ? "Edit Recipe Formulation" : "Create New Recipe Formulation"}
                   </h2>
                   <span style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)" }}>
-                    Standard Base: <strong>1.000 KG (1000 Grams)</strong>
+                    Customised Weight: <strong>{formCustomWeight} Grams</strong>
                   </span>
                 </div>
               </div>
@@ -971,7 +1152,7 @@ export default function MixersManager() {
 
             {/* Modal Body */}
             <form onSubmit={handleSaveMixer} style={{ overflowY: "auto", padding: "20px", flex: 1 }}>
-              {/* Product Selection / Name */}
+              {/* Product Selection & Customised Weight Configuration */}
               <div style={{
                 background: "var(--sd-zinc-50)",
                 padding: "14px",
@@ -1009,10 +1190,10 @@ export default function MixersManager() {
                   ))}
                 </select>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px", marginBottom: "12px" }}>
                   <div>
                     <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>
-                      Mixer / Product Name *
+                      Recipe / Product Name *
                     </label>
                     <input
                       type="text"
@@ -1051,9 +1232,71 @@ export default function MixersManager() {
                     />
                   </div>
                 </div>
+
+                {/* Customised Pack Weight Config (in Grams) */}
+                <div style={{
+                  padding: "10px 12px",
+                  background: "#FFFFFF",
+                  borderRadius: "10px",
+                  border: "1px solid var(--sd-zinc-200)",
+                  marginTop: "8px"
+                }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-black)", textTransform: "uppercase" }}>
+                        Customised Recipe Weight (in Grams)
+                      </span>
+                      <div style={{ fontSize: "0.7rem", color: "var(--sd-zinc-500)" }}>
+                        Unit pack weight for this recipe formulation (e.g. 40g packet)
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {[40, 50, 100, 250, 500, 1000].map(wt => (
+                        <button
+                          key={wt}
+                          type="button"
+                          onClick={() => handleChangeCustomWeight(wt)}
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            fontSize: "0.74rem",
+                            fontWeight: formCustomWeight === wt ? 800 : 600,
+                            background: formCustomWeight === wt ? "var(--sd-black)" : "var(--sd-zinc-100)",
+                            color: formCustomWeight === wt ? "#FFFFFF" : "var(--sd-zinc-700)",
+                            border: formCustomWeight === wt ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-200)",
+                            cursor: "pointer"
+                          }}
+                        >
+                          {wt}g
+                        </button>
+                      ))}
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "4px" }}>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={formData.customisedWeight}
+                          onChange={(e) => handleChangeCustomWeight(e.target.value)}
+                          style={{
+                            width: "70px",
+                            padding: "4px 6px",
+                            borderRadius: "6px",
+                            border: "1px solid var(--sd-zinc-300)",
+                            fontSize: "0.8rem",
+                            fontWeight: 800,
+                            textAlign: "right"
+                          }}
+                        />
+                        <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>g</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* RAW MATERIALS IMPORT / SELECTION */}
+              {/* RAW MATERIALS IMPORT / SELECTION WITH TYPE-TO-SEARCH DROPDOWN */}
               <div style={{
                 background: "#FFFFFF",
                 padding: "16px",
@@ -1064,18 +1307,18 @@ export default function MixersManager() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                   <div>
                     <h4 style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-                      Raw Materials Formulation (1 KG Base)
+                      Raw Materials Formulation ({formCustomWeight}g Customised Pack)
                     </h4>
                     <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>
-                      Import raw spices from Master Assets &bull; Finance module &bull; Raw Materials
+                      Type to search & select raw spices from Master Assets &bull; Finance
                     </span>
                   </div>
 
                   {/* Normalize Button */}
-                  {formData.ingredients.length > 0 && formTotalGrams !== 1000 && (
+                  {formData.ingredients.length > 0 && !isFormBalanced && (
                     <button
                       type="button"
-                      onClick={handleNormalizeTo1000g}
+                      onClick={handleNormalizeToCustomWeight}
                       style={{
                         background: "var(--sd-zinc-100)",
                         border: "1px solid var(--sd-zinc-300)",
@@ -1089,10 +1332,10 @@ export default function MixersManager() {
                         alignItems: "center",
                         gap: "4px"
                       }}
-                      title="Proportionately adjust current ingredients so total is exactly 1000g"
+                      title={`Proportionately adjust current ingredients so total is exactly ${formCustomWeight}g`}
                     >
                       <Sparkles size={11} color="var(--sd-red)" />
-                      <span>Auto-Scale to 1000g</span>
+                      <span>Auto-Scale to {formCustomWeight}g</span>
                     </button>
                   )}
                 </div>
@@ -1107,14 +1350,18 @@ export default function MixersManager() {
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                     <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>
-                      Mix Weight Balance: <strong>{formTotalGrams}g / 1000g</strong> ({((formTotalGrams / 1000) * 100).toFixed(1)}%)
+                      Mix Weight Balance: <strong>{formTotalGrams}g / {formCustomWeight}g</strong> ({((formTotalGrams / (formCustomWeight || 1)) * 100).toFixed(1)}%)
                     </span>
                     <span style={{
                       fontSize: "0.72rem",
                       fontWeight: 800,
-                      color: formTotalGrams === 1000 ? "#059669" : formTotalGrams < 1000 ? "#D97706" : "#DC2626"
+                      color: isFormBalanced ? "#059669" : formTotalGrams < formCustomWeight ? "#D97706" : "#DC2626"
                     }}>
-                      {formTotalGrams === 1000 ? "✓ Perfectly Balanced 1 KG" : formTotalGrams < 1000 ? `Need ${1000 - formTotalGrams}g more` : `Exceeds by +${formTotalGrams - 1000}g`}
+                      {isFormBalanced 
+                        ? `✓ Perfectly Balanced ${formCustomWeight}g` 
+                        : formTotalGrams < formCustomWeight 
+                          ? `Need ${(formCustomWeight - formTotalGrams).toFixed(2)}g more` 
+                          : `Exceeds by +${(formTotalGrams - formCustomWeight).toFixed(2)}g`}
                     </span>
                   </div>
 
@@ -1126,71 +1373,170 @@ export default function MixersManager() {
                   }}>
                     <div style={{
                       height: "100%",
-                      width: `${Math.min(100, (formTotalGrams / 1000) * 100)}%`,
-                      background: formTotalGrams === 1000 ? "#10B981" : formTotalGrams < 1000 ? "#F59E0B" : "#EF4444",
+                      width: `${Math.min(100, (formTotalGrams / (formCustomWeight || 1)) * 100)}%`,
+                      background: isFormBalanced ? "#10B981" : formTotalGrams < formCustomWeight ? "#F59E0B" : "#EF4444",
                       transition: "width 0.2s ease"
                     }} />
                   </div>
                 </div>
 
-                {/* Add Raw Material Controls */}
+                {/* Searchable Raw Material Combobox & Grams Add Controls */}
                 <div style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  gap: "8px",
+                  gap: "10px",
                   alignItems: "flex-end",
                   marginBottom: "14px",
-                  padding: "10px",
+                  padding: "12px",
                   background: "var(--sd-zinc-50)",
-                  borderRadius: "10px",
+                  borderRadius: "12px",
                   border: "1px solid var(--sd-zinc-200)"
                 }}>
-                  <div style={{ flex: "1 1 240px" }}>
-                    <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "3px" }}>
-                      Raw Material (from Master Assets)
+                  {/* Type-to-search Raw Material Input */}
+                  <div style={{ flex: "1 1 260px", position: "relative" }} ref={rmDropdownRef}>
+                    <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-700)", display: "block", marginBottom: "4px" }}>
+                      Raw Material (from Master Assets) <span style={{ color: "var(--sd-red)" }}>* Type to search</span>
                     </label>
-                    <select
-                      value={selectedRmId}
-                      onChange={(e) => setSelectedRmId(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "7px 10px",
-                        borderRadius: "8px",
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type="text"
+                        placeholder="Type to search spice (e.g. Chilli, Coriander, மஞ்சள்)..."
+                        value={rmSearchQuery}
+                        onFocus={() => setIsRmDropdownOpen(true)}
+                        onChange={(e) => {
+                          setRmSearchQuery(e.target.value);
+                          setIsRmDropdownOpen(true);
+                          if (selectedRm && selectedRm.name !== e.target.value) {
+                            setSelectedRm(null);
+                          }
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "8px 32px 8px 10px",
+                          borderRadius: "8px",
+                          border: selectedRm ? "1.5px solid #10B981" : "1px solid var(--sd-zinc-300)",
+                          fontSize: "0.84rem",
+                          background: selectedRm ? "#ECFDF5" : "#FFFFFF",
+                          fontWeight: selectedRm ? 700 : 500,
+                          color: "var(--sd-black)"
+                        }}
+                      />
+                      {selectedRm ? (
+                        <button
+                          type="button"
+                          onClick={handleClearRm}
+                          style={{
+                            position: "absolute",
+                            right: "8px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            background: "none",
+                            border: "none",
+                            color: "var(--sd-zinc-500)",
+                            cursor: "pointer",
+                            padding: "2px"
+                          }}
+                        >
+                          <X size={15} />
+                        </button>
+                      ) : (
+                        <ChevronDown 
+                          size={15} 
+                          style={{
+                            position: "absolute",
+                            right: "10px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            color: "var(--sd-zinc-400)",
+                            pointerEvents: "none"
+                          }} 
+                        />
+                      )}
+                    </div>
+
+                    {/* Dropdown Results */}
+                    {isRmDropdownOpen && (
+                      <div style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        zIndex: 100,
+                        marginTop: "4px",
+                        maxHeight: "220px",
+                        overflowY: "auto",
+                        background: "#FFFFFF",
                         border: "1px solid var(--sd-zinc-300)",
-                        fontSize: "0.82rem",
-                        background: "#FFFFFF"
-                      }}
-                    >
-                      <option value="">-- Choose Raw Material to Add --</option>
-                      {rawMaterials.map(rm => (
-                        <option key={rm.id} value={rm.id}>
-                          {rm.name} {rm.tamilName ? `(${rm.tamilName})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                        borderRadius: "10px",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.15)"
+                      }}>
+                        {filteredRawMaterials.length === 0 ? (
+                          <div style={{ padding: "10px 14px", fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+                            No raw spices found matching "{rmSearchQuery}"
+                          </div>
+                        ) : (
+                          filteredRawMaterials.map(rm => (
+                            <div
+                              key={rm.id}
+                              onClick={() => handleSelectRm(rm)}
+                              style={{
+                                padding: "8px 12px",
+                                borderBottom: "1px solid var(--sd-zinc-100)",
+                                cursor: "pointer",
+                                fontSize: "0.8rem",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                background: selectedRm?.id === rm.id ? "#F4F4F5" : "transparent",
+                                transition: "background 0.1s ease"
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = "#F4F4F5"}
+                              onMouseLeave={(e) => {
+                                if (selectedRm?.id !== rm.id) e.currentTarget.style.background = "transparent";
+                              }}
+                            >
+                              <div>
+                                <span style={{ fontWeight: 700, color: "var(--sd-black)" }}>{rm.name}</span>
+                                {rm.tamilName && (
+                                  <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)", marginLeft: "6px" }}>
+                                    ({rm.tamilName})
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: "0.68rem", color: "var(--sd-zinc-400)", fontWeight: 600 }}>
+                                {rm.hsn ? `HSN ${rm.hsn}` : (rm.category || "Raw Material")}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{ width: "120px" }}>
-                    <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "3px" }}>
-                      Grams (for 1KG)
+                  {/* Grams Input */}
+                  <div style={{ width: "130px" }}>
+                    <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-700)", display: "block", marginBottom: "4px" }}>
+                      Grams ({formCustomWeight}g Pack)
                     </label>
                     <input
                       type="number"
-                      min="1"
-                      step="1"
+                      min="0.1"
+                      step="0.5"
                       value={selectedRmGrams}
                       onChange={(e) => setSelectedRmGrams(e.target.value)}
                       style={{
                         width: "100%",
-                        padding: "7px 10px",
+                        padding: "8px 10px",
                         borderRadius: "8px",
                         border: "1px solid var(--sd-zinc-300)",
-                        fontSize: "0.82rem",
-                        textAlign: "right"
+                        fontSize: "0.84rem",
+                        textAlign: "right",
+                        fontWeight: 700
                       }}
                     />
                   </div>
 
+                  {/* Add Spice Button */}
                   <button
                     type="button"
                     onClick={handleAddIngredient}
@@ -1199,21 +1545,21 @@ export default function MixersManager() {
                       color: "#FFFFFF",
                       border: "none",
                       borderRadius: "8px",
-                      padding: "8px 14px",
-                      fontSize: "0.8rem",
+                      padding: "9px 16px",
+                      fontSize: "0.82rem",
                       fontWeight: 800,
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
-                      gap: "4px"
+                      gap: "5px"
                     }}
                   >
-                    <Plus size={14} />
-                    <span>Add Spice</span>
+                    <Plus size={15} />
+                    <span>Add to Recipe</span>
                   </button>
                 </div>
 
-                {/* Added Ingredients Table (Without any rates or prices) */}
+                {/* Added Ingredients Table */}
                 {formData.ingredients.length === 0 ? (
                   <div style={{
                     padding: "24px",
@@ -1223,7 +1569,7 @@ export default function MixersManager() {
                     border: "1px dashed var(--sd-zinc-200)",
                     borderRadius: "10px"
                   }}>
-                    No raw materials added yet. Select spices above to construct the 1 KG mix ratio.
+                    No raw materials added yet. Search and select spices above to construct the {formCustomWeight}g mix ratio.
                   </div>
                 ) : (
                   <div style={{
@@ -1235,7 +1581,7 @@ export default function MixersManager() {
                       <thead>
                         <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "1px solid var(--sd-zinc-200)", textAlign: "left" }}>
                           <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material Spice</th>
-                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "120px" }}>Weight in Grams</th>
+                          <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "130px" }}>Weight in Grams</th>
                           <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "90px" }}>Ratio %</th>
                           <th style={{ padding: "8px 10px", textAlign: "center", width: "40px" }}></th>
                         </tr>
@@ -1260,7 +1606,7 @@ export default function MixersManager() {
                                   <input
                                     type="number"
                                     min="0"
-                                    step="1"
+                                    step="0.5"
                                     value={ing.grams}
                                     onChange={(e) => handleUpdateIngredientGrams(idx, e.target.value)}
                                     style={{
@@ -1278,7 +1624,7 @@ export default function MixersManager() {
                               </td>
 
                               <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 800, color: "var(--sd-zinc-800)" }}>
-                                {ing.percentage}%
+                                {ing.percentage || (((ing.grams / formCustomWeight) * 100).toFixed(1))}%
                               </td>
 
                               <td style={{ padding: "8px 10px", textAlign: "center" }}>
@@ -1303,12 +1649,14 @@ export default function MixersManager() {
                       </tbody>
                       <tfoot>
                         <tr style={{ background: "var(--sd-zinc-50)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-200)" }}>
-                          <td style={{ padding: "8px 10px", color: "var(--sd-black)" }}>Total 1 KG Base Formulation</td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", color: formTotalGrams === 1000 ? "#059669" : "#DC2626" }}>
+                          <td style={{ padding: "8px 10px", color: "var(--sd-black)" }}>
+                            Total Customised Pack Formulation
+                          </td>
+                          <td style={{ padding: "8px 10px", textAlign: "right", color: isFormBalanced ? "#059669" : "#DC2626" }}>
                             {formTotalGrams}g
                           </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", color: formTotalGrams === 1000 ? "#059669" : "#DC2626" }}>
-                            {((formTotalGrams / 1000) * 100).toFixed(1)}%
+                          <td style={{ padding: "8px 10px", textAlign: "right", color: isFormBalanced ? "#059669" : "#DC2626" }}>
+                            {((formTotalGrams / (formCustomWeight || 1)) * 100).toFixed(1)}%
                           </td>
                           <td></td>
                         </tr>
@@ -1318,16 +1666,16 @@ export default function MixersManager() {
                 )}
               </div>
 
-              {/* Grinding & Processing Instructions */}
+              {/* Formulation Description / Notes */}
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--sd-black)", display: "block", marginBottom: "4px" }}>
-                  Roasting & Grinding Instructions
+                  Recipe Formulation Notes (Optional)
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Dry roast coriander at 60C, roast chilli separately, cool completely before milling."
-                  value={formData.instructions}
-                  onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                  placeholder="e.g. Customised spice ratio for 40g pouch packing."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   style={{
                     width: "100%",
                     padding: "8px 10px",
@@ -1377,7 +1725,7 @@ export default function MixersManager() {
                     cursor: "pointer"
                   }}
                 >
-                  {editingMixer ? "Update Formula" : "Save Mixer Formula"}
+                  {editingMixer ? "Update Recipe" : "Save Recipe Formulation"}
                 </button>
               </div>
             </form>
@@ -1386,7 +1734,7 @@ export default function MixersManager() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: MIXER READY / PRODUCTION BATCH SCALER & GRINDING SLIP            */}
+      {/* MODAL 2: RECIPE READY / PRODUCTION BATCH SCALER & DOWNLOAD/PRINT SLIP     */}
       {/* ========================================================================= */}
       {showScalerModal && scalerMixer && (
         <div style={{
@@ -1425,15 +1773,40 @@ export default function MixersManager() {
                 <Calculator size={22} color="#FBBF24" />
                 <div>
                   <h2 style={{ fontSize: "1.15rem", fontWeight: 900, margin: 0, color: "#FFFFFF" }}>
-                    Mixer Ready &bull; Batch Scaler
+                    Recipe Ready &bull; Batch Scaler
                   </h2>
                   <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>
-                    {scalerMixer.name} {scalerMixer.tamilName ? `(${scalerMixer.tamilName})` : ""}
+                    {scalerMixer.name} {scalerMixer.tamilName ? `(${scalerMixer.tamilName})` : ""} &bull; {scalerPackWeight}g Pack Size
                   </span>
                 </div>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {/* Download PDF Button */}
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
+                  style={{
+                    background: "#DC2626",
+                    border: "none",
+                    color: "#FFFFFF",
+                    borderRadius: "8px",
+                    padding: "6px 14px",
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px"
+                  }}
+                  title="Generate & download printable PDF file"
+                >
+                  {isGeneratingPdf ? <Loader2 size={13} className="spin" /> : <Download size={13} />}
+                  <span>{isGeneratingPdf ? "Generating..." : "Download PDF"}</span>
+                </button>
+
+                {/* Print Slip Button */}
                 <button
                   type="button"
                   onClick={handlePrintSlip}
@@ -1442,7 +1815,7 @@ export default function MixersManager() {
                     border: "1px solid rgba(255,255,255,0.3)",
                     color: "#FFFFFF",
                     borderRadius: "8px",
-                    padding: "5px 12px",
+                    padding: "6px 12px",
                     fontSize: "0.76rem",
                     fontWeight: 700,
                     cursor: "pointer",
@@ -1450,6 +1823,7 @@ export default function MixersManager() {
                     alignItems: "center",
                     gap: "5px"
                   }}
+                  title="Direct print grinding batch slip"
                 >
                   <Printer size={13} />
                   <span>Print Slip</span>
@@ -1471,9 +1845,9 @@ export default function MixersManager() {
               </div>
             </div>
 
-            {/* Modal Body / Printable Grinding Slip (Zero Price Mentions) */}
-            <div style={{ overflowY: "auto", padding: "20px", flex: 1 }} className="printable-grinding-slip">
-              {/* Batch Size Selector Controls (No-Print) */}
+            {/* Modal Body / Printable Slip */}
+            <div style={{ overflowY: "auto", padding: "20px", flex: 1 }}>
+              {/* Pack Count Selector Controls (No-Print) */}
               <div className="no-print" style={{
                 background: "var(--sd-zinc-50)",
                 padding: "14px",
@@ -1483,44 +1857,44 @@ export default function MixersManager() {
               }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                   <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-black)", textTransform: "uppercase" }}>
-                    Select Production Batch Weight (KG)
+                    Select Required Production Quantity ({scalerPackWeight}g Packs)
                   </label>
                   <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>
-                    Scales 1 KG formula automatically
+                    Scales {scalerPackWeight}g recipe ingredients automatically
                   </span>
                 </div>
 
-                {/* Quick Batch Presets */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
-                  {[1, 5, 10, 25, 50, 100].map(kg => (
+                {/* Quick Presets for Packs */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                  {[25, 50, 100, 250, 500, 1000].map(cnt => (
                     <button
-                      key={kg}
+                      key={cnt}
                       type="button"
-                      onClick={() => setBatchKg(kg)}
+                      onClick={() => setNumPacks(cnt)}
                       style={{
                         padding: "6px 14px",
                         borderRadius: "8px",
                         fontSize: "0.8rem",
-                        fontWeight: batchKg === kg ? 900 : 700,
-                        background: batchKg === kg ? "var(--sd-black)" : "#FFFFFF",
-                        color: batchKg === kg ? "#FFFFFF" : "var(--sd-zinc-700)",
-                        border: batchKg === kg ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                        fontWeight: numPacks === cnt ? 900 : 700,
+                        background: numPacks === cnt ? "var(--sd-black)" : "#FFFFFF",
+                        color: numPacks === cnt ? "#FFFFFF" : "var(--sd-zinc-700)",
+                        border: numPacks === cnt ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
                         cursor: "pointer"
                       }}
                     >
-                      {kg} KG
+                      {cnt} Packs
                     </button>
                   ))}
 
-                  {/* Custom KG Input */}
+                  {/* Custom Number of Packs Input */}
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>Custom:</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>Custom Packs:</span>
                     <input
                       type="number"
-                      min="0.1"
-                      step="0.5"
-                      value={batchKg}
-                      onChange={(e) => setBatchKg(Math.max(0.1, Number(e.target.value) || 0))}
+                      min="1"
+                      step="1"
+                      value={numPacks}
+                      onChange={(e) => setNumPacks(Math.max(1, Number(e.target.value) || 1))}
                       style={{
                         width: "80px",
                         padding: "5px 8px",
@@ -1531,154 +1905,158 @@ export default function MixersManager() {
                         textAlign: "right"
                       }}
                     />
-                    <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>KG</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Printable Header Info */}
-              <div style={{
-                borderBottom: "2px solid var(--sd-zinc-800)",
-                paddingBottom: "12px",
-                marginBottom: "14px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start"
-              }}>
-                <div>
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: 900, color: "var(--sd-black)", margin: 0 }}>
-                    {BUSINESS_INFO.name || "SPICES DABBA"} &bull; FACTORY GRINDING SLIP
-                  </h3>
-                  <div style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", fontWeight: 700, marginTop: "2px" }}>
-                    Product: <strong>{scalerMixer.name}</strong> {scalerMixer.tamilName ? `(${scalerMixer.tamilName})` : ""}
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>Packs</span>
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>
-                    Date: {new Date().toLocaleDateString("en-IN")}
-                  </div>
-                  <div style={{
-                    fontSize: "0.95rem",
-                    fontWeight: 900,
-                    background: "var(--sd-black)",
-                    color: "#FFFFFF",
-                    padding: "3px 10px",
-                    borderRadius: "6px",
-                    marginTop: "3px",
-                    display: "inline-block"
-                  }}>
-                    BATCH: {batchKg} KG
-                  </div>
-                </div>
-              </div>
-
-              {/* Scaled Ingredients Table (No Prices/Rates/Costs) */}
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", marginBottom: "16px" }}>
-                <thead>
-                  <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "2px solid var(--sd-zinc-300)", textAlign: "left" }}>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "35px" }}>#</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material Spice</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "120px" }}>1 KG Ratio</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "160px" }}>Batch Weight Required</th>
-                    <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "center", width: "80px" }}>Checked</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(scalerMixer.ingredients || []).map((ing, idx) => {
-                    const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
-                    
-                    // Scaled weight
-                    const scaledGrams = (Number(ing.grams) || 0) * batchKg;
-                    const scaledKg = scaledGrams / 1000;
-
-                    return (
-                      <tr key={idx} style={{ borderBottom: "1px solid var(--sd-zinc-200)" }}>
-                        <td style={{ padding: "8px 10px", color: "var(--sd-zinc-500)", fontWeight: 600 }}>{idx + 1}</td>
-                        <td style={{ padding: "8px 10px", fontWeight: 700, color: "var(--sd-black)" }}>
-                          {ing.rawMaterialName}
-                          {rm?.tamilName && (
-                            <span style={{ fontSize: "0.7rem", color: "var(--sd-zinc-500)", display: "block" }}>
-                              {rm.tamilName}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-zinc-600)" }}>
-                          {ing.grams}g ({ing.percentage}%)
-                        </td>
-                        <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 900, color: "var(--sd-black)", fontSize: "0.9rem" }}>
-                          {scaledKg >= 1 ? `${scaledKg.toFixed(3)} KG` : `${scaledGrams}g`}
-                        </td>
-                        <td style={{ padding: "8px 10px", textAlign: "center" }}>
-                          <span style={{
-                            display: "inline-block",
-                            width: "16px",
-                            height: "16px",
-                            border: "1.5px solid var(--sd-zinc-400)",
-                            borderRadius: "4px"
-                          }} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  {(() => {
-                    const totalBatchGrams = (scalerMixer.ingredients || []).reduce((s, i) => s + ((Number(i.grams) || 0) * batchKg), 0);
-
-                    return (
-                      <tr style={{ background: "var(--sd-zinc-100)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-400)" }}>
-                        <td colSpan={3} style={{ padding: "10px", color: "var(--sd-black)" }}>
-                          TOTAL BATCH OUTPUT ({batchKg} KG BATCH)
-                        </td>
-                        <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-black)", fontSize: "1rem" }}>
-                          {(totalBatchGrams / 1000).toFixed(3)} KG
-                        </td>
-                        <td style={{ padding: "10px", textAlign: "center", color: "#059669", fontSize: "0.75rem" }}>
-                          VERIFIED
-                        </td>
-                      </tr>
-                    );
-                  })()}
-                </tfoot>
-              </table>
-
-              {/* Grinding Instructions Box */}
-              {scalerMixer.instructions && (
+                {/* Calculated Batch Metrics Banner */}
                 <div style={{
-                  background: "var(--sd-zinc-50)",
-                  border: "1px solid var(--sd-zinc-200)",
-                  borderRadius: "10px",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1.2fr",
+                  gap: "10px",
+                  marginTop: "12px",
                   padding: "10px 12px",
-                  marginBottom: "16px"
+                  background: "#FFFFFF",
+                  borderRadius: "10px",
+                  border: "1px solid var(--sd-zinc-200)"
                 }}>
-                  <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--sd-black)", marginBottom: "3px", textTransform: "uppercase" }}>
-                    Roasting & Grinding Instructions:
+                  <div>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Recipe Pack Size</span>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--sd-black)" }}>
+                      {scalerPackWeight} Grams
+                    </div>
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--sd-zinc-700)" }}>
-                    {scalerMixer.instructions}
+
+                  <div>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Total Quantity</span>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--sd-black)" }}>
+                      {numPacks} Packs
+                    </div>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Total Batch Weight Required</span>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--sd-red)" }}>
+                      {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(3)} KG` : `${totalBatchGrams}g`} ({totalBatchGrams.toLocaleString("en-IN")}g)
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Quality Checklist & Mill Operator Signatures */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "14px",
-                paddingTop: "10px",
-                borderTop: "1px dashed var(--sd-zinc-300)"
-              }}>
-                <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-600)" }}>
-                  <div style={{ fontWeight: 800, color: "var(--sd-black)", marginBottom: "4px" }}>Quality Verification:</div>
-                  <div>[ ] Pre-roast moisture &lt; 10%</div>
-                  <div>[ ] Mesh size fine consistency</div>
-                  <div>[ ] Color & Aroma verified against standard</div>
+              {/* Printable Slip Container */}
+              <div id="recipe-batch-slip-area" style={{ background: "#FFFFFF", padding: "10px" }}>
+                {/* Printable Header Info */}
+                <div style={{
+                  borderBottom: "2px solid var(--sd-zinc-800)",
+                  paddingBottom: "12px",
+                  marginBottom: "14px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start"
+                }}>
+                  <div>
+                    <h3 style={{ fontSize: "1.2rem", fontWeight: 900, color: "var(--sd-black)", margin: 0 }}>
+                      {BUSINESS_INFO?.name || "SPICES DABBA"} &bull; FACTORY RECIPE BATCH SLIP
+                    </h3>
+                    <div style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", fontWeight: 700, marginTop: "2px" }}>
+                      Product: <strong>{scalerMixer.name}</strong> {scalerMixer.tamilName ? `(${scalerMixer.tamilName})` : ""}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", marginTop: "2px" }}>
+                      Customised Recipe Pack: <strong>{scalerPackWeight}g</strong> &bull; Production Target: <strong>{numPacks} Packs</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)", fontWeight: 600 }}>
+                      Date: {new Date().toLocaleDateString("en-IN")}
+                    </div>
+                    <div style={{
+                      fontSize: "0.95rem",
+                      fontWeight: 900,
+                      background: "var(--sd-black)",
+                      color: "#FFFFFF",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      marginTop: "4px",
+                      display: "inline-block"
+                    }}>
+                      TOTAL: {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(3)} KG` : `${totalBatchGrams}g`}
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ textAlign: "right", fontSize: "0.74rem", color: "var(--sd-zinc-600)" }}>
-                  <div style={{ marginTop: "30px", borderTop: "1px solid var(--sd-zinc-400)", display: "inline-block", padding: "4px 20px 0 20px" }}>
-                    Factory / Mill Incharge Signature
+                {/* Scaled Ingredients Table (No Checked Column, No Prices) */}
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", marginBottom: "16px" }}>
+                  <thead>
+                    <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "2px solid var(--sd-zinc-300)", textAlign: "left" }}>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "35px" }}>#</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material Spice</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "140px" }}>
+                        Recipe Ratio ({scalerPackWeight}g)
+                      </th>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "180px" }}>
+                        Batch Weight Required ({numPacks} Packs)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(scalerMixer.ingredients || []).map((ing, idx) => {
+                      const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
+                      
+                      // Scaled weight for the total number of packs
+                      const spicePerPackGrams = Number(ing.grams) || 0;
+                      const spiceScaledGrams = Number((spicePerPackGrams * numPacks).toFixed(2));
+                      const spiceScaledKg = spiceScaledGrams / 1000;
+
+                      return (
+                        <tr key={idx} style={{ borderBottom: "1px solid var(--sd-zinc-200)" }}>
+                          <td style={{ padding: "8px 10px", color: "var(--sd-zinc-500)", fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: "8px 10px", fontWeight: 700, color: "var(--sd-black)" }}>
+                            {ing.rawMaterialName}
+                            {rm?.tamilName && (
+                              <span style={{ fontSize: "0.7rem", color: "var(--sd-zinc-500)", display: "block" }}>
+                                {rm.tamilName}
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-zinc-600)" }}>
+                            {spicePerPackGrams}g ({ing.percentage || (((spicePerPackGrams / scalerPackWeight) * 100).toFixed(1))}%)
+                          </td>
+                          <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 900, color: "var(--sd-black)", fontSize: "0.9rem" }}>
+                            {spiceScaledKg >= 1 
+                              ? `${spiceScaledKg.toFixed(3)} KG (${spiceScaledGrams.toLocaleString("en-IN")}g)` 
+                              : `${spiceScaledGrams.toLocaleString("en-IN")}g`}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: "var(--sd-zinc-100)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-400)" }}>
+                      <td colSpan={2} style={{ padding: "10px", color: "var(--sd-black)" }}>
+                        TOTAL BATCH OUTPUT ({numPacks} PACKS &bull; {scalerPackWeight}g EACH)
+                      </td>
+                      <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-zinc-700)" }}>
+                        {scalerPackWeight}g (100%)
+                      </td>
+                      <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-black)", fontSize: "1rem" }}>
+                        {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(3)} KG` : `${totalBatchGrams}g`} ({totalBatchGrams.toLocaleString("en-IN")}g)
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* Mill Operator Signatures Footer Only */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  paddingTop: "24px",
+                  marginTop: "16px"
+                }}>
+                  <div style={{ textAlign: "center", fontSize: "0.74rem", color: "var(--sd-zinc-600)" }}>
+                    <div style={{ borderTop: "1.5px solid var(--sd-zinc-600)", width: "200px", paddingTop: "5px", fontWeight: 700 }}>
+                      Factory / Mill Incharge Signature
+                    </div>
                   </div>
                 </div>
               </div>

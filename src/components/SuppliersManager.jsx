@@ -16,7 +16,6 @@ import {
   XCircle, 
   User, 
   AlertCircle,
-  Pin,
   Loader2 
 } from "lucide-react";
 import { cleanPhoneNumber } from "../utils/formatters";
@@ -485,22 +484,10 @@ export default function SuppliersManager({ subViewToggle = null }) {
                     </div>
                   )}
 
-                  {/* Notes with Pin Icon */}
+                  {/* Notes */}
                   {sup.notes && (
-                    <div style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "6px",
-                      fontSize: "0.76rem",
-                      color: "var(--sd-zinc-700)",
-                      background: "var(--sd-zinc-50)",
-                      padding: "6px 9px",
-                      borderRadius: "7px",
-                      border: "1px dashed var(--sd-zinc-200)",
-                      marginTop: "3px"
-                    }}>
-                      <Pin size={13} color="var(--sd-red)" style={{ flexShrink: 0, marginTop: "2px" }} />
-                      <span style={{ fontStyle: "italic", wordBreak: "break-word" }}>"{sup.notes}"</span>
+                    <div style={{ fontSize: "0.76rem", color: "var(--sd-zinc-400)", fontStyle: "italic", marginTop: "2px" }}>
+                      📌 {sup.notes}
                     </div>
                   )}
                 </div>

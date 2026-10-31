@@ -1618,8 +1618,9 @@ export function POSProvider({ children }) {
     setMixers(prev => prev.filter(m => m.id !== mixerId));
   };
 
-  const duplicateMixer = async (mixerId) => {
-    const existing = mixers.find(m => m.id === mixerId);
+  const duplicateMixer = async (mixerOrId) => {
+    const targetId = typeof mixerOrId === "object" ? mixerOrId?.id : mixerOrId;
+    const existing = mixers.find(m => m.id === targetId);
     if (!existing) return null;
     const cloned = {
       ...existing,

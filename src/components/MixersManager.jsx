@@ -297,27 +297,28 @@ export default function MixersManager() {
   };
 
   // Delete Recipe with confirm
-  const handleDeleteMixer = (mixer) => {
-    showConfirmModal({
+  const handleDeleteMixer = async (mixer) => {
+    const ok = await showConfirmModal({
       title: "Delete Recipe Formulation",
       message: `Are you sure you want to delete "${mixer.name}"? This recipe formulation will be removed permanently.`,
       confirmText: "Delete Recipe",
-      isDanger: true,
-      onConfirm: async () => {
-        try {
-          await deleteMixer(mixer.id);
-          showToast(`Recipe "${mixer.name}" deleted.`);
-        } catch (err) {
-          alert("Failed to delete: " + err.message);
-        }
-      }
+      isDanger: true
     });
+
+    if (ok) {
+      try {
+        await deleteMixer(mixer.id);
+        showToast(`Recipe "${mixer.name}" deleted.`);
+      } catch (err) {
+        alert("Failed to delete: " + err.message);
+      }
+    }
   };
 
   // Duplicate Recipe
   const handleDuplicateMixer = async (mixer) => {
     try {
-      await duplicateMixer(mixer);
+      await duplicateMixer(mixer.id);
       showToast(`Recipe duplicated as "${mixer.name} (Copy)"`);
     } catch (err) {
       alert("Failed to duplicate: " + err.message);

@@ -79,11 +79,12 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
   const [editingCatName, setEditingCatName] = useState("");
   const [editingCatTier, setEditingCatTier] = useState("R");
 
-  // Courier Partners Manager States
+  // Delivery Partners Manager States
   const [courierSearchQuery, setCourierSearchQuery] = useState("");
   const [showCourierModal, setShowCourierModal] = useState(false);
   const [editingCourier, setEditingCourier] = useState(null);
   const [courierErrorMsg, setCourierErrorMsg] = useState("");
+  const [isSubmittingCourier, setIsSubmittingCourier] = useState(false);
   const initialCourierFormData = {
     name: "",
     code: "",
@@ -98,6 +99,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     setEditingCourier(null);
     setCourierFormData(initialCourierFormData);
     setCourierErrorMsg("");
+    setIsSubmittingCourier(false);
     setShowCourierModal(true);
   };
 
@@ -112,33 +114,113 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
       isActive: courier.isActive !== false
     });
     setCourierErrorMsg("");
+    setIsSubmittingCourier(false);
     setShowCourierModal(true);
   };
 
   const handleSaveCourier = async (e) => {
     e.preventDefault();
-    if (!courierFormData.name?.trim()) {
-      setCourierErrorMsg("Courier Company Name is required!");
+    setCourierErrorMsg("");
+
+    // 4. Delivery Partner Company Name validation: No special characters, Max 50 Characters, Mandatory
+    const cleanName = courierFormData.name.trim();
+    if (!cleanName) {
+      setCourierErrorMsg("Delivery Partner Company Name is required!");
       return;
     }
+    if (cleanName.length > 50) {
+      setCourierErrorMsg("Company Name must not exceed 50 characters!");
+      return;
+    }
+    if (/[^a-zA-Z0-9\s.&-]/.test(cleanName)) {
+      setCourierErrorMsg("Company Name must not contain special characters!");
+      return;
+    }
+
+    // 6. Short Code is mandatory (Max 10 chars, alphanumeric)
+    const cleanCode = courierFormData.code.trim().toUpperCase();
+    if (!cleanCode) {
+      setCourierErrorMsg("Short Code is required (e.g. TPC, STC, DTDC, LOCAL)!");
+      return;
+    }
+    if (cleanCode.length > 10) {
+      setCourierErrorMsg("Short Code must not exceed 10 characters!");
+      return;
+    }
+    if (/[^a-zA-Z0-9_-]/.test(cleanCode)) {
+      setCourierErrorMsg("Short Code must contain only alphanumeric characters!");
+      return;
+    }
+
+    // 5. Helpline / Phone validation (Mandatory, 8-12 digits)
+    const cleanPhone = courierFormData.phone.trim();
+    if (!cleanPhone) {
+      setCourierErrorMsg("Helpline / Phone number is required!");
+      return;
+    }
+    const phoneDigits = cleanPhone.replace(/\D/g, "");
+    if (phoneDigits.length < 8 || phoneDigits.length > 12) {
+      setCourierErrorMsg("Helpline / Phone must be a valid 8 to 12 digit phone or landline number!");
+      return;
+    }
+
+    // 6. Online Tracking Portal URL (Mandatory)
+    let cleanUrl = courierFormData.trackingUrl.trim();
+    if (!cleanUrl) {
+      setCourierErrorMsg("Online Tracking Portal URL is required!");
+      return;
+    }
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+      cleanUrl = "https://" + cleanUrl;
+    }
+
+    setIsSubmittingCourier(true);
     try {
+      const payload = {
+        name: cleanName,
+        code: cleanCode,
+        phone: cleanPhone,
+        trackingUrl: cleanUrl,
+        notes: courierFormData.notes.trim(),
+        isActive: courierFormData.isActive !== false
+      };
+
       if (editingCourier) {
-        await updateCourierPartner(editingCourier.id, courierFormData);
+        await updateCourierPartner(editingCourier.id, payload);
       } else {
-        await addCourierPartner(courierFormData);
+        await addCourierPartner(payload);
       }
       setShowCourierModal(false);
       setEditingCourier(null);
     } catch (err) {
-      setCourierErrorMsg(err.message || "Failed to save courier partner");
+      setCourierErrorMsg(err.message || "Failed to save delivery partner");
+    } finally {
+      setIsSubmittingCourier(false);
+    }
+  };
+
+  // 3. Confirmation before switching the Active / Inactive Mode
+  const handleToggleCourierStatus = async (courier) => {
+    const isAct = courier.isActive !== false;
+    const newStatus = !isAct;
+    const ok = await showConfirmModal({
+      title: "Confirm Status Change",
+      message: newStatus 
+        ? `Are you sure you want to set "${courier.name}" as Active? It will be available for order dispatches.`
+        : `Are you sure you want to set "${courier.name}" as Inactive? It will be hidden from new order dispatches.`,
+      confirmText: newStatus ? "Yes, Set Active" : "Yes, Set Inactive",
+      isDanger: !newStatus
+    });
+    if (ok) {
+      await updateCourierPartner(courier.id, { isActive: newStatus });
     }
   };
 
   const handleDeleteCourierClick = async (courierId, courierName) => {
     const ok = await showConfirmModal({
-      title: "Delete Courier Partner",
-      message: `Are you sure you want to remove "${courierName}" from your courier partners list?`,
-      confirmText: "Delete Courier",
+      title: "Delete Delivery Partner",
+      message: `Are you sure you want to remove "${courierName}" from your delivery partners list?`,
+      confirmText: "Delete Delivery Partner",
       isDanger: true
     });
     if (ok) {
@@ -508,17 +590,25 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
       }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {activeSubView === "categories" ? (
+            {activeSubView === "couriers" ? (
+              <Truck size={22} color="var(--sd-red)" />
+            ) : activeSubView === "categories" ? (
               <Layers size={22} color="var(--sd-red)" />
             ) : (
               <Store size={22} color="var(--sd-red)" />
             )}
             <h2 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--sd-black)", margin: 0 }}>
-              {activeSubView === "categories" ? "Customer Categories" : "Customers Directory"}
+              {activeSubView === "couriers" 
+                ? "Delivery Partners" 
+                : activeSubView === "categories" 
+                ? "Customer Categories" 
+                : "Customers Directory"}
             </h2>
           </div>
           <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", marginTop: "2px" }}>
-            {activeSubView === "categories"
+            {activeSubView === "couriers"
+              ? "Manage parcel services, delivery partners & local delivery transport for customer orders."
+              : activeSubView === "categories"
               ? "Define wholesale pricing tiers (SS, D, R, C) and customer shop categories."
               : "Registered wholesale customers, contacts, addresses, and spot billing."}
           </p>
@@ -600,7 +690,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               }}
             >
               <Truck size={14} />
-              <span>Couriers ({courierPartners.length})</span>
+              <span>Delivery Partners ({courierPartners.length})</span>
             </button>
           </div>
 
@@ -637,7 +727,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
             >
               <Plus size={15} />
-              <span>Add Courier Partner</span>
+              <span>Add Delivery Partner</span>
             </button>
           )}
         </div>
@@ -1191,7 +1281,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
         )}
       </div>
 
-      {/* VIEW 3: COURIER PARTNERS / COMPANIES CATALOG */}
+      {/* VIEW 3: DELIVERY PARTNERS CATALOG */}
       <div style={{ display: activeSubView === "couriers" ? "block" : "none" }}>
         {/* Search and Count Bar */}
         <div style={{
@@ -1206,7 +1296,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
             <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
             <input
               type="text"
-              placeholder="Search courier company by name, code, phone..."
+              placeholder="Search delivery partner by name, code, phone..."
               value={courierSearchQuery}
               onChange={(e) => setCourierSearchQuery(e.target.value)}
               className="text-input"
@@ -1223,17 +1313,17 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
             fontWeight: 700,
             border: "1px solid var(--sd-zinc-200)"
           }}>
-            Total Couriers: <strong>{courierPartners.length}</strong> • Active: <strong>{courierPartners.filter(c => c.isActive !== false).length}</strong>
+            Total Delivery Partners: <strong>{courierPartners.length}</strong> • Active: <strong>{courierPartners.filter(c => c.isActive !== false).length}</strong>
           </div>
         </div>
 
-        {/* Courier Cards Grid */}
+        {/* Delivery Partner Cards Grid */}
         {filteredCourierPartners.length === 0 ? (
           <div className="bw-card" style={{ padding: "48px 24px", textAlign: "center", color: "var(--sd-zinc-500)" }}>
             <Truck size={44} strokeWidth={1.5} color="var(--sd-zinc-300)" style={{ margin: "0 auto 10px" }} />
-            <h3 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 700 }}>No courier partners found</h3>
+            <h3 className="font-heading" style={{ fontSize: "1.05rem", fontWeight: 700 }}>No delivery partners found</h3>
             <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-400)", marginTop: "3px", marginBottom: "16px" }}>
-              {courierSearchQuery ? "No couriers matched your search." : "Register courier services (Professional Couriers, ST Courier, DTDC) to manage shipments."}
+              {courierSearchQuery ? "No delivery partners matched your search." : "Register delivery partners (The Professional Couriers, ST Courier, DTDC, Local Transport) to manage order dispatches."}
             </p>
             <button
               type="button"
@@ -1242,7 +1332,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               style={{ padding: "8px 16px", fontSize: "0.82rem" }}
             >
               <Plus size={15} />
-              <span>Add First Courier</span>
+              <span>Add First Delivery Partner</span>
             </button>
           </div>
         ) : (
@@ -1356,7 +1446,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   }}>
                     <button
                       type="button"
-                      onClick={() => updateCourierPartner(courier.id, { isActive: !isAct })}
+                      onClick={() => handleToggleCourierStatus(courier)}
                       className="btn-secondary"
                       style={{
                         padding: "5px 10px",
@@ -1373,7 +1463,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                       onClick={() => handleOpenEditCourier(courier)}
                       className="btn-secondary"
                       style={{ padding: "5px 8px" }}
-                      title="Edit Courier Partner"
+                      title="Edit Delivery Partner"
                     >
                       <Edit2 size={13} />
                     </button>
@@ -1388,7 +1478,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                         color: "var(--sd-zinc-400)",
                         padding: "4px"
                       }}
-                      title="Delete Courier Partner"
+                      title="Delete Delivery Partner"
                     >
                       <Trash2 size={14} color="var(--sd-red)" />
                     </button>
@@ -2055,7 +2145,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Truck size={18} color="var(--sd-red)" />
                 <h3 className="font-heading" style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>
-                  {editingCourier ? "Edit Courier Partner" : "Register Courier Partner"}
+                  {editingCourier ? "Edit Delivery Partner" : "Register Delivery Partner"}
                 </h3>
               </div>
               <button
@@ -2064,7 +2154,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   setShowCourierModal(false);
                   setEditingCourier(null);
                 }}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                disabled={isSubmittingCourier}
+                style={{ background: "none", border: "none", cursor: isSubmittingCourier ? "not-allowed" : "pointer", padding: "4px" }}
               >
                 <X size={18} />
               </button>
@@ -2087,63 +2178,79 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
 
               <div>
                 <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
-                  Courier Company Name <span style={{ color: "var(--sd-red)" }}>*</span>
+                  Delivery Partner / Company Name <span className="input-required">* (Max 50 chars, no special characters)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. The Professional Couriers, ST Courier, DTDC"
+                  maxLength={50}
                   value={courierFormData.name}
-                  onChange={(e) => setCourierFormData({ ...courierFormData, name: e.target.value })}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s.&-]/g, "").slice(0, 50);
+                    setCourierFormData({ ...courierFormData, name: sanitized });
+                  }}
                   className="text-input"
                   required
+                  autoFocus
                 />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
-                    Short Code
+                    Short Code <span className="input-required">* (Max 10 chars)</span>
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. TPC, STC, DTDC"
+                    maxLength={10}
                     value={courierFormData.code}
-                    onChange={(e) => setCourierFormData({ ...courierFormData, code: e.target.value.toUpperCase() })}
+                    onChange={(e) => {
+                      const sanitized = e.target.value.replace(/[^a-zA-Z0-9_-]/g, "").toUpperCase().slice(0, 10);
+                      setCourierFormData({ ...courierFormData, code: sanitized });
+                    }}
                     className="text-input"
+                    required
                   />
                 </div>
 
                 <div>
                   <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
-                    Helpline / Phone
+                    Helpline / Phone <span className="input-required">* (8-12 digits)</span>
                   </label>
                   <input
                     type="tel"
                     inputMode="tel"
-                    placeholder="e.g. 044-22250000"
+                    placeholder="e.g. 044-22250000 or 9842145678"
+                    maxLength={15}
                     value={courierFormData.phone}
-                    onChange={(e) => setCourierFormData({ ...courierFormData, phone: e.target.value })}
+                    onChange={(e) => {
+                      const sanitized = e.target.value.replace(/[^0-9\s-]/g, "").slice(0, 15);
+                      setCourierFormData({ ...courierFormData, phone: sanitized });
+                    }}
                     className="text-input"
+                    required
                   />
                 </div>
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
-                  Online Tracking Portal URL
+                  Online Tracking Portal URL <span className="input-required">*</span>
                 </label>
                 <input
-                  type="url"
-                  placeholder="e.g. https://www.tpcindia.com"
+                  type="text"
+                  placeholder="e.g. https://www.tpcindia.com or https://stcourier.com/track"
                   value={courierFormData.trackingUrl}
                   onChange={(e) => setCourierFormData({ ...courierFormData, trackingUrl: e.target.value })}
                   className="text-input"
+                  required
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
-                  Remarks / Service Notes
+                  Remarks / Service Notes <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
                 </label>
                 <textarea
                   rows={2}
@@ -2164,7 +2271,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--sd-red)" }}
                 />
                 <label htmlFor="courierActiveCheckbox" style={{ fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>
-                  Active Courier Partner (available for order dispatch selection)
+                  Active Delivery Partner (available for order dispatch selection)
                 </label>
               </div>
 
@@ -2177,15 +2284,29 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   }}
                   className="btn-secondary"
                   style={{ padding: "8px 16px" }}
+                  disabled={isSubmittingCourier}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="btn-primary"
-                  style={{ padding: "8px 18px" }}
+                  disabled={isSubmittingCourier}
+                  style={{
+                    padding: "8px 18px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    opacity: isSubmittingCourier ? 0.75 : 1,
+                    cursor: isSubmittingCourier ? "not-allowed" : "pointer"
+                  }}
                 >
-                  {editingCourier ? "Save Changes" : "Register Courier"}
+                  {isSubmittingCourier && <Loader2 size={15} className="spin" />}
+                  <span>
+                    {isSubmittingCourier
+                      ? (editingCourier ? "Saving Changes..." : "Registering...")
+                      : (editingCourier ? "Save Changes" : "Register Delivery Partner")}
+                  </span>
                 </button>
               </div>
             </form>

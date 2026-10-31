@@ -348,56 +348,158 @@ export default function MixersManager() {
     }
   };
 
-  // Download PDF using html2pdf
-  const handleDownloadPdf = async () => {
-    setIsGeneratingPdf(true);
-    const slipEl = document.getElementById("recipe-batch-slip-area");
-    if (!slipEl) {
-      setIsGeneratingPdf(false);
-      return;
+  // Scaler Recipe Parameters
+  const scalerPackWeight = scalerMixer 
+    ? (Number(scalerMixer.customisedWeight) || Number(scalerMixer.baseWeightGrams) || (scalerMixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0) || 40)
+    : 40;
+
+  // Total Batch Grams (computed dynamically including any edited custom batch weights)
+  const totalBatchGrams = scalerMixer
+    ? Number((scalerMixer.ingredients || []).reduce((sum, ing, idx) => {
+        const wt = customBatchWeights[idx] !== undefined 
+          ? customBatchWeights[idx] 
+          : Number(((Number(ing.grams) || 0) * numPacks).toFixed(2));
+        return sum + wt;
+      }, 0).toFixed(2))
+    : 0;
+
+  const totalBatchKg = totalBatchGrams / 1000;
+  const hasCustomOverrides = Object.keys(customBatchWeights).length > 0;
+
+  // Validate batch weights before printing or downloading
+  const validateBatchWeights = () => {
+    if (!numPacks || numPacks <= 0) {
+      showToast("Please enter a valid number of packs (at least 1)");
+      return false;
     }
-
-    const cleanName = (scalerMixer.name || "Recipe").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `${cleanName}_${numPacks}_Packs_Batch_Slip.pdf`;
-
-    try {
-      if (!window.html2pdf) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-
-      if (window.html2pdf) {
-        const opt = {
-          margin: [8, 10, 8, 10],
-          filename: filename,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-        };
-
-        await window.html2pdf().set(opt).from(slipEl).save();
-        showToast("PDF Batch Slip downloaded successfully!");
-        setIsGeneratingPdf(false);
-        return;
-      }
-    } catch (err) {
-      console.warn("Direct html2pdf notice:", err.message);
+    if (!scalerPackWeight || scalerPackWeight <= 0) {
+      showToast("Recipe pack weight is invalid.");
+      return false;
     }
-
-    // Fallback: iframe print
-    handlePrintSlip();
-    setIsGeneratingPdf(false);
+    for (let idx = 0; idx < (scalerMixer?.ingredients || []).length; idx++) {
+      const ing = scalerMixer.ingredients[idx];
+      const wt = customBatchWeights[idx] !== undefined 
+        ? customBatchWeights[idx] 
+        : Number(((Number(ing.grams) || 0) * numPacks).toFixed(2));
+      if (isNaN(wt) || wt <= 0) {
+        showToast(`Invalid weight for "${ing.rawMaterialName}". Weight must be greater than 0g.`);
+        return false;
+      }
+    }
+    return true;
   };
 
-  // Print Slip using clean isolated iframe (immune to CSS hide rules)
-  const handlePrintSlip = () => {
+  // Confirmation prompt displaying Pack Size, Number of Packs, Expected vs Actual Batch Weight
+  const confirmBatchVerification = async (actionType = "pdf") => {
+    const isPdf = actionType === "pdf";
+    const expectedTotalGrams = Number((scalerPackWeight * numPacks).toFixed(2));
+    const diffGrams = Number((totalBatchGrams - expectedTotalGrams).toFixed(2));
+    const expectedTotalKg = (expectedTotalGrams / 1000).toFixed(3);
+    const actualTotalKg = (totalBatchGrams / 1000).toFixed(3);
+    const isDifferent = Math.abs(diffGrams) > 0.05;
+
+    const confirmTitle = hasCustomOverrides
+      ? "⚠️ Confirm Custom Batch Weights"
+      : "Verify Batch & Confirm";
+
+    const confirmContent = (
+      <div style={{ textAlign: "left", width: "100%", fontSize: "0.82rem" }}>
+        <p style={{ margin: "0 0 12px 0", color: "var(--sd-zinc-600)", textAlign: "center", lineHeight: 1.4 }}>
+          Please verify that the <strong>pack size</strong>, <strong>number of packs</strong>, and <strong>total batch weight</strong> are correct before {isPdf ? "generating the PDF" : "printing the slip"}.
+        </p>
+
+        {/* Verification Summary Card */}
+        <div style={{
+          background: "#F8FAFC",
+          border: "1px solid #E2E8F0",
+          borderRadius: "10px",
+          padding: "12px",
+          marginBottom: "12px"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600 }}>Recipe Product:</span>
+            <strong style={{ color: "#0F172A" }}>{scalerMixer.name}</strong>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600 }}>Pack Size (Value):</span>
+            <strong style={{ color: "#0F172A" }}>{scalerPackWeight} Grams</strong>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600 }}>Required Quantity:</span>
+            <strong style={{ color: "#0F172A" }}>{numPacks} Packs</strong>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", borderTop: "1px dashed #CBD5E1", paddingTop: "6px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600 }}>Expected Formula Weight:</span>
+            <span style={{ color: "#334155", fontWeight: 700 }}>
+              {expectedTotalKg >= 1 ? `${expectedTotalKg} KG (${expectedTotalGrams.toLocaleString("en-IN")}g)` : `${expectedTotalGrams.toLocaleString("en-IN")}g`}
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1.5px solid #CBD5E1", paddingTop: "6px", marginTop: "4px" }}>
+            <span style={{ color: "#0F172A", fontWeight: 800 }}>Actual Total Batch Weight:</span>
+            <strong style={{ color: isDifferent ? "#DC2626" : "#16A34A", fontSize: "0.95rem" }}>
+              {actualTotalKg >= 1 ? `${actualTotalKg} KG (${totalBatchGrams.toLocaleString("en-IN")}g)` : `${totalBatchGrams.toLocaleString("en-IN")}g`}
+            </strong>
+          </div>
+        </div>
+
+        {/* Warning callout if customized */}
+        {hasCustomOverrides && (
+          <div style={{
+            background: "#FEF3C7",
+            border: "1px solid #FDE68A",
+            borderRadius: "8px",
+            padding: "8px 10px",
+            marginBottom: "8px",
+            color: "#92400E",
+            fontSize: "0.76rem"
+          }}>
+            <div style={{ fontWeight: 800, marginBottom: "2px" }}>
+              ⚠️ Manual Batch Edits Detected
+            </div>
+            <div>
+              {Object.keys(customBatchWeights).length} spice ingredient weight(s) were manually customized.
+              {isDifferent && (
+                <div style={{ marginTop: "2px", fontWeight: 700 }}>
+                  Net variation: {diffGrams > 0 ? `+${diffGrams}g` : `${diffGrams}g`} from standard formula.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!hasCustomOverrides && !isDifferent && (
+          <div style={{
+            background: "#ECFDF5",
+            border: "1px solid #A7F3D0",
+            borderRadius: "8px",
+            padding: "7px 10px",
+            marginBottom: "8px",
+            color: "#065F46",
+            fontSize: "0.76rem",
+            fontWeight: 700,
+            textAlign: "center"
+          }}>
+            ✓ Formula balance verified ({scalerPackWeight}g &times; {numPacks} Packs).
+          </div>
+        )}
+      </div>
+    );
+
+    return await showConfirmModal({
+      title: confirmTitle,
+      message: confirmContent,
+      confirmText: isPdf ? "Confirm & Download PDF" : "Confirm & Print Slip",
+      cancelText: "Review / Edit Weights",
+      isDanger: false
+    });
+  };
+
+  // Direct Print Slip implementation using clean isolated iframe
+  const executePrintSlip = () => {
     const slipEl = document.getElementById("recipe-batch-slip-area");
     if (!slipEl) return;
+
+    slipEl.classList.add("exporting-pdf");
 
     const printIframe = document.createElement("iframe");
     printIframe.style.position = "fixed";
@@ -429,6 +531,8 @@ export default function MixersManager() {
             th, td { border: 1px solid #D4D4D8; padding: 8px 10px; }
             th { background: #F4F4F5; font-weight: 800; font-size: 12px; }
             td { font-size: 12px; }
+            .no-print-in-slip { display: none !important; }
+            .print-only-text { display: inline-block !important; }
             .header-banner { border-bottom: 2px solid #18181B; padding-bottom: 10px; margin-bottom: 12px; }
             .batch-badge { 
               background: #18181B; 
@@ -448,6 +552,8 @@ export default function MixersManager() {
     `);
     doc.close();
 
+    slipEl.classList.remove("exporting-pdf");
+
     setTimeout(() => {
       printIframe.contentWindow.focus();
       printIframe.contentWindow.print();
@@ -457,6 +563,68 @@ export default function MixersManager() {
         }
       }, 1000);
     }, 300);
+  };
+
+  // Print Slip Handler with verification & confirmation
+  const handlePrintSlip = async () => {
+    if (!validateBatchWeights()) return;
+    const ok = await confirmBatchVerification("print");
+    if (!ok) return;
+    executePrintSlip();
+  };
+
+  // Download PDF Handler with verification & confirmation
+  const handleDownloadPdf = async () => {
+    if (!validateBatchWeights()) return;
+    const ok = await confirmBatchVerification("pdf");
+    if (!ok) return;
+
+    setIsGeneratingPdf(true);
+    const slipEl = document.getElementById("recipe-batch-slip-area");
+    if (!slipEl) {
+      setIsGeneratingPdf(false);
+      return;
+    }
+
+    slipEl.classList.add("exporting-pdf");
+
+    const cleanName = (scalerMixer.name || "Recipe").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `${cleanName}_${numPacks}_Packs_Batch_Slip.pdf`;
+
+    try {
+      if (!window.html2pdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      if (window.html2pdf) {
+        const opt = {
+          margin: [8, 10, 8, 10],
+          filename: filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+        };
+
+        await window.html2pdf().set(opt).from(slipEl).save();
+        slipEl.classList.remove("exporting-pdf");
+        showToast("PDF Batch Slip downloaded successfully!");
+        setIsGeneratingPdf(false);
+        return;
+      }
+    } catch (err) {
+      console.warn("Direct html2pdf notice:", err.message);
+    }
+
+    slipEl.classList.remove("exporting-pdf");
+    // Fallback: iframe print directly
+    executePrintSlip();
+    setIsGeneratingPdf(false);
   };
 
   // Filtered Recipes
@@ -508,24 +676,6 @@ export default function MixersManager() {
 
   // Form Current Total Grams
   const formTotalGrams = Number(formData.ingredients.reduce((s, i) => s + (Number(i.grams) || 0), 0).toFixed(2));
-
-  // Scaler Recipe Parameters
-  const scalerPackWeight = scalerMixer 
-    ? (Number(scalerMixer.customisedWeight) || Number(scalerMixer.baseWeightGrams) || (scalerMixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0) || 40)
-    : 40;
-
-  // Total Batch Grams (computed dynamically including any edited custom batch weights)
-  const totalBatchGrams = scalerMixer
-    ? Number((scalerMixer.ingredients || []).reduce((sum, ing, idx) => {
-        const wt = customBatchWeights[idx] !== undefined 
-          ? customBatchWeights[idx] 
-          : Number(((Number(ing.grams) || 0) * numPacks).toFixed(2));
-        return sum + wt;
-      }, 0).toFixed(2))
-    : 0;
-
-  const totalBatchKg = totalBatchGrams / 1000;
-  const hasCustomOverrides = Object.keys(customBatchWeights).length > 0;
 
   return (
     <div className="responsive-page-container" style={{ paddingBottom: "60px" }}>

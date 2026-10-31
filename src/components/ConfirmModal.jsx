@@ -40,7 +40,7 @@ export default function ConfirmModal({
       <div 
         style={{
           width: "100%",
-          maxWidth: "430px",
+          maxWidth: "460px",
           background: "#FFFFFF",
           borderRadius: "18px",
           padding: "24px",
@@ -106,15 +106,16 @@ export default function ConfirmModal({
         </h3>
 
         {/* Message */}
-        <p style={{
+        <div style={{
           fontSize: "0.86rem",
           color: "var(--sd-zinc-600)",
           lineHeight: 1.5,
           margin: "0 0 22px 0",
-          padding: "0 4px"
+          padding: "0 4px",
+          width: "100%"
         }}>
           {message}
-        </p>
+        </div>
 
         {/* Actions Button Row */}
         <div style={{

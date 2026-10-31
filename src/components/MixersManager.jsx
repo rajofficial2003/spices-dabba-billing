@@ -1361,8 +1361,8 @@ export default function MixersManager() {
                     </label>
                     <input
                       type="number"
-                      min="0.1"
-                      step="0.5"
+                      min="0"
+                      step="any"
                       value={selectedRmGrams}
                       onChange={(e) => setSelectedRmGrams(e.target.value)}
                       style={{
@@ -1448,7 +1448,7 @@ export default function MixersManager() {
                                   <input
                                     type="number"
                                     min="0"
-                                    step="0.5"
+                                    step="any"
                                     value={ing.grams}
                                     onChange={(e) => handleUpdateIngredientGrams(idx, e.target.value)}
                                     style={{

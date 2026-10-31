@@ -19,7 +19,8 @@ import {
   Gift,
   Package,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
 
@@ -72,6 +73,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState(null); // 'order' | 'draft' | null
   const [selectedVariants, setSelectedVariants] = useState({});
   const [mobileTab, setMobileTab] = useState("catalog"); // "catalog" | "cart"
 
@@ -178,6 +180,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
   const handleSaveDraft = async () => {
     setIsProcessing(true);
+    setSubmittingAction("draft");
     try {
       const draft = await saveAsDraft();
       showNotification(`Draft ${draft.invoiceNumber} saved! You can resume it anytime on-field.`, "success");
@@ -185,11 +188,13 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
       showNotification(err.message, "error");
     } finally {
       setIsProcessing(false);
+      setSubmittingAction(null);
     }
   };
 
   const handleGenerateBill = async () => {
     setIsProcessing(true);
+    setSubmittingAction("order");
     try {
       const bill = await finalizeBill();
       showNotification(`Invoice ${bill.invoiceNumber} generated!`, "success");
@@ -202,6 +207,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
       showNotification(err.message, "error");
     } finally {
       setIsProcessing(false);
+      setSubmittingAction(null);
     }
   };
 
@@ -1301,10 +1307,28 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   onClick={handleSaveDraft}
                   className="btn-secondary"
                   title="Save draft"
-                  style={{ flex: 1, padding: "10px", fontSize: "0.88rem", fontWeight: 700 }}
+                  style={{ 
+                    flex: 1, 
+                    padding: "10px", 
+                    fontSize: "0.88rem", 
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
                 >
-                  <Save size={15} />
-                  <span>{activeDraftId ? "Update Draft" : "Save Draft"}</span>
+                  {submittingAction === "draft" ? (
+                    <>
+                      <Loader2 size={15} className="spin" />
+                      <span>Saving Draft...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={15} />
+                      <span>{activeDraftId ? "Update Draft" : "Save Draft"}</span>
+                    </>
+                  )}
                 </button>
 
                 <button
@@ -1313,16 +1337,86 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   onClick={handleGenerateBill}
                   className="btn-accent"
                   title="Submit order & finalize invoice"
-                  style={{ flex: 1.3, padding: "10px 14px", fontSize: "0.92rem", fontWeight: 800 }}
+                  style={{ 
+                    flex: 1.3, 
+                    padding: "10px 14px", 
+                    fontSize: "0.92rem", 
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    cursor: (cartItems.length === 0 || !selectedCustomer || isProcessing) ? "not-allowed" : "pointer"
+                  }}
                 >
-                  <Receipt size={17} />
-                  <span>Submit Order</span>
+                  {submittingAction === "order" ? (
+                    <>
+                      <Loader2 size={17} className="spin" />
+                      <span>Submitting Order...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Receipt size={17} />
+                      <span>Submit Order</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Order Processing Full Screen Loading Overlay */}
+      {isProcessing && submittingAction === "order" && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.45)",
+          backdropFilter: "blur(3px)",
+          zIndex: 100000,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#FFFFFF",
+            borderRadius: "18px",
+            padding: "26px 36px",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+            border: "1px solid var(--sd-zinc-200)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            gap: "14px",
+            maxWidth: "340px",
+            width: "100%",
+            animation: "scaleUp 0.15s ease-out"
+          }}>
+            <div style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "50%",
+              background: "#FEE2E2",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <Loader2 size={30} color="var(--sd-red)" className="spin" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--sd-black)", margin: "0 0 4px 0" }}>
+                Submitting Order...
+              </h3>
+              <p style={{ fontSize: "0.82rem", color: "var(--sd-zinc-500)", margin: 0, lineHeight: 1.4 }}>
+                Finalizing invoice, recording transaction and updating inventory stock...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Bottom Cart Bar for On-Field Mobile/Tablet Spot Billing */}
       {cartItems.length > 0 && mobileTab === "catalog" && (

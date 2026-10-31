@@ -15,7 +15,9 @@ import {
   CheckCircle2, 
   XCircle, 
   User, 
-  AlertCircle 
+  AlertCircle,
+  Pin,
+  Loader2 
 } from "lucide-react";
 import { cleanPhoneNumber } from "../utils/formatters";
 
@@ -33,6 +35,7 @@ export default function SuppliersManager({ subViewToggle = null }) {
   const [showModal, setShowModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialFormData = {
     name: "",
@@ -53,6 +56,7 @@ export default function SuppliersManager({ subViewToggle = null }) {
     setEditingSupplier(null);
     setFormData(initialFormData);
     setErrorMsg("");
+    setIsSubmitting(false);
     setShowModal(true);
   };
 
@@ -71,6 +75,7 @@ export default function SuppliersManager({ subViewToggle = null }) {
       isActive: sup.isActive !== false
     });
     setErrorMsg("");
+    setIsSubmitting(false);
     setShowModal(true);
   };
 
@@ -93,26 +98,118 @@ export default function SuppliersManager({ subViewToggle = null }) {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!formData.name.trim()) {
+    // 1. Mandi / Supplier Name validation (Mandatory, No special characters, Max 50 chars)
+    const cleanName = formData.name.trim();
+    if (!cleanName) {
       setErrorMsg("Mandi / Supplier Name is mandatory!");
       return;
     }
-    if (!formData.phone.trim()) {
-      setErrorMsg("Phone number is mandatory!");
+    if (cleanName.length > 50) {
+      setErrorMsg("Supplier Name must not exceed 50 characters!");
+      return;
+    }
+    if (/[^a-zA-Z0-9\s.&/-]/.test(cleanName)) {
+      setErrorMsg("Supplier Name must not contain special characters!");
       return;
     }
 
+    // 2. Contact Person validation (Optional, No special characters, Max 50 chars)
+    const cleanContactPerson = formData.contactPerson.trim();
+    if (cleanContactPerson) {
+      if (cleanContactPerson.length > 50) {
+        setErrorMsg("Contact Person name must not exceed 50 characters!");
+        return;
+      }
+      if (/[^a-zA-Z0-9\s.]/.test(cleanContactPerson)) {
+        setErrorMsg("Contact Person name must not contain special characters!");
+        return;
+      }
+    }
+
+    // 3. Phone Number validation (Mandatory, Digits only, 8-12 digits)
+    const rawPhone = formData.phone.trim();
+    if (!rawPhone) {
+      setErrorMsg("Phone number is mandatory!");
+      return;
+    }
+    const cleanPhoneDigits = rawPhone.replace(/\D/g, "");
+    if (cleanPhoneDigits.length === 0 || /[^0-9+\s-]/.test(rawPhone)) {
+      setErrorMsg("Phone number must contain only numbers!");
+      return;
+    }
+    if (cleanPhoneDigits.length < 8 || cleanPhoneDigits.length > 12) {
+      setErrorMsg("Please enter a valid phone number (10-digit mobile or 8-12 digits for landlines)!");
+      return;
+    }
+
+    // 4. GSTIN validation (Optional, Alphanumeric only, Exactly 15 chars if entered)
+    const cleanGstin = formData.gstin.trim().toUpperCase();
+    if (cleanGstin) {
+      if (/[^a-zA-Z0-9]/.test(cleanGstin)) {
+        setErrorMsg("GSTIN must not contain special characters (alphabets & numbers only)!");
+        return;
+      }
+      if (cleanGstin.length !== 15) {
+        setErrorMsg("GSTIN must be exactly 15 characters (e.g. 33AAAAA0000A1Z5)!");
+        return;
+      }
+    }
+
+    // 5. Address validation (Optional, Max 100 characters)
+    const cleanAddress = formData.address.trim();
+    if (cleanAddress.length > 100) {
+      setErrorMsg("Address must not exceed 100 characters!");
+      return;
+    }
+
+    // 6. City validation (Optional, Max 50 chars, no special characters)
+    const cleanCity = formData.city.trim();
+    if (cleanCity) {
+      if (cleanCity.length > 50) {
+        setErrorMsg("City must not exceed 50 characters!");
+        return;
+      }
+      if (/[^a-zA-Z0-9\s.-]/.test(cleanCity)) {
+        setErrorMsg("City must not contain special characters!");
+        return;
+      }
+    }
+
+    // 7. State validation (Optional, Max 50 chars)
+    const cleanState = formData.state.trim();
+    if (cleanState.length > 50) {
+      setErrorMsg("State must not exceed 50 characters!");
+      return;
+    }
+
+    // 8. Pincode validation (Optional, Exactly 6 digits if entered)
+    const cleanPincode = formData.pincode.trim();
+    if (cleanPincode) {
+      if (!/^\d{6}$/.test(cleanPincode)) {
+        setErrorMsg("Pincode must be exactly 6 numeric digits!");
+        return;
+      }
+    }
+
+    // 9. Notes validation (Optional, Max 200 characters)
+    const cleanNotes = formData.notes.trim();
+    if (cleanNotes.length > 200) {
+      setErrorMsg("Notes must not exceed 200 characters!");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const payload = {
-        name: formData.name.trim(),
-        contactPerson: formData.contactPerson.trim(),
-        phone: formData.phone.trim(),
-        gstin: formData.gstin.trim().toUpperCase(),
-        address: formData.address.trim(),
-        city: formData.city.trim(),
-        state: formData.state.trim(),
-        pincode: formData.pincode.trim(),
-        notes: formData.notes.trim(),
+        name: cleanName,
+        contactPerson: cleanContactPerson,
+        phone: cleanPhoneDigits,
+        gstin: cleanGstin,
+        address: cleanAddress,
+        city: cleanCity,
+        state: cleanState,
+        pincode: cleanPincode,
+        notes: cleanNotes,
         isActive: formData.isActive !== false
       };
 
@@ -124,6 +221,8 @@ export default function SuppliersManager({ subViewToggle = null }) {
       setShowModal(false);
     } catch (err) {
       setErrorMsg(err.message || "Failed to save supplier details");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -386,10 +485,22 @@ export default function SuppliersManager({ subViewToggle = null }) {
                     </div>
                   )}
 
-                  {/* Notes */}
+                  {/* Notes with Pin Icon */}
                   {sup.notes && (
-                    <div style={{ fontSize: "0.74rem", color: "var(--sd-zinc-500)", fontStyle: "italic", marginTop: "2px" }}>
-                      "{sup.notes}"
+                    <div style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "6px",
+                      fontSize: "0.76rem",
+                      color: "var(--sd-zinc-700)",
+                      background: "var(--sd-zinc-50)",
+                      padding: "6px 9px",
+                      borderRadius: "7px",
+                      border: "1px dashed var(--sd-zinc-200)",
+                      marginTop: "3px"
+                    }}>
+                      <Pin size={13} color="var(--sd-red)" style={{ flexShrink: 0, marginTop: "2px" }} />
+                      <span style={{ fontStyle: "italic", wordBreak: "break-word" }}>"{sup.notes}"</span>
                     </div>
                   )}
                 </div>
@@ -530,10 +641,14 @@ export default function SuppliersManager({ subViewToggle = null }) {
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {/* Supplier Name */}
                 <div>
-                  <label className="input-label">Mandi / Supplier Name *</label>
+                  <label className="input-label">
+                    Mandi / Supplier Name <span style={{ color: "var(--sd-red)" }}>*</span>
+                    <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500, marginLeft: "4px" }}>(Max 50 chars, no special characters)</span>
+                  </label>
                   <input
                     type="text"
                     required
+                    maxLength={50}
                     placeholder="e.g. Sri Murugan Spices Mandi"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -544,9 +659,12 @@ export default function SuppliersManager({ subViewToggle = null }) {
                 {/* Contact Person & Phone */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <label className="input-label">Contact Person</label>
+                    <label className="input-label">
+                      Contact Person <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>(Optional, Max 50 chars)</span>
+                    </label>
                     <input
                       type="text"
+                      maxLength={50}
                       placeholder="e.g. Murugan"
                       value={formData.contactPerson}
                       onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
@@ -554,33 +672,45 @@ export default function SuppliersManager({ subViewToggle = null }) {
                     />
                   </div>
                   <div>
-                    <label className="input-label">Phone Number *</label>
+                    <label className="input-label">
+                      Phone Number <span style={{ color: "var(--sd-red)" }}>*</span>
+                      <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500, marginLeft: "4px" }}>(10 digits)</span>
+                    </label>
                     <input
                       type="tel"
                       required
+                      maxLength={12}
                       placeholder="e.g. 9842123456"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setFormData({ ...formData, phone: val });
+                      }}
                       className="text-input"
-                      maxLength={10}
                     />
                   </div>
                 </div>
 
                 {/* GSTIN */}
                 <div>
-                  <label className="input-label">GSTIN (Optional)</label>
+                  <label className="input-label">
+                    GSTIN <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>(Optional, 15 chars alphanumeric)</span>
+                  </label>
                   <input
                     type="text"
+                    maxLength={15}
                     placeholder="e.g. 33AAAAA0000A1Z5"
                     value={formData.gstin}
-                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                      setFormData({ ...formData, gstin: val });
+                    }}
                     className="text-input"
-                    maxLength={15}
+                    style={{ textTransform: "uppercase", fontFamily: "monospace", letterSpacing: "1px" }}
                   />
                 </div>
 
-                {/* Address Section - Matching Register Customer Form */}
+                {/* Address Section */}
                 <div style={{
                   background: "var(--sd-zinc-50)",
                   border: "1px solid var(--sd-zinc-200)",
@@ -597,24 +727,27 @@ export default function SuppliersManager({ subViewToggle = null }) {
 
                   <div style={{ marginBottom: "8px" }}>
                     <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                      Address (Street / Door No / Area)
+                      Address (Street / Door No / Area) <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>(Max 100 chars)</span>
                     </label>
-                    <input
-                      type="text"
+                    <textarea
                       placeholder="e.g. 12, Bazaar Street, Spices Yard"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       className="text-input"
+                      rows={2}
+                      maxLength={100}
+                      style={{ resize: "vertical", minHeight: "56px" }}
                     />
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
                     <div>
                       <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                        City
+                        City <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>(Max 50)</span>
                       </label>
                       <input
                         type="text"
+                        maxLength={50}
                         placeholder="e.g. Theni"
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
@@ -624,10 +757,11 @@ export default function SuppliersManager({ subViewToggle = null }) {
 
                     <div>
                       <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                        State
+                        State <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>(Max 50)</span>
                       </label>
                       <input
                         type="text"
+                        maxLength={50}
                         placeholder="Tamil Nadu"
                         value={formData.state}
                         onChange={(e) => setFormData({ ...formData, state: e.target.value })}
@@ -637,15 +771,18 @@ export default function SuppliersManager({ subViewToggle = null }) {
 
                     <div>
                       <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                        Pincode
+                        Pincode <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>(6 digits)</span>
                       </label>
                       <input
                         type="text"
+                        maxLength={6}
                         placeholder="e.g. 625513"
                         value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, "");
+                          setFormData({ ...formData, pincode: val });
+                        }}
                         className="text-input"
-                        maxLength={6}
                       />
                     </div>
                   </div>
@@ -653,13 +790,17 @@ export default function SuppliersManager({ subViewToggle = null }) {
 
                 {/* Notes */}
                 <div>
-                  <label className="input-label">Notes (Optional)</label>
-                  <input
-                    type="text"
+                  <label className="input-label">
+                    Notes <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>(Optional, Max 200 chars)</span>
+                  </label>
+                  <textarea
                     placeholder="e.g. Bulk cardamom supplier, payment 15 days credit"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="text-input"
+                    rows={2}
+                    maxLength={200}
+                    style={{ resize: "vertical", minHeight: "50px" }}
                   />
                 </div>
 
@@ -723,6 +864,7 @@ export default function SuppliersManager({ subViewToggle = null }) {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", paddingTop: "14px", marginTop: "14px", borderTop: "1px solid var(--sd-zinc-200)" }}>
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => setShowModal(false)}
                   className="btn-secondary"
                 >
@@ -730,9 +872,18 @@ export default function SuppliersManager({ subViewToggle = null }) {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="btn-accent"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  {editingSupplier ? "Update Supplier" : "Register Supplier"}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={15} className="spin" />
+                      <span>{editingSupplier ? "Updating..." : "Saving..."}</span>
+                    </>
+                  ) : (
+                    <span>{editingSupplier ? "Update Supplier" : "Register Supplier"}</span>
+                  )}
                 </button>
               </div>
             </form>

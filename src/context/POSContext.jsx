@@ -1449,6 +1449,8 @@ export function POSProvider({ children }) {
       gstin: supData.gstin?.trim() || "",
       address: supData.address?.trim() || "",
       city: supData.city?.trim() || "",
+      state: supData.state?.trim() || "Tamil Nadu",
+      pincode: supData.pincode?.trim() || "",
       notes: supData.notes?.trim() || "",
       isActive: supData.isActive !== false,
       timestamp: Date.now()

@@ -127,8 +127,17 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     e.preventDefault();
     setCustomerFormError("");
 
-    if (!newCustomerForm.customerName.trim()) {
-      setCustomerFormError("Shopkeeper / Contact Person is mandatory!");
+    const customerName = newCustomerForm.customerName.trim();
+    if (!customerName) {
+      setCustomerFormError("Contact Person is mandatory!");
+      return;
+    }
+    if (customerName.length > 50) {
+      setCustomerFormError("Contact Person name must not exceed 50 characters!");
+      return;
+    }
+    if (/[^a-zA-Z0-9\s.]/.test(customerName)) {
+      setCustomerFormError("Contact Person name must not contain special characters!");
       return;
     }
     if (!newCustomerForm.phone.trim()) {
@@ -1392,13 +1401,17 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
               <div style={{ marginBottom: "10px" }}>
                 <label className="input-label">
-                  Shopkeeper / Contact Person <span className="input-required">* (Mandatory)</span>
+                  Contact Person <span className="input-required">* (Mandatory, Max 50 chars)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. R. Murugesan"
+                  maxLength={50}
                   value={newCustomerForm.customerName}
-                  onChange={(e) => setNewCustomerForm({ ...newCustomerForm, customerName: e.target.value })}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s.]/g, "").slice(0, 50);
+                    setNewCustomerForm({ ...newCustomerForm, customerName: sanitized });
+                  }}
                   className="text-input"
                   required
                 />

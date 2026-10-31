@@ -20,7 +20,8 @@ import {
   Tag,
   User,
   Layers,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import { formatCurrency, cleanPhoneNumber } from "../utils/formatters";
 
@@ -69,6 +70,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Customer Category Manager States
   const [newCatName, setNewCatName] = useState("");
@@ -185,6 +187,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     setEditingCustomer(null);
     setFormData(initialFormData);
     setErrorMsg("");
+    setIsSubmitting(false);
     setShowModal(true);
   };
 
@@ -207,9 +210,15 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
       (customer.shippingAddress.pincode || "") === (bAddr.pincode || "")
     );
 
+    const customerName = customer.customerName || "";
+    // Contact Person should never appear in Business Name if no business name was provided
+    const resolvedBusinessName = (customer.businessName && customer.businessName !== customerName)
+      ? customer.businessName
+      : (customer.shopName && customer.shopName !== customerName ? customer.shopName : "");
+
     setFormData({
-      businessName: customer.businessName || customer.shopName || "",
-      customerName: customer.customerName || "",
+      businessName: resolvedBusinessName,
+      customerName: customerName,
       phone: customer.phone || "",
       gstin: customer.gstin || "",
       category: customer.category || "",
@@ -221,6 +230,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
       isActive: customer.isActive !== false
     });
     setErrorMsg("");
+    setIsSubmitting(false);
     setShowModal(true);
   };
 
@@ -228,14 +238,84 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     e.preventDefault();
     setErrorMsg("");
 
-    // Contact Person and Phone Number are mandatory
-    if (!formData.customerName.trim()) {
-      setErrorMsg("Shopkeeper / Contact Person is mandatory!");
+    // Contact Person validation (Mandatory, No special characters, Max 50 chars)
+    const customerName = formData.customerName.trim();
+    if (!customerName) {
+      setErrorMsg("Contact Person is mandatory!");
       return;
     }
+    if (customerName.length > 50) {
+      setErrorMsg("Contact Person name must not exceed 50 characters!");
+      return;
+    }
+    if (/[^a-zA-Z0-9\s.]/.test(customerName)) {
+      setErrorMsg("Contact Person name must not contain special characters!");
+      return;
+    }
+
+    // Phone Number validation (Mandatory, 10 digits)
     if (!formData.phone.trim()) {
       setErrorMsg("Phone Number is mandatory!");
       return;
+    }
+    if (formData.phone.trim().length !== 10) {
+      setErrorMsg("Phone Number must be a valid 10-digit number!");
+      return;
+    }
+
+    // GSTIN validation (Optional, Alphanumeric only, Max 15 chars)
+    const gstinClean = formData.gstin ? formData.gstin.trim().toUpperCase() : "";
+    if (gstinClean) {
+      if (/[^a-zA-Z0-9]/.test(gstinClean)) {
+        setErrorMsg("GSTIN must not contain special characters (alphabets & numbers only)!");
+        return;
+      }
+      if (gstinClean.length > 15) {
+        setErrorMsg("GSTIN must not exceed 15 characters!");
+        return;
+      }
+    }
+
+    // Billing Address Mandatory Validations (Address max 100 chars, Pincode alphanumeric only)
+    if (!formData.billingAddress.address?.trim()) {
+      setErrorMsg("Billing Address is mandatory!");
+      return;
+    }
+    if (formData.billingAddress.address.trim().length > 100) {
+      setErrorMsg("Billing Address must not exceed 100 characters!");
+      return;
+    }
+    if (!formData.billingAddress.city?.trim()) {
+      setErrorMsg("Billing City is mandatory!");
+      return;
+    }
+    if (!formData.billingAddress.state?.trim()) {
+      setErrorMsg("Billing State is mandatory!");
+      return;
+    }
+    if (!formData.billingAddress.pincode?.trim()) {
+      setErrorMsg("Billing Pincode is mandatory!");
+      return;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(formData.billingAddress.pincode.trim())) {
+      setErrorMsg("Billing Pincode must contain only letters and numbers (no special characters)!");
+      return;
+    }
+
+    // If shipping address is not same as billing address
+    if (!formData.sameAsBilling) {
+      if (!formData.shippingAddress.address?.trim()) {
+        setErrorMsg("Shipping Address is mandatory when not same as billing!");
+        return;
+      }
+      if (formData.shippingAddress.address.trim().length > 100) {
+        setErrorMsg("Shipping Address must not exceed 100 characters!");
+        return;
+      }
+      if (formData.shippingAddress.pincode?.trim() && !/^[a-zA-Z0-9]+$/.test(formData.shippingAddress.pincode.trim())) {
+        setErrorMsg("Shipping Pincode must contain only letters and numbers (no special characters)!");
+        return;
+      }
     }
 
     const finalShippingAddress = formData.sameAsBilling 
@@ -252,7 +332,6 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     const unifiedAddress = addressComponents.join(", ");
 
     const businessName = formData.businessName.trim();
-    const customerName = formData.customerName.trim();
     // Default shopName to businessName or contact person so POS & Invoice continue to work
     const shopName = businessName || customerName;
 
@@ -264,7 +343,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
       shopName,
       customerName,
       phone: formData.phone.trim(),
-      gstin: formData.gstin.trim().toUpperCase(),
+      gstin: gstinClean,
       category: formData.category || "",
       categoryName,
       pricingTier: formData.pricingTier || "R",
@@ -286,6 +365,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
       outstandingBalance: editingCustomer ? (Number(editingCustomer.outstandingBalance) || 0) : 0
     };
 
+    setIsSubmitting(true);
     try {
       if (editingCustomer) {
         await updateCustomer(editingCustomer.id, payload);
@@ -295,6 +375,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
       setShowModal(false);
     } catch (err) {
       setErrorMsg(err.message || "Failed to save customer");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1345,7 +1427,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                style={{ background: "none", border: "none", color: "var(--sd-zinc-500)", cursor: "pointer" }}
+                disabled={isSubmitting}
+                style={{ background: "none", border: "none", color: "var(--sd-zinc-500)", cursor: isSubmitting ? "not-allowed" : "pointer" }}
               >
                 <X size={18} />
               </button>
@@ -1370,13 +1453,17 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               {/* Contact Person (Mandatory) */}
               <div style={{ marginBottom: "12px" }}>
                 <label className="input-label">
-                  Shopkeeper / Contact Person <span className="input-required">* (Mandatory)</span>
+                  Contact Person <span className="input-required">* (Mandatory, Max 50 chars)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. R. Murugesan"
+                  maxLength={50}
                   value={formData.customerName}
-                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s.]/g, "").slice(0, 50);
+                    setFormData({ ...formData, customerName: sanitized });
+                  }}
                   className="text-input"
                   required
                   autoFocus
@@ -1422,13 +1509,16 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               {/* GSTIN (Optional) */}
               <div style={{ marginBottom: "14px" }}>
                 <label className="input-label">
-                  GSTIN <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
+                  GSTIN <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional - Alphanumeric only, Max 15 chars)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. 33AAAAA0000A1Z5"
                   value={formData.gstin}
-                  onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 15);
+                    setFormData({ ...formData, gstin: sanitized });
+                  }}
                   className="text-input"
                   maxLength={15}
                   style={{ textTransform: "uppercase" }}
@@ -1438,32 +1528,9 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               {/* Customer Category & Billing Pricing Tier Dropdown Fields */}
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px", marginBottom: "14px" }}>
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <label className="input-label" style={{ marginBottom: 0 }}>
-                      Customer Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingCatId(null);
-                        setNewCatName("");
-                        setNewCatTier("R");
-                        setShowCatModal(true);
-                      }}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "var(--sd-red)",
-                        fontSize: "0.72rem",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        padding: 0,
-                        textDecoration: "underline"
-                      }}
-                    >
-                      + Add Category
-                    </button>
-                  </div>
+                  <label className="input-label" style={{ marginBottom: "4px" }}>
+                    Customer Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
+                  </label>
                   <select
                     value={formData.category}
                     onChange={(e) => {
@@ -1534,30 +1601,38 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                   <Building2 size={16} color="var(--sd-black)" />
                   <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-black)" }}>
-                    Billing Address
+                    Billing Address <span className="input-required">* (Mandatory)</span>
                   </span>
                 </div>
 
                 <div style={{ marginBottom: "8px" }}>
                   <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                    Address (Street / Door No / Area)
+                    Address (Street / Door No / Area) <span className="input-required">* (Max 100 chars)</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 12, Bazaar Street"
+                  <textarea
+                    rows="3"
+                    maxLength={100}
+                    placeholder="e.g. Door No. 12/4, Bazaar Street, Main Market, Opp. Bus Stand"
                     value={formData.billingAddress.address}
                     onChange={(e) => setFormData({
                       ...formData,
-                      billingAddress: { ...formData.billingAddress, address: e.target.value }
+                      billingAddress: { ...formData.billingAddress, address: e.target.value.slice(0, 100) }
                     })}
                     className="text-input"
+                    style={{ minHeight: "75px", resize: "vertical", fontFamily: "inherit" }}
+                    required
                   />
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "2px" }}>
+                    <span style={{ fontSize: "0.68rem", color: (formData.billingAddress.address?.length || 0) >= 100 ? "var(--sd-red)" : "var(--sd-zinc-400)", fontWeight: 600 }}>
+                      {formData.billingAddress.address?.length || 0} / 100 characters
+                    </span>
+                  </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
                   <div>
                     <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                      City
+                      City <span className="input-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -1568,12 +1643,13 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                         billingAddress: { ...formData.billingAddress, city: e.target.value }
                       })}
                       className="text-input"
+                      required
                     />
                   </div>
 
                   <div>
                     <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                      State
+                      State <span className="input-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -1584,23 +1660,28 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                         billingAddress: { ...formData.billingAddress, state: e.target.value }
                       })}
                       className="text-input"
+                      required
                     />
                   </div>
 
                   <div>
                     <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                      Pincode
+                      Pincode <span className="input-required">* (Alphanumeric)</span>
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. 625513"
                       value={formData.billingAddress.pincode}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        billingAddress: { ...formData.billingAddress, pincode: e.target.value }
-                      })}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+                        setFormData({
+                          ...formData,
+                          billingAddress: { ...formData.billingAddress, pincode: sanitized }
+                        });
+                      }}
                       className="text-input"
-                      maxLength={6}
+                      maxLength={10}
+                      required
                     />
                   </div>
                 </div>
@@ -1643,24 +1724,32 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   <div>
                     <div style={{ marginBottom: "8px" }}>
                       <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                        Address (Delivery Point / Area)
+                        Address (Delivery Point / Area) <span className="input-required">* (Max 100 chars)</span>
                       </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Godown No 4, Main Road"
+                      <textarea
+                        rows="3"
+                        maxLength={100}
+                        placeholder="e.g. Godown No 4, Delivery Point, Main Road"
                         value={formData.shippingAddress.address}
                         onChange={(e) => setFormData({
                           ...formData,
-                          shippingAddress: { ...formData.shippingAddress, address: e.target.value }
+                          shippingAddress: { ...formData.shippingAddress, address: e.target.value.slice(0, 100) }
                         })}
                         className="text-input"
+                        style={{ minHeight: "75px", resize: "vertical", fontFamily: "inherit" }}
+                        required={!formData.sameAsBilling}
                       />
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "2px" }}>
+                        <span style={{ fontSize: "0.68rem", color: (formData.shippingAddress.address?.length || 0) >= 100 ? "var(--sd-red)" : "var(--sd-zinc-400)", fontWeight: 600 }}>
+                          {formData.shippingAddress.address?.length || 0} / 100 characters
+                        </span>
+                      </div>
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
                       <div>
                         <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                          City
+                          City <span className="input-required">*</span>
                         </label>
                         <input
                           type="text"
@@ -1671,12 +1760,13 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                             shippingAddress: { ...formData.shippingAddress, city: e.target.value }
                           })}
                           className="text-input"
+                          required={!formData.sameAsBilling}
                         />
                       </div>
 
                       <div>
                         <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                          State
+                          State <span className="input-required">*</span>
                         </label>
                         <input
                           type="text"
@@ -1687,23 +1777,28 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                             shippingAddress: { ...formData.shippingAddress, state: e.target.value }
                           })}
                           className="text-input"
+                          required={!formData.sameAsBilling}
                         />
                       </div>
 
                       <div>
                         <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                          Pincode
+                          Pincode <span className="input-required">* (Alphanumeric)</span>
                         </label>
                         <input
                           type="text"
                           placeholder="e.g. 625513"
                           value={formData.shippingAddress.pincode}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            shippingAddress: { ...formData.shippingAddress, pincode: e.target.value }
-                          })}
+                          onChange={(e) => {
+                            const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+                            setFormData({
+                              ...formData,
+                              shippingAddress: { ...formData.shippingAddress, pincode: sanitized }
+                            });
+                          }}
                           className="text-input"
-                          maxLength={6}
+                          maxLength={10}
+                          required={!formData.sameAsBilling}
                         />
                       </div>
                     </div>
@@ -1804,14 +1899,28 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   type="button"
                   onClick={() => setShowModal(false)}
                   className="btn-secondary"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="btn-accent"
+                  disabled={isSubmitting}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    opacity: isSubmitting ? 0.75 : 1,
+                    cursor: isSubmitting ? "not-allowed" : "pointer"
+                  }}
                 >
-                  {editingCustomer ? "Update Customer" : "Register Customer"}
+                  {isSubmitting && <Loader2 size={16} className="spin" />}
+                  <span>
+                    {isSubmitting
+                      ? (editingCustomer ? "Updating Customer..." : "Registering Customer...")
+                      : (editingCustomer ? "Update Customer" : "Register Customer")}
+                  </span>
                 </button>
               </div>
             </form>

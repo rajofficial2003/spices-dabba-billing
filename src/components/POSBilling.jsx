@@ -29,6 +29,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     products,
     categories,
     customers,
+    customerCategories = [],
     selectedCustomer,
     setSelectedCustomer,
     pricingTier,
@@ -62,8 +63,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     activeDraftId,
     saveAsDraft,
     finalizeBill,
-    addCustomer,
-    customerCategories = []
+    addCustomer
   } = usePOS();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -159,7 +159,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
         customerName,
         category: newCustomerForm.category || "",
         categoryName,
-        pricingTier: catObj?.defaultPricingTier || "R",
+        pricingTier: newCustomerForm.category || "custcat_retailer",
         address: newCustomerForm.address.trim(),
         notes: newCustomerForm.notes?.trim() || ""
       });
@@ -388,7 +388,8 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
               const activeTierRate = getTierRate(currentVariant || product, pricingTier);
               const wholesaleRate = activeTierRate;
-              const tierName = pricingTier === 'SS' ? 'SS Rate' : pricingTier === 'D' ? 'Dealer Rate' : pricingTier === 'C' ? 'Customer Rate' : 'Retailer Rate';
+              const activeCatObj = customerCategories.find(c => c.id === pricingTier || c.name === pricingTier);
+              const tierName = activeCatObj?.name ? `${activeCatObj.name} Rate` : 'Rate';
               const mrpRate = currentVariant
                 ? (Number(currentVariant.mrp) || Number(currentVariant.price) || 0)
                 : (Number(product.mrp) || Number(product.defaultPrice) || 0);
@@ -776,39 +777,36 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   </button>
                 </div>
 
-                {/* Inline Rate Tier Selector */}
-                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "0.7rem" }}>
-                  <span style={{ fontWeight: 700, color: "var(--sd-zinc-500)" }}>Rate Tier:</span>
-                  {[
-                    { key: "SS", label: "SS" },
-                    { key: "D", label: "Dealer" },
-                    { key: "R", label: "Retailer" },
-                    { key: "C", label: "Customer" }
-                  ].map(t => {
-                    const isActive = pricingTier === t.key;
+                {/* Customer Category Pricing Rate Selector */}
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "0.7rem", marginTop: "4px" }}>
+                  <span style={{ fontWeight: 700, color: "var(--sd-zinc-500)" }}>Category Rate:</span>
+                  {customerCategories.map(cat => {
+                    const isActive = pricingTier === cat.id || pricingTier === cat.name;
                     return (
                       <button
-                        key={t.key}
+                        key={cat.id}
                         type="button"
-                        onClick={() => setPricingTier(t.key)}
+                        onClick={() => setPricingTier(cat.id)}
                         style={{
-                          padding: "1px 6px",
-                          borderRadius: "4px",
+                          padding: "2px 8px",
+                          borderRadius: "6px",
                           fontSize: "0.68rem",
                           fontWeight: 800,
                           cursor: "pointer",
                           background: isActive ? "var(--sd-black)" : "var(--sd-white)",
                           color: isActive ? "var(--sd-white)" : "var(--sd-zinc-700)",
-                          border: isActive ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)"
+                          border: isActive ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                          transition: "all 0.15s ease"
                         }}
+                        title={`Select ${cat.name} pricing`}
                       >
-                        {t.label}
+                        {cat.name}
                       </button>
                     );
                   })}
                   {(selectedCustomer.categoryName || selectedCustomer.category) && (
                     <span style={{ color: "var(--sd-zinc-400)", marginLeft: "auto", fontSize: "0.68rem", fontWeight: 600 }}>
-                      {selectedCustomer.categoryName || selectedCustomer.category}
+                      Customer Cat: <strong>{selectedCustomer.categoryName || selectedCustomer.category}</strong>
                     </span>
                   )}
                 </div>
@@ -831,6 +829,35 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                     </option>
                   ))}
                 </select>
+
+                {/* Customer Category Pricing Rate Selector when no customer is selected */}
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "0.7rem", marginTop: "8px" }}>
+                  <span style={{ fontWeight: 700, color: "var(--sd-zinc-500)" }}>Category Rate:</span>
+                  {customerCategories.map(cat => {
+                    const isActive = pricingTier === cat.id || pricingTier === cat.name;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setPricingTier(cat.id)}
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          fontSize: "0.68rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          background: isActive ? "var(--sd-black)" : "var(--sd-white)",
+                          color: isActive ? "var(--sd-white)" : "var(--sd-zinc-700)",
+                          border: isActive ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                          transition: "all 0.15s ease"
+                        }}
+                        title={`Select ${cat.name} pricing`}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -1556,7 +1583,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   <option value="">-- Select Customer Category --</option>
                   {customerCategories.map(cat => (
                     <option key={cat.id || cat.name} value={cat.id || cat.name}>
-                      {cat.name} (Tier: {cat.defaultPricingTier || 'R'})
+                      {cat.name}
                     </option>
                   ))}
                 </select>

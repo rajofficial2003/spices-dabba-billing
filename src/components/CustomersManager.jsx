@@ -496,12 +496,10 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     if (!newCatName.trim()) return;
     try {
       const added = await addCustomerCategory({ 
-        name: newCatName.trim(), 
-        defaultPricingTier: newCatTier 
+        name: newCatName.trim()
       });
-      setFormData(prev => ({ ...prev, category: added.id || added.name, pricingTier: newCatTier }));
+      setFormData(prev => ({ ...prev, category: added.id || added.name, pricingTier: added.id || added.name }));
       setNewCatName("");
-      setNewCatTier("R");
       setShowCatModal(false);
     } catch (err) {
       alert("Error adding customer category: " + err.message);
@@ -512,8 +510,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     if (!editingCatName.trim()) return;
     try {
       await updateCustomerCategory(id, { 
-        name: editingCatName.trim(), 
-        defaultPricingTier: editingCatTier 
+        name: editingCatName.trim()
       });
       setEditingCatId(null);
       setShowCatModal(false);
@@ -525,9 +522,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
   const filteredCustomerCategories = customerCategories.filter(cat => {
     const q = catSearchQuery.toLowerCase().trim();
     if (!q) return true;
-    const nameMatch = (cat.name || "").toLowerCase().includes(q);
-    const tierMatch = (cat.defaultPricingTier || "").toLowerCase().includes(q);
-    return nameMatch || tierMatch;
+    return (cat.name || "").toLowerCase().includes(q);
   });
 
   const handleDeleteCategoryClick = async (id, name) => {
@@ -969,33 +964,13 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                     </div>
                   )}
 
-                  {/* Category & Pricing Tier Tag */}
-                  {((customer.categoryName || customer.category) || customer.pricingTier) && (
+                  {/* Category Tag */}
+                  {(customer.categoryName || customer.category) && (
                     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px", fontSize: "0.76rem" }}>
                       <Tag size={13} style={{ color: "var(--sd-red)", flexShrink: 0 }} />
                       <span style={{ color: "var(--sd-zinc-700)" }}>
-                        {customer.categoryName || customer.category ? (
-                          <>Category: <strong>{customer.categoryName || customer.category}</strong></>
-                        ) : null}
+                        Category: <strong>{customer.categoryName || customer.category}</strong>
                       </span>
-                      {(() => {
-                        const tier = customer.pricingTier || getCustomerPricingTier(customer);
-                        const label = tier === 'SS' ? 'Super Stockist (SS)' : tier === 'D' ? 'Dealer (D)' : tier === 'C' ? 'Customer (C)' : 'Retailer (R)';
-                        return (
-                          <span style={{
-                            marginLeft: "auto",
-                            background: "var(--sd-zinc-100)",
-                            padding: "1px 6px",
-                            borderRadius: "4px",
-                            fontWeight: 700,
-                            fontSize: "0.7rem",
-                            color: "var(--sd-black)",
-                            border: "1px solid var(--sd-zinc-200)"
-                          }}>
-                            Rate: {label}
-                          </span>
-                        );
-                      })()}
                     </div>
                   )}
 
@@ -1173,12 +1148,6 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
           <div className="responsive-cards-grid">
             {filteredCustomerCategories.map(cat => {
               const count = customers.filter(c => c.category === cat.id || c.category === cat.name || c.categoryName === cat.name).length;
-              const tier = cat.defaultPricingTier || "R";
-              const tierLabel = tier === 'SS' ? 'Super Stockist (SS)' : tier === 'D' ? 'Dealer (D)' : tier === 'C' ? 'Consumer (C)' : 'Retailer (R)';
-              const tierStyle = tier === 'SS' ? { bg: '#EEF2FF', text: '#4F46E5', border: '#C7D2FE' }
-                : tier === 'D' ? { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0' }
-                : tier === 'C' ? { bg: '#F5F3FF', text: '#7C3AED', border: '#DDD6FE' }
-                : { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE' };
 
               return (
                 <div
@@ -1199,22 +1168,22 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                         {cat.name}
                       </h3>
                       <span style={{
-                        background: tierStyle.bg,
-                        color: tierStyle.text,
-                        border: `1px solid ${tierStyle.border}`,
+                        background: "#EFF6FF",
+                        color: "#2563EB",
+                        border: "1px solid #BFDBFE",
                         padding: "2px 8px",
                         borderRadius: "6px",
                         fontSize: "0.72rem",
                         fontWeight: 800,
                         whiteSpace: "nowrap"
                       }}>
-                        Rate: {tierLabel}
+                        {count} {count === 1 ? "Customer" : "Customers"}
                       </span>
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--sd-zinc-600)" }}>
                       <Users size={14} color="var(--sd-zinc-500)" />
-                      <span><strong>{count}</strong> {count === 1 ? "customer registered" : "customers registered"}</span>
+                      <span>{count > 0 ? `Assigned to ${count} buyer accounts` : "No customers assigned yet"}</span>
                     </div>
                   </div>
 
@@ -1249,7 +1218,6 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                       onClick={() => {
                         setEditingCatId(cat.id);
                         setEditingCatName(cat.name);
-                        setEditingCatTier(cat.defaultPricingTier || "R");
                         setShowCatModal(true);
                       }}
                       className="btn-secondary"
@@ -1617,9 +1585,9 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
 
               {/* Customer Category & Billing Pricing Tier Dropdown Fields */}
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px", marginBottom: "14px" }}>
-                <div>
+                <div style={{ marginBottom: "12px" }}>
                   <label className="input-label" style={{ marginBottom: "4px" }}>
-                    Customer Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional)</span>
+                    Customer Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Determines wholesale price tier during billing)</span>
                   </label>
                   <select
                     value={formData.category}
@@ -1627,25 +1595,14 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                       if (e.target.value === "__NEW_CAT__") {
                         setEditingCatId(null);
                         setNewCatName("");
-                        setNewCatTier("R");
                         setShowCatModal(true);
                         return;
                       }
                       const newCatId = e.target.value;
-                      const catObj = customerCategories.find(c => c.id === newCatId || c.name === newCatId);
-                      const catName = catObj?.name || newCatId;
-                      let autoTier = catObj?.defaultPricingTier || formData.pricingTier || "R";
-                      if (!catObj?.defaultPricingTier) {
-                        if (/stockist|ss/i.test(catName)) autoTier = "SS";
-                        else if (/dealer/i.test(catName)) autoTier = "D";
-                        else if (/customer|consumer/i.test(catName)) autoTier = "C";
-                        else if (/retail/i.test(catName)) autoTier = "R";
-                      }
-
                       setFormData({
                         ...formData,
                         category: newCatId,
-                        pricingTier: autoTier
+                        pricingTier: newCatId
                       });
                     }}
                     className="custom-select"
@@ -1659,23 +1616,6 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                     <option value="__NEW_CAT__" style={{ fontWeight: 800, color: "var(--sd-red)" }}>
                       + Add New Category...
                     </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="input-label" style={{ marginBottom: "4px" }}>
-                    Billing Pricing Tier <span className="input-required">*</span>
-                  </label>
-                  <select
-                    value={formData.pricingTier || "R"}
-                    onChange={(e) => setFormData({ ...formData, pricingTier: e.target.value })}
-                    className="custom-select"
-                    style={{ fontWeight: 700 }}
-                  >
-                    <option value="SS">Super Stockist (SS)</option>
-                    <option value="D">Dealer Rate (D)</option>
-                    <option value="R">Retailer Rate (R)</option>
-                    <option value="C">Customer Rate (C)</option>
                   </select>
                 </div>
               </div>
@@ -2077,26 +2017,6 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   required
                   autoFocus
                 />
-              </div>
-
-              <div>
-                <label className="input-label" style={{ fontWeight: 700, marginBottom: "4px" }}>
-                  Default Pricing Tier <span className="input-required">*</span>
-                </label>
-                <select
-                  value={editingCatId ? editingCatTier : newCatTier}
-                  onChange={(e) => editingCatId ? setEditingCatTier(e.target.value) : setNewCatTier(e.target.value)}
-                  className="text-input"
-                  style={{ fontWeight: 700 }}
-                >
-                  <option value="R">Retailer Rate (R)</option>
-                  <option value="SS">Super Stockist Rate (SS)</option>
-                  <option value="D">Dealer Rate (D)</option>
-                  <option value="C">Consumer Rate (C)</option>
-                </select>
-                <p style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)", marginTop: "4px", margin: "4px 0 0 0" }}>
-                  Customers registered under this category will automatically get this wholesale price tier during billing.
-                </p>
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>

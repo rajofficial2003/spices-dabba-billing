@@ -23,6 +23,7 @@ import {
   Loader2
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
+import { DEFAULT_PRODUCT_IMAGE } from "../utils/constants";
 
 export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
   const {
@@ -420,11 +421,11 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                     borderBottom: "1px solid var(--sd-zinc-200)"
                   }}>
                     <img
-                      src={product.image || "/images/logo/logo.png"}
+                      src={product.image || DEFAULT_PRODUCT_IMAGE}
                       alt={product.name}
                       loading="eager"
                       decoding="async"
-                      onError={(e) => { e.target.src = "/images/logo/logo.png"; }}
+                      onError={(e) => { e.currentTarget.src = DEFAULT_PRODUCT_IMAGE; }}
                       style={{
                         width: "100%",
                         height: "100%",

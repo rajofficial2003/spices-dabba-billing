@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Package, Store, Boxes, DollarSign, Tag, Building2 } from "lucide-react";
+import { Package, Store, Boxes, IndianRupee, Tag, Building2 } from "lucide-react";
 import ProductsManager from "./ProductsManager";
 import CustomersManager from "./CustomersManager";
 import ExpenseCategoriesManager from "./ExpenseCategoriesManager";
@@ -142,7 +142,7 @@ export default function MasterAssets({
                 boxShadow: isFinanceActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
               }}
             >
-              <DollarSign size={15} />
+              <IndianRupee size={15} />
               <span>Finance</span>
             </button>
           </div>

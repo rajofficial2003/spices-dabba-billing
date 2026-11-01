@@ -19,6 +19,7 @@ import {
 import { BUSINESS_INFO } from "../data/initialData";
 import { generateInvoiceNumber } from "../utils/formatters";
 import { uploadProductImage } from "../utils/imageCompressor";
+import { DEFAULT_PRODUCT_IMAGE } from "../utils/constants";
 import ConfirmModal from "../components/ConfirmModal";
 
 const POSContext = createContext(null);
@@ -699,7 +700,7 @@ export function POSProvider({ children }) {
           originalPrice: variantWholesale,
           mrp: variantMrp,
           gstPercent: product.gstPercent !== undefined ? Number(product.gstPercent) : 5,
-          image: product.image || "/images/products/pepper-powder.png",
+          image: product.image || DEFAULT_PRODUCT_IMAGE,
           quantity: qty,
           isSample: Boolean(isSample),
           stock: selectedVariant?.stock ?? product.stock ?? 100

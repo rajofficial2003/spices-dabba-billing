@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
 import { compressImage, uploadProductImage, formatBytes } from "../utils/imageCompressor";
+import { DEFAULT_PRODUCT_IMAGE } from "../utils/constants";
 import CategoriesManager from "./CategoriesManager";
 
 export default function ProductsManager({ initialSubView = "products" }) {
@@ -362,7 +363,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
       stock: product.stock ?? 100,
       minStock: product.minStock ?? 15,
       description: product.description || "",
-      image: product.image || "/images/products/pepper-powder.png",
+      image: product.image || "",
       isActive: product.isActive !== false,
       variants: existingVariants
     });
@@ -932,11 +933,11 @@ export default function ProductsManager({ initialSubView = "products" }) {
                 borderBottom: "1px solid var(--sd-zinc-200)"
               }}>
                 <img
-                  src={product.image || "/images/logo/logo.png"}
+                  src={product.image || DEFAULT_PRODUCT_IMAGE}
                   alt={product.name}
                   loading="eager"
                   decoding="async"
-                  onError={(e) => { e.target.src = "/images/logo/logo.png"; }}
+                  onError={(e) => { e.currentTarget.src = DEFAULT_PRODUCT_IMAGE; }}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -1556,10 +1557,10 @@ export default function ProductsManager({ initialSubView = "products" }) {
                     flexShrink: 0
                   }}>
                     <img
-                      src={compressionStats?.previewUrl || formData.image}
+                      src={compressionStats?.previewUrl || formData.image || DEFAULT_PRODUCT_IMAGE}
                       alt="Preview"
                       style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
-                      onError={(e) => { e.target.src = "/images/products/pepper-powder.png"; }}
+                      onError={(e) => { e.currentTarget.src = DEFAULT_PRODUCT_IMAGE; }}
                     />
                   </div>
 

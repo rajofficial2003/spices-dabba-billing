@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { usePOS } from "../context/POSContext";
 import { 
-  DollarSign, 
+  IndianRupee, 
   TrendingUp, 
   TrendingDown, 
   Plus, 

@@ -959,6 +959,8 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   {cartItems.map((item, index) => {
                     const itemRate = Number(item.wholesalePrice) || 0;
                     const itemTotal = Math.round(itemRate * item.quantity * 100) / 100;
+                    const itemGstPercent = item.isSample ? 0 : (item.gstPercent !== undefined ? Number(item.gstPercent) : 5);
+                    const itemGstAmount = Math.round((itemTotal * itemGstPercent / 100) * 100) / 100;
 
                     return (
                       <div
@@ -1022,7 +1024,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                                 padding: "1px 6px",
                                 borderRadius: "3px"
                               }}>
-                                GST: {item.isSample ? "0%" : `${item.gstPercent !== undefined ? item.gstPercent : 5}%`}
+                                GST: {item.isSample ? "0%" : `${itemGstPercent}% (+₹${itemGstAmount.toFixed(2)})`}
                               </span>
                             </div>
                           </div>
@@ -1158,13 +1160,31 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                           </div>
 
                           <div style={{
-                            fontWeight: 900,
-                            fontSize: "1rem",
-                            color: item.isSample ? "var(--sd-red)" : "var(--sd-black)",
-                            minWidth: "60px",
-                            textAlign: "right"
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-end",
+                            minWidth: "75px"
                           }}>
-                            {item.isSample ? "₹0.00" : `₹${itemTotal.toFixed(2)}`}
+                            <div style={{
+                              fontWeight: 900,
+                              fontSize: "1rem",
+                              color: item.isSample ? "var(--sd-red)" : "var(--sd-black)",
+                              textAlign: "right"
+                            }}>
+                              {item.isSample ? "₹0.00" : `₹${itemTotal.toFixed(2)}`}
+                            </div>
+                            {!item.isSample && (
+                              <div style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 800,
+                                color: "var(--sd-red)",
+                                marginTop: "1px",
+                                textAlign: "right",
+                                whiteSpace: "nowrap"
+                              }}>
+                                +₹{itemGstAmount.toFixed(2)} ({itemGstPercent}% GST)
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1249,13 +1269,6 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 </div>
               </div>
 
-              {/* Total GST Amount */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.88rem", color: "var(--sd-zinc-600)", fontWeight: 600 }}>Total GST:</span>
-                <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--sd-black)" }}>
-                  +₹{Number(taxAmount || 0).toFixed(2)}
-                </span>
-              </div>
 
               {/* Grand Total - High Contrast Charcoal Black Card with Bold White Text */}
               <div style={{

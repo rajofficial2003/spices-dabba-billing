@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
 import { compressImage, uploadProductImage, formatBytes } from "../utils/imageCompressor";
-import { DEFAULT_PRODUCT_IMAGE } from "../utils/constants";
+import { DEFAULT_PRODUCT_IMAGE, STATIC_CUSTOMER_CATEGORIES } from "../utils/constants";
 import CategoriesManager from "./CategoriesManager";
 
 export default function ProductsManager({ initialSubView = "products" }) {
@@ -127,12 +127,11 @@ export default function ProductsManager({ initialSubView = "products" }) {
     setFormData(prev => {
       const v0 = prev.variants[0] || {};
       const mult = (val) => val ? Math.round(Number(val) * 1.8) : "";
-      
-      const newCatPrices = {};
-      customerCategories.forEach(cat => {
-        const baseVal = v0.categoryPrices?.[cat.id] ?? v0.retailerPrice ?? "";
-        newCatPrices[cat.id] = mult(baseVal);
-      });
+      const ss = mult(v0.superStockistPrice);
+      const d = mult(v0.dealerPrice);
+      const r = mult(v0.retailerPrice);
+      const c = mult(v0.customerPrice);
+      const mrp = mult(v0.mrp);
 
       return {
         ...prev,
@@ -140,13 +139,13 @@ export default function ProductsManager({ initialSubView = "products" }) {
           ...prev.variants,
           {
             size: presetSize,
-            categoryPrices: newCatPrices,
-            superStockistPrice: mult(v0.superStockistPrice),
-            dealerPrice: mult(v0.dealerPrice),
-            retailerPrice: mult(v0.retailerPrice),
-            customerPrice: mult(v0.customerPrice),
-            mrp: mult(v0.mrp),
-            stock: 100
+            superStockistPrice: ss,
+            dealerPrice: d,
+            retailerPrice: r,
+            customerPrice: c,
+            mrp: mrp,
+            stock: 100,
+            categoryPrices: { SS: ss, D: d, R: r, C: c }
           }
         ]
       };
@@ -208,6 +207,14 @@ export default function ProductsManager({ initialSubView = "products" }) {
         [field]: value
       };
 
+      if (!currentRow.categoryPrices) {
+        currentRow.categoryPrices = {};
+      }
+      if (field === "superStockistPrice") currentRow.categoryPrices.SS = value;
+      if (field === "dealerPrice") currentRow.categoryPrices.D = value;
+      if (field === "retailerPrice") currentRow.categoryPrices.R = value;
+      if (field === "customerPrice") currentRow.categoryPrices.C = value;
+
       // Automatic GST included calculation:
       if (field === "customerPrice" || (field === "retailerPrice" && !currentRow.customerPrice)) {
         const gstRate = Number(prev.gstPercent ?? 5);
@@ -245,11 +252,6 @@ export default function ProductsManager({ initialSubView = "products" }) {
     const defaultCat = categories.find(c => c.id !== "all") || categories[0];
     const defaultSubcatRaw = defaultCat?.subcategories?.[0];
     const defaultSubcat = typeof defaultSubcatRaw === "string" ? defaultSubcatRaw : (defaultSubcatRaw?.name || "");
-    
-    const initialCatPrices = {};
-    customerCategories.forEach(cat => {
-      initialCatPrices[cat.id] = "";
-    });
 
     setFormData({
       name: "",
@@ -272,13 +274,13 @@ export default function ProductsManager({ initialSubView = "products" }) {
       variants: [
         { 
           size: "50 g", 
-          categoryPrices: initialCatPrices,
           superStockistPrice: "", 
           dealerPrice: "", 
           retailerPrice: "", 
           customerPrice: "", 
           mrp: "", 
-          stock: 50 
+          stock: 50,
+          categoryPrices: { SS: "", D: "", R: "", C: "" }
         }
       ]
     });
@@ -292,58 +294,37 @@ export default function ProductsManager({ initialSubView = "products" }) {
     setEditingProduct(product);
     const existingVariants = (product.variants && product.variants.length > 0)
       ? product.variants.map(v => {
-          const cp = { ...(v.categoryPrices || product.categoryPrices || {}) };
-          customerCategories.forEach(cat => {
-            if (cp[cat.id] === undefined || cp[cat.id] === "") {
-              const nameLower = (cat.name || "").toLowerCase();
-              if (cat.id === "custcat_stockist" || nameLower.includes("stockist")) {
-                cp[cat.id] = v.superStockistPrice ?? v.ssPrice ?? product.superStockistPrice ?? "";
-              } else if (cat.id === "custcat_dealer" || nameLower.includes("dealer")) {
-                cp[cat.id] = v.dealerPrice ?? v.dPrice ?? product.dealerPrice ?? "";
-              } else if (cat.id === "custcat_retailer" || nameLower.includes("retail")) {
-                cp[cat.id] = v.retailerPrice ?? v.rPrice ?? v.wholesalePrice ?? product.wholesalePrice ?? "";
-              } else if (cat.id === "custcat_consumer" || nameLower.includes("consumer") || nameLower.includes("customer")) {
-                cp[cat.id] = v.customerPrice ?? v.cPrice ?? v.mrp ?? product.mrp ?? "";
-              } else {
-                cp[cat.id] = v.retailerPrice ?? v.wholesalePrice ?? "";
-              }
-            }
-          });
-
+          const ss = v.superStockistPrice ?? v.categoryPrices?.["SS"] ?? v.categoryPrices?.["custcat_stockist"] ?? product.superStockistPrice ?? "";
+          const d = v.dealerPrice ?? v.categoryPrices?.["D"] ?? v.categoryPrices?.["custcat_dealer"] ?? product.dealerPrice ?? "";
+          const r = v.retailerPrice ?? v.categoryPrices?.["R"] ?? v.categoryPrices?.["custcat_retailer"] ?? v.wholesalePrice ?? product.wholesalePrice ?? "";
+          const c = v.customerPrice ?? v.categoryPrices?.["C"] ?? v.categoryPrices?.["custcat_consumer"] ?? product.customerPrice ?? product.mrp ?? "";
+          const mrp = v.mrp ?? product.mrp ?? "";
           return {
             size: v.size || v.name || "50 g",
-            categoryPrices: cp,
-            superStockistPrice: v.superStockistPrice ?? v.ssPrice ?? product.superStockistPrice ?? "",
-            dealerPrice: v.dealerPrice ?? v.dPrice ?? product.dealerPrice ?? "",
-            retailerPrice: v.retailerPrice ?? v.rPrice ?? v.wholesalePrice ?? product.wholesalePrice ?? "",
-            customerPrice: v.customerPrice ?? v.cPrice ?? v.mrp ?? product.mrp ?? "",
-            mrp: v.mrp ?? product.mrp ?? "",
-            stock: v.stock ?? product.stock ?? 100
+            superStockistPrice: ss,
+            dealerPrice: d,
+            retailerPrice: r,
+            customerPrice: c,
+            mrp: mrp,
+            stock: v.stock ?? product.stock ?? 100,
+            categoryPrices: { SS: ss, D: d, R: r, C: c }
           };
         })
       : [
           {
             size: product.unit || "50 g",
-            categoryPrices: (() => {
-              const cp = { ...(product.categoryPrices || {}) };
-              customerCategories.forEach(cat => {
-                if (cp[cat.id] === undefined || cp[cat.id] === "") {
-                  const nameLower = (cat.name || "").toLowerCase();
-                  if (cat.id === "custcat_stockist" || nameLower.includes("stockist")) cp[cat.id] = product.superStockistPrice ?? "";
-                  else if (cat.id === "custcat_dealer" || nameLower.includes("dealer")) cp[cat.id] = product.dealerPrice ?? "";
-                  else if (cat.id === "custcat_retailer" || nameLower.includes("retail")) cp[cat.id] = product.retailerPrice ?? product.wholesalePrice ?? "";
-                  else if (cat.id === "custcat_consumer" || nameLower.includes("consumer")) cp[cat.id] = product.customerPrice ?? product.mrp ?? "";
-                  else cp[cat.id] = product.retailerPrice ?? product.wholesalePrice ?? "";
-                }
-              });
-              return cp;
-            })(),
-            superStockistPrice: product.superStockistPrice ?? "",
-            dealerPrice: product.dealerPrice ?? "",
-            retailerPrice: product.retailerPrice ?? product.wholesalePrice ?? "",
-            customerPrice: product.customerPrice ?? product.mrp ?? "",
+            superStockistPrice: product.superStockistPrice ?? product.categoryPrices?.["SS"] ?? "",
+            dealerPrice: product.dealerPrice ?? product.categoryPrices?.["D"] ?? "",
+            retailerPrice: product.retailerPrice ?? product.wholesalePrice ?? product.categoryPrices?.["R"] ?? "",
+            customerPrice: product.customerPrice ?? product.mrp ?? product.categoryPrices?.["C"] ?? "",
             mrp: product.mrp ?? "",
-            stock: product.stock ?? 100
+            stock: product.stock ?? 100,
+            categoryPrices: {
+              SS: product.superStockistPrice ?? product.categoryPrices?.["SS"] ?? "",
+              D: product.dealerPrice ?? product.categoryPrices?.["D"] ?? "",
+              R: product.retailerPrice ?? product.wholesalePrice ?? product.categoryPrices?.["R"] ?? "",
+              C: product.customerPrice ?? product.mrp ?? product.categoryPrices?.["C"] ?? ""
+            }
           }
         ];
 
@@ -1074,40 +1055,46 @@ export default function ProductsManager({ initialSubView = "products" }) {
                   flexDirection: "column",
                   gap: "6px"
                 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <div>
-                      <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 700, color: "var(--sd-zinc-500)" }}>
-                        MRP Price:
-                      </span>
-                      <span style={{ fontSize: "0.65rem", color: "var(--sd-zinc-400)", marginLeft: "4px" }}>
-                        (Incl. {product.gstPercent ?? 5}% GST)
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "var(--sd-black)" }}>
-                      ₹{mrp}
-                    </div>
-                  </div>
-
-                  {/* Customer Categories Rates Grid */}
+                  {/* Static Customer Categories Rates Grid in required order */}
                   <div style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
-                    gap: "4px",
+                    gap: "5px 8px",
                     background: "var(--sd-zinc-50)",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
+                    padding: "8px",
+                    borderRadius: "8px",
                     border: "1px solid var(--sd-zinc-200)",
                     fontSize: "0.72rem"
                   }}>
-                    {customerCategories.slice(0, 4).map(cat => {
+                    {STATIC_CUSTOMER_CATEGORIES.map(cat => {
                       const rate = getTierRate(currentVariant || product, cat.id);
                       return (
-                        <div key={cat.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                          <span style={{ color: "var(--sd-zinc-500)", fontWeight: 600 }}>{cat.name}:</span>
-                          <strong style={{ color: "var(--sd-zinc-800)" }}>₹{rate}</strong>
+                        <div key={cat.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ color: "var(--sd-zinc-600)", fontWeight: 600 }}>{cat.name}:</span>
+                          <strong style={{ color: "var(--sd-zinc-900)" }}>₹{rate}</strong>
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Prices Last: MRP always displayed at the end */}
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    background: "var(--sd-white)",
+                    padding: "6px 8px",
+                    borderRadius: "6px",
+                    border: "1px dashed var(--sd-zinc-300)"
+                  }}>
+                    <div>
+                      <span style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "var(--sd-zinc-600)" }}>
+                        MRP (+{product.gstPercent ?? 5}% GST):
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "var(--sd-red)" }}>
+                      ₹{mrp}
+                    </div>
                   </div>
                 </div>
 
@@ -1405,11 +1392,11 @@ export default function ProductsManager({ initialSubView = "products" }) {
                     display: "flex", 
                     flexDirection: "column", 
                     gap: "8px", 
-                    minWidth: `${Math.max(760, 260 + (customerCategories.length || 4) * 110)}px` 
+                    minWidth: "780px" 
                   }}>
                     <div style={{
                       display: "grid",
-                      gridTemplateColumns: `1.2fr ${customerCategories.map(() => "1fr").join(" ")} 1.2fr 0.9fr 36px`,
+                      gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1.25fr 0.8fr 36px",
                       gap: "6px",
                       padding: "0 4px",
                       fontSize: "0.7rem",
@@ -1418,12 +1405,11 @@ export default function ProductsManager({ initialSubView = "products" }) {
                       textTransform: "uppercase"
                     }}>
                       <span>Weight / Size</span>
-                      {customerCategories.map(cat => (
-                        <span key={cat.id} title={`Price for ${cat.name}`} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {cat.name} (₹)
-                        </span>
-                      ))}
-                      <span>MRP (₹) (+{formData.gstPercent ?? 5}% GST)</span>
+                      <span style={{ color: "#7C3AED" }}>Super Stockist (SS) (₹)</span>
+                      <span style={{ color: "#059669" }}>Dealer (D) (₹)</span>
+                      <span style={{ color: "#2563EB" }}>Retailer (R) (₹)</span>
+                      <span style={{ color: "#DC2626" }}>Customer (C) (₹)</span>
+                      <span style={{ color: "var(--sd-red)" }}>MRP (₹) (+{formData.gstPercent ?? 5}% GST)</span>
                       <span>Stock</span>
                       <span></span>
                     </div>
@@ -1433,7 +1419,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
                         key={idx}
                         style={{
                           display: "grid",
-                          gridTemplateColumns: `1.2fr ${customerCategories.map(() => "1fr").join(" ")} 1.2fr 0.9fr 36px`,
+                          gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr 1.25fr 0.8fr 36px",
                           gap: "6px",
                           alignItems: "center",
                           background: "var(--sd-white)",
@@ -1452,25 +1438,72 @@ export default function ProductsManager({ initialSubView = "products" }) {
                           required
                         />
 
-                        {/* Customer Categories Pricing Inputs */}
-                        {customerCategories.map(cat => (
-                          <div key={cat.id} style={{ position: "relative" }}>
-                            <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
-                            <input
-                              type="number"
-                              step="any"
-                              min="0"
-                              placeholder={cat.name}
-                              value={v.categoryPrices?.[cat.id] ?? ""}
-                              onChange={(e) => handleUpdateVariantCategoryPrice(idx, cat.id, e.target.value)}
-                              className="text-input"
-                              style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
-                              title={`Rate for ${cat.name}`}
-                            />
-                          </div>
-                        ))}
+                        {/* Super Stockist (SS) Price */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="SS"
+                            value={v.superStockistPrice ?? ""}
+                            onChange={(e) => handleUpdateVariantRow(idx, "superStockistPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
+                            title="Super Stockist (SS) Price"
+                          />
+                        </div>
 
-                        {/* MRP (₹) */}
+                        {/* Dealer (D) Price */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="Dealer"
+                            value={v.dealerPrice ?? ""}
+                            onChange={(e) => handleUpdateVariantRow(idx, "dealerPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
+                            title="Dealer (D) Price"
+                          />
+                        </div>
+
+                        {/* Retailer (R) Price */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="Retailer"
+                            value={v.retailerPrice ?? ""}
+                            onChange={(e) => handleUpdateVariantRow(idx, "retailerPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
+                            title="Retailer (R) Price"
+                            required
+                          />
+                        </div>
+
+                        {/* Customer (C) Price */}
+                        <div style={{ position: "relative" }}>
+                          <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="Customer"
+                            value={v.customerPrice ?? ""}
+                            onChange={(e) => handleUpdateVariantRow(idx, "customerPrice", e.target.value)}
+                            className="text-input"
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 700 }}
+                            title="Customer (C) Price"
+                          />
+                        </div>
+
+                        {/* MRP (₹) - Always Last Price Column */}
                         <div style={{ position: "relative" }}>
                           <span style={{ position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)", fontSize: "0.72rem", color: "var(--sd-zinc-400)", fontWeight: 700 }}>₹</span>
                           <input
@@ -1478,10 +1511,12 @@ export default function ProductsManager({ initialSubView = "products" }) {
                             step="any"
                             min="0"
                             placeholder="MRP"
-                            value={v.mrp}
+                            value={v.mrp ?? ""}
                             onChange={(e) => handleUpdateVariantRow(idx, "mrp", e.target.value)}
                             className="text-input"
-                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 800 }}
+                            style={{ padding: "6px 6px 6px 18px", fontSize: "0.8rem", fontWeight: 800, color: "var(--sd-red)" }}
+                            title="MRP Price (last)"
+                            required
                           />
                         </div>
 

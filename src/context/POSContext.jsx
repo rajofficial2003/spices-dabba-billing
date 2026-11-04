@@ -19,7 +19,7 @@ import {
 import { BUSINESS_INFO } from "../data/initialData";
 import { generateInvoiceNumber } from "../utils/formatters";
 import { uploadProductImage } from "../utils/imageCompressor";
-import { DEFAULT_PRODUCT_IMAGE } from "../utils/constants";
+import { DEFAULT_PRODUCT_IMAGE, STATIC_CUSTOMER_CATEGORIES } from "../utils/constants";
 import ConfirmModal from "../components/ConfirmModal";
 
 const POSContext = createContext(null);
@@ -34,96 +34,48 @@ export const preloadProductImage = (url) => {
   img.src = url;
 };
 
-// Customer Category Pricing Rate helpers (Dynamic based on Customer Categories)
-export const getCustomerPricingTier = (customer, customerCategories = []) => {
-  if (!customer) {
-    const defaultCat = customerCategories[0];
-    return defaultCat ? defaultCat.id : 'custcat_retailer';
-  }
-
-  // 1. Direct match by customer category ID
-  if (customer.category && customerCategories.some(c => c.id === customer.category)) {
-    return customer.category;
-  }
-
-  // 2. Match by customer category Name
-  const catName = (customer.categoryName || customer.category || '').toLowerCase().trim();
-  if (catName) {
-    const found = customerCategories.find(c => (c.name || '').toLowerCase().trim() === catName || c.id === customer.category);
-    if (found) return found.id;
-  }
-
-  // 3. Match legacy pricingTier ('SS', 'D', 'C', 'R')
-  if (customer.pricingTier) {
-    const pt = String(customer.pricingTier).toUpperCase();
-    if (pt === 'SS') {
-      const ssCat = customerCategories.find(c => (c.name || '').toLowerCase().includes('stockist') || c.id === 'custcat_stockist');
-      if (ssCat) return ssCat.id;
-    } else if (pt === 'D') {
-      const dCat = customerCategories.find(c => (c.name || '').toLowerCase().includes('dealer') || c.id === 'custcat_dealer');
-      if (dCat) return dCat.id;
-    } else if (pt === 'C') {
-      const cCat = customerCategories.find(c => (c.name || '').toLowerCase().includes('consumer') || (c.name || '').toLowerCase().includes('walk-in') || c.id === 'custcat_consumer');
-      if (cCat) return cCat.id;
-    } else {
-      const rCat = customerCategories.find(c => (c.name || '').toLowerCase().includes('retail') || c.id === 'custcat_retailer');
-      if (rCat) return rCat.id;
-    }
-  }
-
-  const defaultCat = customerCategories.find(c => c.id === 'custcat_retailer') || customerCategories[0];
-  return defaultCat ? defaultCat.id : 'custcat_retailer';
+// Customer Category Pricing Rate helpers (Static 4 Categories: SS, D, R, C)
+export const getCustomerPricingTier = (customer) => {
+  if (!customer) return 'R';
+  const raw = String(customer.category || customer.categoryName || customer.pricingTier || '').toUpperCase().trim();
+  if (raw === 'SS' || raw.includes('SUPER') || raw.includes('STOCKIST')) return 'SS';
+  if (raw === 'D' || raw.includes('DEALER')) return 'D';
+  if (raw === 'C' || raw.includes('CUSTOMER') || raw.includes('CONSUMER') || raw.includes('WALK-IN')) return 'C';
+  if (raw === 'R' || raw.includes('RETAIL') || raw.includes('WHOLESALE') || raw.includes('HOTEL')) return 'R';
+  return 'R';
 };
 
-export const getTierRate = (productOrVariant, tier = 'custcat_retailer', customerCategories = []) => {
+export const getTierRate = (productOrVariant, tier = 'R') => {
   if (!productOrVariant) return 0;
-
-  // 1. Check dynamic categoryPrices dictionary on the product/variant
-  const catPrices = productOrVariant.categoryPrices || {};
-  if (tier && catPrices[tier] !== undefined && Number(catPrices[tier]) > 0) {
-    return Number(catPrices[tier]);
+  const rawTier = String(tier || 'R').toUpperCase().trim();
+  let normalizedTier = 'R';
+  if (rawTier === 'SS' || rawTier.includes('SUPER') || rawTier.includes('STOCKIST')) {
+    normalizedTier = 'SS';
+  } else if (rawTier === 'D' || rawTier.includes('DEALER')) {
+    normalizedTier = 'D';
+  } else if (rawTier === 'C' || rawTier.includes('CUSTOMER') || rawTier.includes('CONSUMER')) {
+    normalizedTier = 'C';
+  } else {
+    normalizedTier = 'R';
   }
 
-  // Check matching category by ID or Name
-  const matchedCat = customerCategories.find(c => c.id === tier || c.name === tier);
-  if (matchedCat) {
-    if (catPrices[matchedCat.id] !== undefined && Number(catPrices[matchedCat.id]) > 0) {
-      return Number(catPrices[matchedCat.id]);
-    }
-    if (catPrices[matchedCat.name] !== undefined && Number(catPrices[matchedCat.name]) > 0) {
-      return Number(catPrices[matchedCat.name]);
-    }
-  }
-
-  // 2. Intelligent fallback to legacy rates
-  const tierLower = String(tier || '').toLowerCase();
-  const catNameLower = String(matchedCat?.name || '').toLowerCase();
-  const searchKey = `${tierLower} ${catNameLower}`;
-
-  const ss = Number(productOrVariant.superStockistPrice) || 0;
-  const d = Number(productOrVariant.dealerPrice) || 0;
-  const r = Number(productOrVariant.retailerPrice) || Number(productOrVariant.wholesalePrice) || Number(productOrVariant.price) || 0;
-  const c = Number(productOrVariant.customerPrice) || Number(productOrVariant.mrp) || 0;
+  const ss = Number(productOrVariant.superStockistPrice) || Number(productOrVariant.categoryPrices?.['SS']) || Number(productOrVariant.categoryPrices?.['custcat_stockist']) || 0;
+  const d = Number(productOrVariant.dealerPrice) || Number(productOrVariant.categoryPrices?.['D']) || Number(productOrVariant.categoryPrices?.['custcat_dealer']) || 0;
+  const r = Number(productOrVariant.retailerPrice) || Number(productOrVariant.wholesalePrice) || Number(productOrVariant.categoryPrices?.['R']) || Number(productOrVariant.categoryPrices?.['custcat_retailer']) || 0;
+  const c = Number(productOrVariant.customerPrice) || Number(productOrVariant.categoryPrices?.['C']) || Number(productOrVariant.categoryPrices?.['custcat_consumer']) || Number(productOrVariant.mrp) || 0;
   const mrp = Number(productOrVariant.mrp) || 0;
 
-  if (tier === 'SS' || searchKey.includes('super stockist') || searchKey.includes('stockist')) {
+  if (normalizedTier === 'SS') {
     return ss > 0 ? ss : (r > 0 ? r : mrp);
   }
-  if (tier === 'D' || searchKey.includes('dealer')) {
+  if (normalizedTier === 'D') {
     return d > 0 ? d : (r > 0 ? r : mrp);
   }
-  if (tier === 'C' || searchKey.includes('consumer') || searchKey.includes('customer') || searchKey.includes('walk-in')) {
+  if (normalizedTier === 'C') {
     return c > 0 ? c : (mrp > 0 ? mrp : r);
   }
-  if (tier === 'R' || searchKey.includes('retail') || searchKey.includes('wholesale')) {
-    return r > 0 ? r : (d > 0 ? d : (ss > 0 ? ss : mrp));
-  }
-
-  // Any custom category price set on this product
-  const anyPrice = Object.values(catPrices).find(v => Number(v) > 0);
-  if (anyPrice) return Number(anyPrice);
-
-  return r > 0 ? r : (d > 0 ? d : (ss > 0 ? ss : (mrp > 0 ? mrp : 0)));
+  // Retailer (R)
+  return r > 0 ? r : (d > 0 ? d : (ss > 0 ? ss : mrp));
 };
 
 export function POSProvider({ children }) {
@@ -148,23 +100,8 @@ export function POSProvider({ children }) {
   ];
   const [expenseCategories, setExpenseCategories] = useState(DEFAULT_EXPENSE_CATEGORIES);
 
-  // Dynamic Customer Categories
-  const DEFAULT_CUSTOMER_CATEGORIES = [
-    { id: "custcat_retailer", name: "Retailer", color: "#2563EB" },
-    { id: "custcat_wholesaler", name: "Wholesaler", color: "#0891B2" },
-    { id: "custcat_dealer", name: "Dealer", color: "#059669" },
-    { id: "custcat_stockist", name: "Super Stockist", color: "#7C3AED" },
-    { id: "custcat_hotel", name: "Hotel / Restaurant / Mess", color: "#D97706" },
-    { id: "custcat_consumer", name: "Direct Consumer / Walk-in", color: "#DC2626" }
-  ];
-  const [customerCategories, setCustomerCategories] = useState(() => {
-    try {
-      const saved = localStorage.getItem("sdb_customer_categories");
-      return saved ? JSON.parse(saved) : DEFAULT_CUSTOMER_CATEGORIES;
-    } catch {
-      return DEFAULT_CUSTOMER_CATEGORIES;
-    }
-  });
+  // Static Customer Categories (SS, D, R, C)
+  const customerCategories = STATIC_CUSTOMER_CATEGORIES;
 
   // Dynamic Courier Partners State (The Professional Couriers, ST Courier, DTDC, etc.)
   const DEFAULT_COURIER_PARTNERS = [
@@ -310,7 +247,7 @@ export function POSProvider({ children }) {
 
   // Active Billing Station / Cart State
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [pricingTier, setPricingTier] = useState("custcat_retailer"); // Customer Category ID
+  const [pricingTier, setPricingTier] = useState("R"); // 'SS' | 'D' | 'R' | 'C'
   const [cartItems, setCartItems] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState("fixed"); // "fixed" (₹) or "percent" (%)
@@ -333,10 +270,6 @@ export function POSProvider({ children }) {
   useEffect(() => {
     localStorage.setItem("sdb_customers", JSON.stringify(customers));
   }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem("sdb_customer_categories", JSON.stringify(customerCategories));
-  }, [customerCategories]);
 
   useEffect(() => {
     localStorage.setItem("sdb_suppliers", JSON.stringify(suppliers));
@@ -493,21 +426,7 @@ export function POSProvider({ children }) {
         console.warn("Firestore expense categories listener note:", err.message);
       });
 
-      // 8. Dynamic Customer Categories listener
-      const custCatCol = collection(db, "billing_customer_categories");
-      unsubscribeCustomerCategories = onSnapshot(custCatCol, (snapshot) => {
-        if (!snapshot.empty) {
-          const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          cats.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-          setCustomerCategories(cats);
-        } else {
-          setCustomerCategories(DEFAULT_CUSTOMER_CATEGORIES);
-        }
-      }, (err) => {
-        console.warn("Firestore customer categories listener note:", err.message);
-      });
-
-      // 9. Dynamic Suppliers listener
+      // 8. Dynamic Suppliers listener
       const suppCol = collection(db, "billing_suppliers");
       unsubscribeSuppliers = onSnapshot(suppCol, (snapshot) => {
         if (!snapshot.empty) {
@@ -622,19 +541,18 @@ export function POSProvider({ children }) {
   const handleSelectCustomer = (cust) => {
     setSelectedCustomer(cust);
     if (!cust) {
-      const defCatId = customerCategories[0]?.id || "custcat_retailer";
-      setPricingTier(defCatId);
+      setPricingTier("R");
       return;
     }
-    const tier = getCustomerPricingTier(cust, customerCategories);
+    const tier = getCustomerPricingTier(cust);
     setPricingTier(tier);
-    // Automatically recalculate existing cart items to the selected customer's category price!
+    // Automatically recalculate existing cart items to the selected customer's tier!
     setCartItems(prev => prev.map(item => {
       if (item.isSample) return item;
       const prod = products.find(p => p.id === item.productId);
       if (!prod) return item;
       const variant = prod.variants?.find(v => (v.size || v.name) === item.variantSize) || null;
-      const newTierRate = getTierRate(variant || prod, tier, customerCategories);
+      const newTierRate = getTierRate(variant || prod, tier);
       return {
         ...item,
         wholesalePrice: newTierRate,
@@ -650,7 +568,7 @@ export function POSProvider({ children }) {
       const prod = products.find(p => p.id === item.productId);
       if (!prod) return item;
       const variant = prod.variants?.find(v => (v.size || v.name) === item.variantSize) || null;
-      const newTierRate = getTierRate(variant || prod, newTier, customerCategories);
+      const newTierRate = getTierRate(variant || prod, newTier);
       return {
         ...item,
         wholesalePrice: newTierRate,
@@ -663,7 +581,7 @@ export function POSProvider({ children }) {
   const addToCart = (product, qty = 1, isSample = false, variant = null) => {
     const selectedVariant = variant || (product.variants && product.variants.length > 0 ? product.variants[0] : null);
     const variantSize = selectedVariant?.size || product.unit || "Pack";
-    const tierRate = getTierRate(selectedVariant || product, pricingTier, customerCategories);
+    const tierRate = getTierRate(selectedVariant || product, pricingTier);
     const variantWholesale = isSample ? 0 : tierRate;
     const variantMrp = selectedVariant 
       ? (Number(selectedVariant.mrp) || Number(selectedVariant.price) || 0)
@@ -1706,8 +1624,8 @@ export function POSProvider({ children }) {
         setSelectedCustomer: handleSelectCustomer,
         pricingTier,
         setPricingTier: handleUpdatePricingTier,
-        getCustomerPricingTier: (cust) => getCustomerPricingTier(cust, customerCategories),
-        getTierRate: (prod, tier) => getTierRate(prod, tier || pricingTier, customerCategories),
+        getCustomerPricingTier: (cust) => getCustomerPricingTier(cust),
+        getTierRate: (prod, tier) => getTierRate(prod, tier || pricingTier),
         cartItems,
         addToCart,
         addSampleToCart,

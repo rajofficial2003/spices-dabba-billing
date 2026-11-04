@@ -24,6 +24,7 @@ import {
   Loader2
 } from "lucide-react";
 import { formatCurrency, cleanPhoneNumber } from "../utils/formatters";
+import { STATIC_CUSTOMER_CATEGORIES } from "../utils/constants";
 
 const formatAddress = (addr) => {
   if (!addr) return "";
@@ -550,7 +551,14 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
     if (statusFilter === "inactive" && isAct) return false;
 
     // Category filter
-    if (categoryFilter !== "all" && c.category !== categoryFilter && c.categoryName !== categoryFilter) return false;
+    if (categoryFilter !== "all") {
+      const targetCat = STATIC_CUSTOMER_CATEGORIES.find(sc => sc.id === categoryFilter || sc.name === categoryFilter);
+      const catCode = targetCat?.id || categoryFilter;
+      const catName = targetCat?.shortName.toUpperCase() || "";
+      const raw = String(c.category || c.categoryName || "").toUpperCase();
+      const matches = raw === catCode || (catName && raw.includes(catName));
+      if (!matches) return false;
+    }
 
     // Search query
     const q = searchQuery.toLowerCase().trim();
@@ -644,29 +652,6 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
 
             <button
               type="button"
-              onClick={() => setActiveSubView("categories")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "8px",
-                fontSize: "0.82rem",
-                fontWeight: activeSubView === "categories" ? 800 : 600,
-                background: activeSubView === "categories" ? "var(--sd-black)" : "transparent",
-                color: activeSubView === "categories" ? "#FFFFFF" : "var(--sd-zinc-700)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                boxShadow: activeSubView === "categories" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
-                transition: "all 0.15s ease"
-              }}
-            >
-              <Layers size={14} />
-              <span>Categories ({customerCategories.length})</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setActiveSubView("couriers")}
               style={{
                 padding: "6px 14px",
@@ -689,32 +674,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
             </button>
           </div>
 
-          {activeSubView === "customers" ? (
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="btn-primary"
-              style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
-            >
-              <Plus size={15} />
-              <span>Add Customer</span>
-            </button>
-          ) : activeSubView === "categories" ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingCatId(null);
-                setNewCatName("");
-                setNewCatTier("R");
-                setShowCatModal(true);
-              }}
-              className="btn-primary"
-              style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
-            >
-              <Plus size={15} />
-              <span>Add Customer Category</span>
-            </button>
-          ) : (
+          {activeSubView === "couriers" ? (
             <button
               type="button"
               onClick={handleOpenAddCourier}
@@ -723,6 +683,16 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
             >
               <Plus size={15} />
               <span>Add Delivery Partner</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="btn-primary"
+              style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
+            >
+              <Plus size={15} />
+              <span>Add Customer</span>
             </button>
           )}
         </div>
@@ -841,14 +811,17 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
         >
           All Categories ({customers.length})
         </button>
-        {customerCategories.map(cat => {
-          const count = customers.filter(c => c.category === cat.id || c.category === cat.name || c.categoryName === cat.name).length;
+        {STATIC_CUSTOMER_CATEGORIES.map(cat => {
+          const count = customers.filter(c => {
+            const raw = String(c.category || c.categoryName || "").toUpperCase();
+            return raw === cat.id || raw.includes(cat.shortName.toUpperCase());
+          }).length;
           const isSelected = categoryFilter === cat.id || categoryFilter === cat.name;
           return (
             <button
-              key={cat.id || cat.name}
+              key={cat.id}
               type="button"
-              onClick={() => setCategoryFilter(isSelected ? "all" : (cat.id || cat.name))}
+              onClick={() => setCategoryFilter(isSelected ? "all" : cat.id)}
               style={{
                 padding: "5px 12px",
                 borderRadius: "20px",
@@ -1583,41 +1556,31 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                 />
               </div>
 
-              {/* Customer Category & Billing Pricing Tier Dropdown Fields */}
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px", marginBottom: "14px" }}>
-                <div style={{ marginBottom: "12px" }}>
-                  <label className="input-label" style={{ marginBottom: "4px" }}>
-                    Customer Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Determines wholesale price tier during billing)</span>
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => {
-                      if (e.target.value === "__NEW_CAT__") {
-                        setEditingCatId(null);
-                        setNewCatName("");
-                        setShowCatModal(true);
-                        return;
-                      }
-                      const newCatId = e.target.value;
-                      setFormData({
-                        ...formData,
-                        category: newCatId,
-                        pricingTier: newCatId
-                      });
-                    }}
-                    className="custom-select"
-                  >
-                    <option value="">-- Select Customer Category --</option>
-                    {customerCategories.map(cat => (
-                      <option key={cat.id || cat.name} value={cat.id || cat.name}>
-                        {cat.name} {cat.tamilName ? `(${cat.tamilName})` : ''}
-                      </option>
-                    ))}
-                    <option value="__NEW_CAT__" style={{ fontWeight: 800, color: "var(--sd-red)" }}>
-                      + Add New Category...
+              {/* Customer Category Dropdown Field */}
+              <div style={{ marginBottom: "14px" }}>
+                <label className="input-label" style={{ marginBottom: "4px" }}>
+                  Customer Category <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Determines wholesale price tier during billing)</span>
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => {
+                    const newCatId = e.target.value;
+                    setFormData({
+                      ...formData,
+                      category: newCatId,
+                      pricingTier: newCatId
+                    });
+                  }}
+                  className="custom-select"
+                  required
+                >
+                  <option value="">-- Select Customer Category --</option>
+                  {STATIC_CUSTOMER_CATEGORIES.map(cat => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
                     </option>
-                  </select>
-                </div>
+                  ))}
+                </select>
               </div>
 
               {/* Billing Address Section */}

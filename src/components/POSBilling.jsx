@@ -389,7 +389,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
               const activeTierRate = getTierRate(currentVariant || product, pricingTier);
               const wholesaleRate = activeTierRate;
-              const activeCatObj = customerCategories.find(c => c.id === pricingTier || c.name === pricingTier);
+              const activeCatObj = customerCategories.find(c => c.id === pricingTier || c.code === pricingTier || c.name === pricingTier);
               const tierName = activeCatObj?.name ? `${activeCatObj.name} Rate` : 'Rate';
               const mrpRate = currentVariant
                 ? (Number(currentVariant.mrp) || Number(currentVariant.price) || 0)
@@ -782,7 +782,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "0.7rem", marginTop: "4px" }}>
                   <span style={{ fontWeight: 700, color: "var(--sd-zinc-500)" }}>Category Rate:</span>
                   {customerCategories.map(cat => {
-                    const isActive = pricingTier === cat.id || pricingTier === cat.name;
+                    const isActive = pricingTier === cat.id || pricingTier === cat.code || pricingTier === cat.name;
                     return (
                       <button
                         key={cat.id}
@@ -835,7 +835,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "0.7rem", marginTop: "8px" }}>
                   <span style={{ fontWeight: 700, color: "var(--sd-zinc-500)" }}>Category Rate:</span>
                   {customerCategories.map(cat => {
-                    const isActive = pricingTier === cat.id || pricingTier === cat.name;
+                    const isActive = pricingTier === cat.id || pricingTier === cat.code || pricingTier === cat.name;
                     return (
                       <button
                         key={cat.id}
@@ -1583,7 +1583,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 >
                   <option value="">-- Select Customer Category --</option>
                   {customerCategories.map(cat => (
-                    <option key={cat.id || cat.name} value={cat.id || cat.name}>
+                    <option key={cat.id} value={cat.name}>
                       {cat.name}
                     </option>
                   ))}

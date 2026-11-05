@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { POSProvider, usePOS } from "./context/POSContext";
+import Login from "./components/Login";
 import Header from "./components/Header";
 import POSBilling from "./components/POSBilling";
 import DraftsAndOrders from "./components/DraftsAndOrders";
@@ -135,10 +137,51 @@ function POSApp() {
   );
 }
 
-export default function App() {
+function AppContent() {
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: "#09090B",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#FFFFFF",
+        gap: "16px"
+      }}>
+        <div style={{
+          width: "44px",
+          height: "44px",
+          borderRadius: "50%",
+          border: "3px solid rgba(220, 38, 38, 0.2)",
+          borderTopColor: "var(--sd-red, #DC2626)",
+          animation: "spin 0.8s linear infinite"
+        }} />
+        <div style={{ fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.5px", color: "var(--sd-zinc-400, #A1A1AA)" }}>
+          Loading Spices Dabba...
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <Login />;
+  }
+
   return (
     <POSProvider>
       <POSApp />
     </POSProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

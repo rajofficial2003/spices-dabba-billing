@@ -16,7 +16,8 @@ export const BUSINESS_INFO = {
   accountNumber: "180150050800432",
   ifscCode: "TMBL0000180",
   upiId: "9940159298",
-  upiHolder: "Vaishno Devi"
+  upiHolder: "Vaishno Devi",
+  qrCodePath: "/images/upi-qr.jpg"
 };
 
 // All static & mock collections removed - Pure Firebase Firestore & Storage only

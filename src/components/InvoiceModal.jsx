@@ -635,27 +635,30 @@ export default function InvoiceModal({ order, onClose }) {
                   <div><strong>UPI:</strong> 9940159298 (Vaishno Devi)</div>
                 </div>
 
-                {qrCodeUrl && (
-                  <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    background: "#FFFFFF",
-                    padding: "4px 6px",
-                    borderRadius: "6px",
-                    border: "1px solid #D4D4D8",
-                    flexShrink: 0
-                  }}>
-                    <img
-                      src={qrCodeUrl}
-                      alt="UPI QR Code"
-                      style={{ width: "70px", height: "70px", display: "block" }}
-                    />
-                    <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                      Scan & Pay (UPI)
-                    </span>
-                  </div>
-                )}
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  background: "#FFFFFF",
+                  padding: "4px 6px",
+                  borderRadius: "6px",
+                  border: "1px solid #D4D4D8",
+                  flexShrink: 0
+                }}>
+                  <img
+                    src={BUSINESS_INFO.qrCodePath || "/images/upi-qr.jpg"}
+                    alt="UPI QR Code"
+                    onError={(e) => {
+                      if (qrCodeUrl && e.target.src !== qrCodeUrl) {
+                        e.target.src = qrCodeUrl;
+                      }
+                    }}
+                    style={{ width: "74px", height: "74px", objectFit: "contain", display: "block" }}
+                  />
+                  <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
+                    Scan & Pay (UPI)
+                  </span>
+                </div>
               </div>
             </div>
 

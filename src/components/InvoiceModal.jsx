@@ -575,7 +575,7 @@ export default function InvoiceModal({ order, onClose }) {
                           rel="noopener noreferrer"
                           title={`Click to open online tracking portal for ${courierName || "Courier"}`}
                           style={{
-                            color: "#8B1E1E",
+                            color: "#09090b",
                             fontSize: "0.85rem",
                             fontWeight: 800,
                             textDecoration: "underline",
@@ -587,10 +587,10 @@ export default function InvoiceModal({ order, onClose }) {
                           }}
                         >
                           <span>{courierName || "Courier Partner"}</span>
-                          <span style={{ fontSize: "0.72rem", color: "#8B1E1E" }}>↗</span>
+                          <span style={{ fontSize: "0.72rem", color: "#09090b" }}>↗</span>
                         </a>
                       ) : (
-                        <strong style={{ color: "#8B1E1E", fontSize: "0.84rem" }}>
+                        <strong style={{ color: "#09090b", fontSize: "0.84rem" }}>
                           {courierName || "Courier Partner"}
                         </strong>
                       )}
@@ -624,7 +624,7 @@ export default function InvoiceModal({ order, onClose }) {
                             }}
                           >
                             <span>{order.trackingId || order.shippingDetails?.trackingId}</span>
-                            <span style={{ fontSize: "0.68rem", color: "#8B1E1E" }}>↗</span>
+                            <span style={{ fontSize: "0.68rem", color: "#09090b" }}>↗</span>
                           </a>
                         ) : (
                           <span style={{

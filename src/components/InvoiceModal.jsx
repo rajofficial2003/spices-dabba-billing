@@ -182,15 +182,25 @@ export default function InvoiceModal({ order, onClose }) {
     executePrintOrPdf(true);
   };
 
-  // Calculate dynamic GST breakdown based on items (supports both new and previous orders)
-  const calculatedTax = Number(order.tax) > 0 
-    ? Number(order.tax) 
-    : (order.items || []).reduce((sum, item) => {
-        if (item.isSample) return sum;
-        const rate = Number(item.wholesalePrice) || Number(item.price) || 0;
-        const gst = item.gstPercent !== undefined ? Number(item.gstPercent) : 5;
-        return sum + (rate * (item.quantity || 1) * gst) / 100;
-      }, 0);
+  // Calculate dynamic GST breakdown strictly from items so row GST values always sum accurately
+  const totalTableGst = Math.round(
+    (order.items || []).reduce((sum, item) => {
+      if (item.isSample) return sum;
+      const rate = Number(item.wholesalePrice) || Number(item.price) || 0;
+      const gstPercent = item.isSample ? 0 : (item.gstPercent !== undefined ? Number(item.gstPercent) : 5);
+      const unitInclusive = item.isSample
+        ? 0
+        : (item.inclusivePrice !== undefined
+            ? Number(item.inclusivePrice)
+            : Math.round(rate * (1 + gstPercent / 100) * 100) / 100);
+      const rowTotal = Math.round(unitInclusive * (item.quantity || 1) * 100) / 100;
+      const baseTotal = Math.round(rate * (item.quantity || 1) * 100) / 100;
+      const itemGstAmount = item.isSample ? 0 : Math.round((rowTotal - baseTotal) * 100) / 100;
+      return sum + itemGstAmount;
+    }, 0) * 100
+  ) / 100;
+
+  const calculatedTax = totalTableGst > 0 ? totalTableGst : (Number(order.tax) || 0);
 
   const taxPct = Number(order.taxPercent) > 0 
     ? Number(order.taxPercent) 

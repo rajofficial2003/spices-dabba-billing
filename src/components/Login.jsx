@@ -326,18 +326,6 @@ export default function Login() {
             </button>
           </form>
         </div>
-
-        {/* Footer Security Badge */}
-        <div style={{
-          background: "#F4F4F5",
-          padding: "12px",
-          textAlign: "center",
-          fontSize: "0.72rem",
-          color: "#71717A",
-          borderTop: "1px solid #E4E4E7"
-        }}>
-          Protected by Firebase Authentication &bull; 256-Bit SSL Encryption
-        </div>
       </div>
 
       {/* Forgot Password Reset Modal */}

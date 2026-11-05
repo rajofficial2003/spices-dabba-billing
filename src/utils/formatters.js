@@ -12,7 +12,7 @@ export function formatCurrency(amount) {
 }
 
 /**
- * Format date to readable string
+ * Format date to readable string with time
  */
 export function formatDate(dateInput) {
   if (!dateInput) return "N/A";
@@ -34,6 +34,29 @@ export function formatDate(dateInput) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true
+  }).format(date);
+}
+
+/**
+ * Format date only (no time)
+ */
+export function formatDateOnly(dateInput) {
+  if (!dateInput) return "N/A";
+  let date;
+  if (dateInput?.toDate) {
+    date = dateInput.toDate();
+  } else if (typeof dateInput === "string" || typeof dateInput === "number") {
+    date = new Date(dateInput);
+  } else if (dateInput instanceof Date) {
+    date = dateInput;
+  } else {
+    return "N/A";
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
   }).format(date);
 }
 

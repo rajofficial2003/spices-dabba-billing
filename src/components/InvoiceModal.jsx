@@ -15,7 +15,7 @@ import {
   Download,
   Loader2
 } from "lucide-react";
-import { formatCurrency, formatDate, cleanPhoneNumber } from "../utils/formatters";
+import { formatCurrency, formatDate, formatDateOnly, cleanPhoneNumber } from "../utils/formatters";
 
 // Number to Indian Words converter
 function numberToWords(num) {
@@ -168,8 +168,8 @@ export default function InvoiceModal({ order, onClose }) {
     let msg = `*JEES foods*\n`;
     msg += `GSTIN: ${BUSINESS_INFO.gstin} | ${BUSINESS_INFO.address}\n`;
     msg += `--------------------------------\n`;
-    msg += `🧾 *INVOICE: ${order.invoiceNumber || "BILL"}*\n`;
-    msg += `📅 Date: ${new Date().toLocaleDateString("en-IN")}\n`;
+    msg += `🧾 *Invoice Code: ${order.invoiceNumber || "BILL"}*\n`;
+    msg += `📅 Invoice Date: ${formatDateOnly(order.timestamp || order.createdAt || Date.now())}\n`;
     msg += `🏪 *Shop:* ${order.customer?.shopName || "Retailer"}\n`;
     msg += `📱 Phone: ${order.customer?.phone || "-"}\n`;
 
@@ -191,11 +191,13 @@ export default function InvoiceModal({ order, onClose }) {
             ? Number(item.inclusivePrice)
             : Math.round(rate * (1 + gstPercent / 100) * 100) / 100);
       const rowTotal = Math.round(unitInclusive * (item.quantity || 1) * 100) / 100;
+      const baseTotal = Math.round(rate * (item.quantity || 1) * 100) / 100;
+      const itemGstAmount = item.isSample ? 0 : Math.round((rowTotal - baseTotal) * 100) / 100;
       const hsn = item.hsnCode || "0910 91 00";
       const packText = item.unit || item.variantSize || "Pack";
 
       msg += `${idx + 1}. *${item.name}* [Pack: ${packText}]\n`;
-      msg += `   HSN: ${hsn} | Qty: ${item.quantity} | GST: ${gstPercent}%\n`;
+      msg += `   HSN: ${hsn} | Qty: ${item.quantity} | GST: ${gstPercent}% | IGST: ₹${itemGstAmount.toFixed(2)}\n`;
       msg += `   Unit: ₹${rate.toFixed(2)} | Prod Price: ₹${unitInclusive.toFixed(2)} | Total: *₹${rowTotal.toFixed(2)}*\n`;
     });
 
@@ -356,10 +358,10 @@ export default function InvoiceModal({ order, onClose }) {
                 Invoice Details
               </div>
               <div style={{ fontSize: "0.88rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                Invoice: <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{order.invoiceNumber}</span>
+                Invoice Code: <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{order.invoiceNumber}</span>
               </div>
               <div style={{ fontSize: "0.8rem", color: "#52525B", marginTop: "2px", whiteSpace: "nowrap" }}>
-                Date: {formatDate(order.timestamp || order.createdAt)}
+                Invoice Date: {formatDateOnly(order.timestamp || order.createdAt)}
               </div>
             </div>
           </div>
@@ -500,15 +502,16 @@ export default function InvoiceModal({ order, onClose }) {
           }}>
             <thead>
               <tr style={{ background: "#09090b", color: "#FFFFFF", textAlign: "left" }}>
-                <th style={{ padding: "8px 4px", width: "28px", textAlign: "center" }}>#</th>
+                <th style={{ padding: "8px 4px", width: "26px", textAlign: "center" }}>#</th>
                 <th style={{ padding: "8px 8px" }}>Item Description & Masala</th>
-                <th style={{ padding: "8px 6px", width: "85px", textAlign: "center", background: "#18181b" }}>HSN Code</th>
-                <th style={{ padding: "8px 6px", width: "45px", textAlign: "center" }}>Qty</th>
-                <th style={{ padding: "8px 6px", width: "75px", textAlign: "right" }}>Unit price</th>
-                <th style={{ padding: "8px 6px", width: "50px", textAlign: "center" }}>GST</th>
-                <th style={{ padding: "8px 6px", width: "90px", textAlign: "right" }}>Product price</th>
-                <th style={{ padding: "8px 6px", width: "65px", textAlign: "right" }}>MRP</th>
-                <th style={{ padding: "8px 8px", width: "85px", textAlign: "right" }}>Total</th>
+                <th style={{ padding: "8px 6px", width: "80px", textAlign: "center", background: "#18181b" }}>HSN Code</th>
+                <th style={{ padding: "8px 4px", width: "40px", textAlign: "center" }}>Qty</th>
+                <th style={{ padding: "8px 6px", width: "70px", textAlign: "right" }}>Unit price</th>
+                <th style={{ padding: "8px 4px", width: "45px", textAlign: "center" }}>GST</th>
+                <th style={{ padding: "8px 6px", width: "65px", textAlign: "right" }}>IGST</th>
+                <th style={{ padding: "8px 6px", width: "85px", textAlign: "right" }}>Product price</th>
+                <th style={{ padding: "8px 6px", width: "60px", textAlign: "right" }}>MRP</th>
+                <th style={{ padding: "8px 8px", width: "80px", textAlign: "right" }}>Total</th>
               </tr>
             </thead>
             <tbody>
@@ -521,6 +524,8 @@ export default function InvoiceModal({ order, onClose }) {
                       ? Number(item.inclusivePrice)
                       : Math.round(rate * (1 + gstPercent / 100) * 100) / 100);
                 const rowTotal = Math.round(unitInclusive * (item.quantity || 1) * 100) / 100;
+                const baseTotal = Math.round(rate * (item.quantity || 1) * 100) / 100;
+                const itemGstAmount = item.isSample ? 0 : Math.round((rowTotal - baseTotal) * 100) / 100;
                 const mrp = Number(item.mrp) || 0;
                 const hsn = item.hsnCode || "0910 91 00";
                 const packText = item.unit || item.variantSize || "Standard Pack";
@@ -559,16 +564,20 @@ export default function InvoiceModal({ order, onClose }) {
                       {hsn}
                     </td>
                     {/* Qty */}
-                    <td style={{ padding: "7px 6px", textAlign: "center", fontWeight: 800 }}>
+                    <td style={{ padding: "7px 4px", textAlign: "center", fontWeight: 800 }}>
                       {item.quantity}
                     </td>
                     {/* Unit price (without GST) */}
                     <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: item.isSample ? 800 : 500, color: item.isSample ? "#DC2626" : "inherit" }}>
                       {item.isSample ? "₹0.00" : `₹${rate.toFixed(2)}`}
                     </td>
-                    {/* GST */}
-                    <td style={{ padding: "7px 6px", textAlign: "center", fontWeight: 700, color: "#18181b" }}>
+                    {/* GST % */}
+                    <td style={{ padding: "7px 4px", textAlign: "center", fontWeight: 700, color: "#18181b" }}>
                       {item.isSample ? "0%" : `${gstPercent}%`}
+                    </td>
+                    {/* IGST (GST Amount) */}
+                    <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: 600, color: item.isSample ? "#DC2626" : "#52525B" }}>
+                      {item.isSample ? "₹0.00" : `₹${itemGstAmount.toFixed(2)}`}
                     </td>
                     {/* Product price (Base rate + GST) */}
                     <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: 700, color: item.isSample ? "#DC2626" : "#09090b" }}>

@@ -756,69 +756,6 @@ export default function SettingsManager() {
       </div>
       </>
       )}
-
-      {/* Staff Account & Session Management Card */}
-      <div style={{
-        marginTop: "24px",
-        background: "#FFFFFF",
-        border: "1px solid var(--sd-zinc-200)",
-        borderRadius: "16px",
-        padding: "20px 24px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "16px"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{
-            width: "44px",
-            height: "44px",
-            borderRadius: "12px",
-            background: "#FEE2E2",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0
-          }}>
-            <ShieldCheck size={22} color="var(--sd-red)" />
-          </div>
-          <div>
-            <h4 style={{ fontSize: "0.95rem", fontWeight: 800, margin: 0, color: "var(--sd-black)" }}>
-              Account & Session Management
-            </h4>
-            <div style={{ fontSize: "0.78rem", color: "var(--sd-zinc-500)", marginTop: "2px" }}>
-              Signed in as <strong style={{ color: "var(--sd-black)" }}>{currentUser?.name || currentUser?.email || "User"}</strong> &bull; {isSuperAdmin ? "Super Admin (Full Access)" : `Employee Role: ${currentUser?.role || "Staff"}`}
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          style={{
-            background: "#09090B",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: "10px",
-            padding: "10px 18px",
-            fontSize: "0.82rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-            transition: "all 0.15s ease"
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "#DC2626"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "#09090B"; }}
-        >
-          <LogOut size={16} />
-          <span>Sign Out with Confirmation</span>
-        </button>
-      </div>
     </div>
   );
 }

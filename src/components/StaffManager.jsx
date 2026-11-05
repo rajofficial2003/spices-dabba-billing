@@ -172,9 +172,12 @@ export default function StaffManager() {
 
     const cleanUsername = formData.username.trim().toLowerCase().replace(/\s+/g, '');
     if (!cleanUsername) {
-      setErrorMsg("Please provide a valid login username (alphanumeric, no spaces).");
+      setErrorMsg("Please provide a valid login username or email.");
       return;
     }
+
+    const isEmail = cleanUsername.includes('@');
+    const staffEmail = isEmail ? cleanUsername : (formData.email ? formData.email.trim().toLowerCase() : "");
 
     if (!formData.password || formData.password.length < 4) {
       setErrorMsg("Password must be at least 4 characters long.");
@@ -192,12 +195,14 @@ export default function StaffManager() {
       if (modalMode === "add") {
         await addStaff({
           ...formData,
-          username: cleanUsername
+          username: cleanUsername,
+          email: staffEmail
         });
       } else if (modalMode === "edit" && selectedStaff) {
         await updateStaff(selectedStaff.id, {
           ...formData,
-          username: cleanUsername
+          username: cleanUsername,
+          email: staffEmail
         });
       }
       setModalMode(null);
@@ -714,12 +719,12 @@ export default function StaffManager() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-black)", marginBottom: "4px" }}>
-                    Login Username <span style={{ color: "#DC2626" }}>*</span>
+                    Login ID (Username or Email) <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. karthik / cashier1"
+                    placeholder="e.g. karthik or staff@gmail.com"
                     value={formData.username}
                     onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/\s+/g, '') }))}
                     style={{
@@ -734,7 +739,7 @@ export default function StaffManager() {
                     }}
                   />
                   <span style={{ fontSize: "0.70rem", color: "var(--sd-zinc-500)", display: "block", marginTop: "2px" }}>
-                    Staff will enter this username to login.
+                    Employee can enter this username or email to sign in.
                   </span>
                 </div>
 
@@ -1013,3 +1018,4 @@ export default function StaffManager() {
     </div>
   );
 }
+

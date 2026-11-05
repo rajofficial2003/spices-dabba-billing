@@ -76,7 +76,7 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  // Dual Login: Supports Firebase Auth (Super Admin email) and Firestore billing_staff (Employee username/email)
+  // Dual Login: Supports Firestore billing_staff (Employee username/email) and Firebase Auth (Super Admin email)
   const login = async (identifier, password) => {
     setAuthError("");
     const cleanId = String(identifier || "").trim();
@@ -86,66 +86,57 @@ export function AuthProvider({ children }) {
       throw new Error("Please enter both username/email and password.");
     }
 
-    // 1. If it looks like an email, first attempt Firebase Auth (Super Admin)
-    if (cleanId.includes("@")) {
-      try {
-        const cred = await signInWithEmailAndPassword(auth, cleanId, cleanPass);
-        setCurrentUser(cred.user);
-        setStaffUser(null);
-        localStorage.removeItem("spices_dabba_active_staff");
-        return { type: "admin", user: cred.user };
-      } catch (adminErr) {
-        // If Firebase Auth fails, fallback to check if staff was registered with this email
-        try {
-          const q = query(collection(db, "billing_staff"), where("email", "==", cleanId.toLowerCase()));
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            const staffDoc = snap.docs[0];
-            const staffData = { id: staffDoc.id, ...staffDoc.data() };
-            if (staffData.isActive === false) {
-              throw new Error("This staff account has been deactivated. Please contact Super Admin.");
-            }
-            if (String(staffData.password) !== cleanPass) {
-              throw new Error("Incorrect password for staff account.");
-            }
-            setStaffUser(staffData);
-            setCurrentUser(null);
-            localStorage.setItem("spices_dabba_active_staff", JSON.stringify(staffData));
-            return { type: "staff", staff: staffData };
-          }
-        } catch (innerErr) {
-          if (innerErr.message && !innerErr.code) throw innerErr;
+    const lowerId = cleanId.toLowerCase();
+
+    // 1. First, check if there is a staff member in Firestore billing_staff by username or email
+    try {
+      let matchedStaff = null;
+
+      // Query by username
+      const qUser = query(collection(db, "billing_staff"), where("username", "==", lowerId));
+      const snapUser = await getDocs(qUser);
+      if (!snapUser.empty) {
+        matchedStaff = { id: snapUser.docs[0].id, ...snapUser.docs[0].data() };
+      } else {
+        // Query by email
+        const qEmail = query(collection(db, "billing_staff"), where("email", "==", lowerId));
+        const snapEmail = await getDocs(qEmail);
+        if (!snapEmail.empty) {
+          matchedStaff = { id: snapEmail.docs[0].id, ...snapEmail.docs[0].data() };
         }
-        throw adminErr;
       }
+
+      if (matchedStaff) {
+        if (matchedStaff.isActive === false) {
+          throw new Error("This employee account has been deactivated. Please contact Super Admin.");
+        }
+        if (String(matchedStaff.password) !== cleanPass) {
+          throw new Error("Incorrect password for staff account. Please check your credentials.");
+        }
+
+        setStaffUser(matchedStaff);
+        setCurrentUser(null);
+        localStorage.setItem("spices_dabba_active_staff", JSON.stringify(matchedStaff));
+        return { type: "staff", staff: matchedStaff };
+      }
+    } catch (staffErr) {
+      // If error is about deactivated account or wrong password, rethrow so the user gets clear feedback
+      if (staffErr.message && !staffErr.code) {
+        throw staffErr;
+      }
+      console.warn("Staff lookup notice:", staffErr.message);
     }
 
-    // 2. If it's a username (no @), check Firestore billing_staff directly
-    const staffQuery = query(
-      collection(db, "billing_staff"), 
-      where("username", "==", cleanId.toLowerCase())
-    );
-    const staffSnap = await getDocs(staffQuery);
-
-    if (staffSnap.empty) {
-      throw new Error("Staff account not found with this username. Please verify your credentials or contact Admin.");
+    // 2. If not found in billing_staff, attempt Firebase Auth (Super Admin login)
+    try {
+      const cred = await signInWithEmailAndPassword(auth, cleanId, cleanPass);
+      setCurrentUser(cred.user);
+      setStaffUser(null);
+      localStorage.removeItem("spices_dabba_active_staff");
+      return { type: "admin", user: cred.user };
+    } catch (adminErr) {
+      throw adminErr;
     }
-
-    const staffDoc = staffSnap.docs[0];
-    const staffData = { id: staffDoc.id, ...staffDoc.data() };
-
-    if (staffData.isActive === false) {
-      throw new Error("This employee account has been deactivated. Please contact Super Admin.");
-    }
-
-    if (String(staffData.password) !== cleanPass) {
-      throw new Error("Incorrect password for this staff account. Please try again.");
-    }
-
-    setStaffUser(staffData);
-    setCurrentUser(null);
-    localStorage.setItem("spices_dabba_active_staff", JSON.stringify(staffData));
-    return { type: "staff", staff: staffData };
   };
 
   const logout = async () => {

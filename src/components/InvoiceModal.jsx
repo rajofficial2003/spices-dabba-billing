@@ -148,7 +148,7 @@ export default function InvoiceModal({ order, onClose }) {
     const cleanPhone = cleanPhoneNumber(order.customer.phone);
     const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
-    let msg = `*${BUSINESS_INFO.name}* (${BUSINESS_INFO.tamilName || ""})\n`;
+    let msg = `*JEES foods*\n`;
     msg += `GSTIN: ${BUSINESS_INFO.gstin} | ${BUSINESS_INFO.address}\n`;
     msg += `--------------------------------\n`;
     msg += `🧾 *TAX INVOICE: ${order.invoiceNumber || "BILL"}*\n`;
@@ -305,13 +305,10 @@ export default function InvoiceModal({ order, onClose }) {
 
               <div>
                 <h1 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 900, color: "#09090b", margin: 0, lineHeight: 1.1 }}>
-                  {BUSINESS_INFO.name}
+                  JEES foods
                 </h1>
-                <div className="font-tamil" style={{ fontSize: "0.85rem", fontWeight: 700, color: "#8B1E1E" }}>
-                  {BUSINESS_INFO.tamilName}
-                </div>
                 <div style={{ fontSize: "0.8rem", color: "#52525B", marginTop: "3px" }}>
-                  <strong>Mfr:</strong> {BUSINESS_INFO.manufacturer} • {BUSINESS_INFO.address}
+                  {BUSINESS_INFO.address}
                 </div>
                 <div style={{ fontSize: "0.8rem", color: "#09090b", marginTop: "2px" }}>
                   <strong>GSTIN:</strong> {BUSINESS_INFO.gstin} | <strong>State:</strong> 33-Tamil Nadu | <strong>Ph:</strong> {BUSINESS_INFO.phonePrimary}
@@ -643,7 +640,7 @@ export default function InvoiceModal({ order, onClose }) {
 
             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
               <div style={{ fontWeight: 700, color: "#09090b", marginBottom: "40px" }}>
-                For {BUSINESS_INFO.name}
+                For JEES foods
               </div>
               <div style={{ borderTop: "1px dashed #A1A1AA", display: "inline-block", paddingTop: "4px", color: "#52525B" }}>
                 Authorized Signatory / Seal

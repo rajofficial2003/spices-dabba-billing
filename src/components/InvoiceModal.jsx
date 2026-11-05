@@ -47,7 +47,7 @@ function formatAddress(addr) {
 }
 
 export default function InvoiceModal({ order, onClose }) {
-  const { BUSINESS_INFO } = usePOS();
+  const { BUSINESS_INFO, courierPartners = [] } = usePOS();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
 
@@ -159,6 +159,63 @@ export default function InvoiceModal({ order, onClose }) {
   const isSameAddress = customer.sameAsBilling !== false && (!shippingAddr || shippingAddr === billingAddr);
   const finalShippingAddr = (isSameAddress || !shippingAddr) ? (billingAddr || shippingAddr) : shippingAddr;
 
+  const courierName = (order.courierCompany || order.shippingDetails?.courierCompany || "").trim();
+  const trackingNum = (order.trackingId || order.shippingDetails?.trackingId || "").trim();
+
+  // Resolve tracking URL for Courier
+  const getTrackingUrl = () => {
+    if (!courierName && !trackingNum) return "";
+
+    let url = (order.trackingUrl || order.shippingDetails?.trackingUrl || "").trim();
+
+    if (!url && courierName) {
+      const matched = (courierPartners || []).find(c =>
+        c.name?.trim().toLowerCase() === courierName.toLowerCase() ||
+        c.code?.trim().toLowerCase() === courierName.toLowerCase()
+      );
+      if (matched?.trackingUrl) {
+        url = matched.trackingUrl.trim();
+      }
+    }
+
+    if (!url && courierName) {
+      const lower = courierName.toLowerCase();
+      if (lower.includes("professional") || lower.includes("tpc")) url = "https://www.tpcindia.com";
+      else if (lower.includes("st courier") || lower.includes("stc")) url = "https://stcourier.com/track";
+      else if (lower.includes("dtdc")) url = "https://www.dtdc.in/tracking.asp";
+      else if (lower.includes("india post") || lower.includes("speed post")) url = "https://www.indiapost.gov.in";
+      else if (lower.includes("blue dart") || lower.includes("bluedart")) url = "https://www.bluedart.com/tracking";
+      else if (lower.includes("trackon")) url = "https://trackon.in";
+      else if (lower.includes("delhivery")) url = "https://www.delhivery.com/tracking";
+      else if (lower.includes("ecom express")) url = "https://ecomexpress.in/tracking/";
+      else if (lower.includes("xpressbees")) url = "https://www.xpressbees.com/track";
+    }
+
+    if (!url) {
+      return `https://www.google.com/search?q=${encodeURIComponent(`${courierName} ${trackingNum} tracking`.trim())}`;
+    }
+
+    if (trackingNum) {
+      if (url.includes("{trackingId}")) {
+        url = url.replace("{trackingId}", encodeURIComponent(trackingNum));
+      } else if (url.includes("{docket}")) {
+        url = url.replace("{docket}", encodeURIComponent(trackingNum));
+      } else if (url.includes("stcourier.com/track")) {
+        url = `https://stcourier.com/track/tracking_details/${encodeURIComponent(trackingNum)}`;
+      } else if (url.includes("trackon.in") && !url.includes("awb=")) {
+        url = `https://trackon.in/Tracking?awb=${encodeURIComponent(trackingNum)}`;
+      }
+    }
+
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+
+    return url;
+  };
+
+  const resolvedTrackingUrl = getTrackingUrl();
+
   // Build WhatsApp share link including HSN codes & GST breakdown
   const generateWhatsAppA4BillLink = () => {
     if (!order.customer?.phone) return null;
@@ -173,10 +230,11 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `🏪 *Shop:* ${order.customer?.shopName || "Retailer"}\n`;
     msg += `📱 Phone: ${order.customer?.phone || "-"}\n`;
 
-    const courierName = order.courierCompany || order.shippingDetails?.courierCompany;
-    const trackingNum = order.trackingId || order.shippingDetails?.trackingId;
     if (courierName || trackingNum) {
       msg += `🚚 Dispatch: ${courierName || "Courier"}${trackingNum ? ` [Docket: ${trackingNum}]` : ""}\n`;
+      if (resolvedTrackingUrl) {
+        msg += `🔗 Tracking URL: ${resolvedTrackingUrl}\n`;
+      }
     }
 
     msg += `--------------------------------\n`;
@@ -457,9 +515,32 @@ export default function InvoiceModal({ order, onClose }) {
                       <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 800, color: "#71717A", display: "block" }}>
                         COURIER / TRANSPORTER:
                       </span>
-                      <strong style={{ color: "#8B1E1E", fontSize: "0.84rem" }}>
-                        {order.courierCompany || order.shippingDetails?.courierCompany || "Courier Partner"}
-                      </strong>
+                      {resolvedTrackingUrl ? (
+                        <a
+                          href={resolvedTrackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Click to open online tracking portal for ${courierName || "Courier"}`}
+                          style={{
+                            color: "#8B1E1E",
+                            fontSize: "0.85rem",
+                            fontWeight: 800,
+                            textDecoration: "underline",
+                            textUnderlineOffset: "3px",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px"
+                          }}
+                        >
+                          <span>{courierName || "Courier Partner"}</span>
+                          <span style={{ fontSize: "0.72rem", color: "#8B1E1E" }}>↗</span>
+                        </a>
+                      ) : (
+                        <strong style={{ color: "#8B1E1E", fontSize: "0.84rem" }}>
+                          {courierName || "Courier Partner"}
+                        </strong>
+                      )}
                     </div>
 
                     {(order.trackingId || order.shippingDetails?.trackingId) && (
@@ -467,18 +548,45 @@ export default function InvoiceModal({ order, onClose }) {
                         <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 800, color: "#71717A", display: "block" }}>
                           TRACKING / DOCKET #:
                         </span>
-                        <span style={{
-                          fontFamily: "monospace",
-                          fontWeight: 800,
-                          color: "#09090b",
-                          background: "#F4F4F5",
-                          padding: "1px 6px",
-                          borderRadius: "4px",
-                          border: "1px solid #E4E4E7",
-                          display: "inline-block"
-                        }}>
-                          {order.trackingId || order.shippingDetails?.trackingId}
-                        </span>
+                        {resolvedTrackingUrl ? (
+                          <a
+                            href={resolvedTrackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Click to track consignment"
+                            style={{
+                              fontFamily: "monospace",
+                              fontWeight: 800,
+                              color: "#09090b",
+                              background: "#F4F4F5",
+                              padding: "2px 7px",
+                              borderRadius: "4px",
+                              border: "1px solid #D4D4D8",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              textDecoration: "underline",
+                              textUnderlineOffset: "2px",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <span>{order.trackingId || order.shippingDetails?.trackingId}</span>
+                            <span style={{ fontSize: "0.68rem", color: "#8B1E1E" }}>↗</span>
+                          </a>
+                        ) : (
+                          <span style={{
+                            fontFamily: "monospace",
+                            fontWeight: 800,
+                            color: "#09090b",
+                            background: "#F4F4F5",
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            border: "1px solid #E4E4E7",
+                            display: "inline-block"
+                          }}>
+                            {order.trackingId || order.shippingDetails?.trackingId}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

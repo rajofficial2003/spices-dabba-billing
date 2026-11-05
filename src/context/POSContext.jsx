@@ -553,10 +553,14 @@ export function POSProvider({ children }) {
       if (!prod) return item;
       const variant = prod.variants?.find(v => (v.size || v.name) === item.variantSize) || null;
       const newTierRate = getTierRate(variant || prod, tier);
+      const gstPct = item.gstPercent !== undefined ? Number(item.gstPercent) : 5;
+      const newInclusive = Math.round((newTierRate * (1 + gstPct / 100)) * 100) / 100;
       return {
         ...item,
         wholesalePrice: newTierRate,
-        originalPrice: newTierRate
+        inclusivePrice: newInclusive,
+        originalPrice: newTierRate,
+        originalInclusivePrice: newInclusive
       };
     }));
   };
@@ -569,10 +573,14 @@ export function POSProvider({ children }) {
       if (!prod) return item;
       const variant = prod.variants?.find(v => (v.size || v.name) === item.variantSize) || null;
       const newTierRate = getTierRate(variant || prod, newTier);
+      const gstPct = item.gstPercent !== undefined ? Number(item.gstPercent) : 5;
+      const newInclusive = Math.round((newTierRate * (1 + gstPct / 100)) * 100) / 100;
       return {
         ...item,
         wholesalePrice: newTierRate,
-        originalPrice: newTierRate
+        inclusivePrice: newInclusive,
+        originalPrice: newTierRate,
+        originalInclusivePrice: newInclusive
       };
     }));
   };
@@ -582,6 +590,8 @@ export function POSProvider({ children }) {
     const selectedVariant = variant || (product.variants && product.variants.length > 0 ? product.variants[0] : null);
     const variantSize = selectedVariant?.size || product.unit || "Pack";
     const tierRate = getTierRate(selectedVariant || product, pricingTier);
+    const gstPercent = product.gstPercent !== undefined ? Number(product.gstPercent) : 5;
+    const unitInclusive = isSample ? 0 : Math.round((tierRate * (1 + gstPercent / 100)) * 100) / 100;
     const variantWholesale = isSample ? 0 : tierRate;
     const variantMrp = selectedVariant 
       ? (Number(selectedVariant.mrp) || Number(selectedVariant.price) || 0)
@@ -614,10 +624,12 @@ export function POSProvider({ children }) {
           hsnCode: product.hsnCode || "0910 91 00",
           unit: variantSize,
           variantSize: variantSize,
-          wholesalePrice: isSample ? 0 : variantWholesale,
+          wholesalePrice: variantWholesale,
+          inclusivePrice: unitInclusive,
           originalPrice: variantWholesale,
+          originalInclusivePrice: unitInclusive,
           mrp: variantMrp,
-          gstPercent: product.gstPercent !== undefined ? Number(product.gstPercent) : 5,
+          gstPercent: gstPercent,
           image: product.image || DEFAULT_PRODUCT_IMAGE,
           quantity: qty,
           isSample: Boolean(isSample),
@@ -638,7 +650,8 @@ export function POSProvider({ children }) {
         return {
           ...item,
           isSample: nextIsSample,
-          wholesalePrice: nextIsSample ? 0 : (item.originalPrice || item.wholesalePrice || 0)
+          wholesalePrice: nextIsSample ? 0 : (item.originalPrice || item.wholesalePrice || 0),
+          inclusivePrice: nextIsSample ? 0 : (item.originalInclusivePrice || item.inclusivePrice || 0)
         };
       }
       return item;
@@ -655,9 +668,28 @@ export function POSProvider({ children }) {
     );
   };
 
-  const updateCartItemPrice = (cartItemId, newWholesalePrice) => {
+  const updateCartItemPrice = (cartItemId, newPrice, isInclusive = true) => {
     setCartItems(prev => 
-      prev.map(item => (item.id === cartItemId || item.cartItemId === cartItemId) ? { ...item, wholesalePrice: Number(newWholesalePrice) } : item)
+      prev.map(item => {
+        if (item.id !== cartItemId && item.cartItemId !== cartItemId) return item;
+        const numPrice = Number(newPrice) || 0;
+        const gstPct = item.gstPercent !== undefined ? Number(item.gstPercent) : 5;
+        if (isInclusive) {
+          const basePrice = Math.round((numPrice / (1 + gstPct / 100)) * 10000) / 10000;
+          return {
+            ...item,
+            inclusivePrice: newPrice,
+            wholesalePrice: basePrice
+          };
+        } else {
+          const incPrice = Math.round((numPrice * (1 + gstPct / 100)) * 100) / 100;
+          return {
+            ...item,
+            wholesalePrice: numPrice,
+            inclusivePrice: incPrice
+          };
+        }
+      })
     );
   };
 

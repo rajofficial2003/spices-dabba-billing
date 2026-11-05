@@ -957,11 +957,17 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {cartItems.map((item, index) => {
-                    const itemRate = Number(item.wholesalePrice) || 0;
-                    const itemBaseTotal = Math.round(itemRate * item.quantity * 100) / 100;
                     const itemGstPercent = item.isSample ? 0 : (item.gstPercent !== undefined ? Number(item.gstPercent) : 5);
-                    const itemGstAmount = Math.round((itemBaseTotal * itemGstPercent / 100) * 100) / 100;
-                    const itemTotalWithGst = Math.round((itemBaseTotal + itemGstAmount) * 100) / 100;
+                    const unitInclusivePrice = item.isSample 
+                      ? 0 
+                      : (item.inclusivePrice !== undefined 
+                          ? item.inclusivePrice 
+                          : Math.round((Number(item.wholesalePrice) * (1 + itemGstPercent / 100)) * 100) / 100);
+
+                    const numUnitInclusive = Number(unitInclusivePrice) || 0;
+                    const itemTotalWithGst = Math.round(numUnitInclusive * item.quantity * 100) / 100;
+                    const itemBaseTotal = Math.round((itemTotalWithGst / (1 + itemGstPercent / 100)) * 100) / 100;
+                    const itemGstAmount = Math.round((itemTotalWithGst - itemBaseTotal) * 100) / 100;
 
                     return (
                       <div
@@ -1016,17 +1022,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                               }}>
                                 HSN: {item.hsnCode || "0910 91 00"}
                               </span>
-                              <span style={{
-                                fontSize: "0.68rem",
-                                fontWeight: 800,
-                                background: "var(--sd-red-subtle)",
-                                color: "var(--sd-red)",
-                                border: "1px solid var(--sd-red-border)",
-                                padding: "1px 6px",
-                                borderRadius: "3px"
-                              }}>
-                                GST: {item.isSample ? "0%" : `${itemGstPercent}%`}
-                              </span>
+
                             </div>
                           </div>
                           
@@ -1142,20 +1138,32 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                                   type="number"
                                   step="any"
                                   min="0"
-                                  value={item.wholesalePrice}
-                                  onChange={(e) => updateCartItemPrice(item.id, e.target.value)}
-                                  title="Wholesale unit rate"
+                                  value={unitInclusivePrice}
+                                  onChange={(e) => updateCartItemPrice(item.id, e.target.value, true)}
+                                  title="Unit rate (incl. GST)"
                                   style={{
-                                    width: "66px",
+                                    width: "68px",
                                     padding: "4px 6px",
                                     fontSize: "0.92rem",
-                                    fontWeight: 700,
+                                    fontWeight: 800,
                                     border: "1px solid var(--sd-zinc-300)",
                                     borderRadius: "6px",
                                     textAlign: "right",
                                     color: "var(--sd-black)"
                                   }}
                                 />
+                                <span style={{
+                                  fontSize: "0.68rem",
+                                  fontWeight: 800,
+                                  background: "var(--sd-red-subtle)",
+                                  color: "var(--sd-red)",
+                                  border: "1px solid var(--sd-red-border)",
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  whiteSpace: "nowrap"
+                                }}>
+                                  GST: {itemGstPercent}%
+                                </span>
                               </>
                             )}
                           </div>

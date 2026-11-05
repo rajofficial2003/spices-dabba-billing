@@ -703,27 +703,13 @@ export default function InvoiceModal({ order, onClose }) {
             </tbody>
             <tfoot>
               <tr style={{ background: "#F4F4F5", borderTop: "2px solid #09090b", fontWeight: 800 }}>
-                <td colSpan="3" style={{ padding: "8px 6px", textAlign: "right", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px" }}>
-                  Total:
+                <td colSpan="5" style={{ padding: "8px 10px", textAlign: "right", textTransform: "uppercase", fontSize: "0.76rem", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
+                  Total GST:
                 </td>
-                <td style={{ padding: "8px 4px", textAlign: "center", fontWeight: 800 }}>
-                  {(order.items || []).reduce((sum, it) => sum + Number(it.quantity || 0), 0)}
-                </td>
-                <td style={{ padding: "8px 6px", textAlign: "right", color: "#71717A" }}>-</td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 800, color: "#09090b" }}>
                   ₹{calculatedTax.toFixed(2)}
                 </td>
-                <td style={{ padding: "8px 6px", textAlign: "right", color: "#71717A" }}>-</td>
-                <td style={{ padding: "8px 6px", textAlign: "right", color: "#71717A" }}>-</td>
-                <td style={{ padding: "8px 8px", textAlign: "right", fontWeight: 900, color: "#09090b" }}>
-                  ₹{(order.items || []).reduce((sum, it) => {
-                    if (it.isSample) return sum;
-                    const rate = Number(it.wholesalePrice) || Number(it.price) || 0;
-                    const gst = Number(it.gstPercent ?? 5);
-                    const inc = it.inclusivePrice !== undefined ? Number(it.inclusivePrice) : Math.round(rate * (1 + gst / 100) * 100) / 100;
-                    return sum + Math.round(inc * (it.quantity || 1) * 100) / 100;
-                  }, 0).toFixed(2)}
-                </td>
+                <td colSpan="3" style={{ padding: "8px 6px" }}></td>
               </tr>
             </tfoot>
           </table>

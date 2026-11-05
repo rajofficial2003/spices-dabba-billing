@@ -10,18 +10,15 @@ import {
   Loader2, 
   CheckCircle2, 
   LogIn, 
-  UserPlus,
   KeyRound
 } from "lucide-react";
 import { BUSINESS_INFO } from "../data/initialData";
 
 export default function Login() {
-  const { login, signup, resetPassword } = useAuth();
+  const { login, resetPassword } = useAuth();
   
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   
   const [loading, setLoading] = useState(false);
@@ -36,12 +33,6 @@ export default function Login() {
     const code = err.code || "";
     if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
       return "Incorrect email or password. Please check your credentials.";
-    }
-    if (code === "auth/email-already-in-use") {
-      return "An account with this email already exists. Please switch to Sign In.";
-    }
-    if (code === "auth/weak-password") {
-      return "Password should be at least 6 characters.";
     }
     if (code === "auth/invalid-email") {
       return "Please enter a valid email address.";
@@ -64,24 +55,9 @@ export default function Login() {
       return;
     }
 
-    if (isSignUp) {
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-      }
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters long.");
-        return;
-      }
-    }
-
     try {
       setLoading(true);
-      if (isSignUp) {
-        await signup(email, password);
-      } else {
-        await login(email, password);
-      }
+      await login(email, password);
     } catch (err) {
       setError(formatAuthError(err));
     } finally {
@@ -249,28 +225,26 @@ export default function Login() {
                 }}>
                   Password
                 </label>
-                {!isSignUp && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResetEmail(email);
-                      setShowResetModal(true);
-                      setError("");
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      color: "#8B1E1E",
-                      fontSize: "0.74rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      textDecoration: "underline"
-                    }}
-                  >
-                    Forgot Password?
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetEmail(email);
+                    setShowResetModal(true);
+                    setError("");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    color: "#8B1E1E",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textDecoration: "underline"
+                  }}
+                >
+                  Forgot Password?
+                </button>
               </div>
               <div style={{ position: "relative" }}>
                 <Lock size={16} color="#71717A" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
@@ -313,40 +287,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Confirm Password Field (Only when signing up) */}
-            {isSignUp && (
-              <div>
-                <label style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  fontWeight: 700,
-                  color: "#18181B",
-                  marginBottom: "6px"
-                }}>
-                  Confirm Password
-                </label>
-                <div style={{ position: "relative" }}>
-                  <Lock size={16} color="#71717A" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px 10px 38px",
-                      borderRadius: "10px",
-                      border: "1.5px solid #E4E4E7",
-                      fontSize: "0.88rem",
-                      outline: "none",
-                      boxSizing: "border-box"
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Submit Button */}
             <button
               type="submit"
@@ -365,7 +305,7 @@ export default function Login() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "8px",
-                marginTop: "6px",
+                marginTop: "10px",
                 boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
                 transition: "opacity 0.2s"
               }}
@@ -375,64 +315,16 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 size={18} className="spin" />
-                  <span>{isSignUp ? "Creating Account..." : "Signing In..."}</span>
+                  <span>Signing In...</span>
                 </>
               ) : (
                 <>
-                  {isSignUp ? <UserPlus size={18} /> : <LogIn size={18} />}
-                  <span>{isSignUp ? "Create Staff Account" : "Sign In to Spices Dabba"}</span>
+                  <LogIn size={18} />
+                  <span>Sign In to Spices Dabba</span>
                 </>
               )}
             </button>
           </form>
-
-          {/* Toggle between Sign In and Sign Up */}
-          <div style={{
-            marginTop: "20px",
-            paddingTop: "16px",
-            borderTop: "1px solid #E4E4E7",
-            textAlign: "center",
-            fontSize: "0.82rem",
-            color: "#52525B"
-          }}>
-            {isSignUp ? (
-              <span>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => { setIsSignUp(false); setError(""); }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#09090B",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    textDecoration: "underline"
-                  }}
-                >
-                  Sign In
-                </button>
-              </span>
-            ) : (
-              <span>
-                Need to add staff credentials?{" "}
-                <button
-                  type="button"
-                  onClick={() => { setIsSignUp(true); setError(""); }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#8B1E1E",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    textDecoration: "underline"
-                  }}
-                >
-                  Register New Account
-                </button>
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Footer Security Badge */}
@@ -576,3 +468,4 @@ export default function Login() {
     </div>
   );
 }
+

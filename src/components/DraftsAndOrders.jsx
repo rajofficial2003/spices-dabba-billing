@@ -190,8 +190,8 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
 
   const filteredOrders = orders.filter(order => {
     if (filterTab === "draft" && order.status !== "draft") return false;
-    if (filterTab === "completed" && order.status !== "completed") return false;
-    if (filterTab === "credit" && (order.status !== "completed" || order.paymentStatus !== "pending")) return false;
+    if (filterTab === "completed" && (order.status !== "completed" || order.paymentStatus === "pending" || order.paymentStatus === "credit")) return false;
+    if (filterTab === "credit" && (order.status !== "completed" || (order.paymentStatus !== "pending" && order.paymentStatus !== "credit"))) return false;
 
     // Date range filtering
     if (startDate || endDate) {
@@ -215,8 +215,8 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
   });
 
   const draftCount = orders.filter(o => o.status === "draft").length;
-  const completedCount = orders.filter(o => o.status === "completed").length;
-  const creditCount = orders.filter(o => o.status === "completed" && o.paymentStatus === "pending").length;
+  const completedCount = orders.filter(o => o.status === "completed" && o.paymentStatus !== "pending" && o.paymentStatus !== "credit").length;
+  const creditCount = orders.filter(o => o.status === "completed" && (o.paymentStatus === "pending" || o.paymentStatus === "credit")).length;
 
   const filteredTotalAmount = filteredOrders
     .filter(o => o.status === "completed")

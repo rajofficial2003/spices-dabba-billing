@@ -1483,8 +1483,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
 
               {/* Contact Person (Mandatory) */}
               <div style={{ marginBottom: "12px" }}>
-                <label className="input-label">
-                  Contact Person <span className="input-required">* (Mandatory, Max 50 chars)</span>
+                <label className="input-label" title="Mandatory field, maximum 50 characters allowed">
+                  Contact Person <span className="input-required" title="Mandatory, max 50 chars">*</span>
                 </label>
                 <input
                   type="text"
@@ -1503,8 +1503,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
 
               {/* Phone Number (Mandatory) */}
               <div style={{ marginBottom: "12px" }}>
-                <label className="input-label">
-                  Phone Number <span className="input-required">* (Mandatory)</span>
+                <label className="input-label" title="Mandatory field, 10-digit mobile number">
+                  Phone Number <span className="input-required" title="Mandatory">*</span>
                 </label>
                 <input
                   type="tel"
@@ -1539,8 +1539,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
 
               {/* GSTIN (Optional) */}
               <div style={{ marginBottom: "14px" }}>
-                <label className="input-label">
-                  GSTIN <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }}>(Optional - Alphanumeric only, Max 15 chars)</span>
+                <label className="input-label" title="Optional - Alphanumeric only, max 15 characters">
+                  GSTIN <span style={{ color: "var(--sd-zinc-400)", fontWeight: 400 }} title="Optional - Alphanumeric only, max 15 characters">(Optional)</span>
                 </label>
                 <input
                   type="text"
@@ -1593,14 +1593,14 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                   <Building2 size={16} color="var(--sd-black)" />
-                  <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-black)" }}>
-                    Billing Address <span className="input-required">* (Mandatory)</span>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-black)" }} title="Mandatory field">
+                    Billing Address <span className="input-required" title="Mandatory">*</span>
                   </span>
                 </div>
 
                 <div style={{ marginBottom: "8px" }}>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                    Address (Street / Door No / Area) <span className="input-required">* (Max 100 chars)</span>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }} title="Maximum 100 characters allowed">
+                    Address (Street / Door No / Area) <span className="input-required" title="Max 100 characters">*</span>
                   </label>
                   <textarea
                     rows="3"
@@ -1658,8 +1658,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   </div>
 
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                      Pincode <span className="input-required">* (Alphanumeric)</span>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }} title="Alphanumeric pincode">
+                      Pincode <span className="input-required" title="Alphanumeric pincode">*</span>
                     </label>
                     <input
                       type="text"
@@ -1716,8 +1716,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                 {!formData.sameAsBilling && (
                   <div>
                     <div style={{ marginBottom: "8px" }}>
-                      <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                        Address (Delivery Point / Area) <span className="input-required">* (Max 100 chars)</span>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }} title="Maximum 100 characters allowed">
+                        Address (Delivery Point / Area) <span className="input-required" title="Max 100 characters">*</span>
                       </label>
                       <textarea
                         rows="3"
@@ -1775,8 +1775,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                       </div>
 
                       <div>
-                        <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
-                          Pincode <span className="input-required">* (Alphanumeric)</span>
+                        <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }} title="Alphanumeric pincode">
+                          Pincode <span className="input-required" title="Alphanumeric pincode">*</span>
                         </label>
                         <input
                           type="text"
@@ -2060,8 +2060,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               )}
 
               <div>
-                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
-                  Delivery Partner / Company Name <span className="input-required">* (Max 50 chars, no special characters)</span>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }} title="Maximum 50 characters, no special characters allowed">
+                  Delivery Partner / Company Name <span className="input-required" title="Max 50 chars, no special characters">*</span>
                 </label>
                 <input
                   type="text"
@@ -2080,8 +2080,8 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
-                    Short Code <span className="input-required">* (Max 10 chars)</span>
+                  <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }} title="Maximum 10 characters">
+                    Short Code <span className="input-required" title="Max 10 chars">*</span>
                   </label>
                   <input
                     type="text"

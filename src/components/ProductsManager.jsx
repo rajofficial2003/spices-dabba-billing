@@ -1324,7 +1324,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
                 </div>
 
                 <div>
-                  <label className="input-label">Low Stock Alert (Packs)</label>
+                  <label className="input-label">Low Stock Alert</label>
                   <input
                     type="number"
                     min="0"

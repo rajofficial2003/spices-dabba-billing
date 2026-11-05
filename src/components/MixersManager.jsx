@@ -759,7 +759,7 @@ export default function MixersManager() {
           }}
         >
           <Plus size={16} />
-          <span>+ Create New Recipe</span>
+          <span>Create New Recipe</span>
         </button>
       </div>
 

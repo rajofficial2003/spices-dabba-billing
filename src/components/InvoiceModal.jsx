@@ -448,6 +448,20 @@ export default function InvoiceModal({ order, onClose }) {
               </div>
 
               <div>
+                <div style={{
+                  display: "inline-block",
+                  background: "#09090b",
+                  color: "#FFFFFF",
+                  fontSize: "0.68rem",
+                  fontWeight: 800,
+                  padding: "1px 6px",
+                  borderRadius: "3px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  marginBottom: "4px"
+                }}>
+                  From (Sender)
+                </div>
                 <h1 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 900, color: "#09090b", margin: 0, lineHeight: 1.1 }}>
                   JEES foods
                 </h1>
@@ -524,7 +538,7 @@ export default function InvoiceModal({ order, onClose }) {
             <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
                 <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
-                  Shipp To
+                  To / Shipp To
                 </div>
               </div>
               <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>

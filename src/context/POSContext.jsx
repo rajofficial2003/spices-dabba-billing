@@ -508,17 +508,29 @@ export function POSProvider({ children }) {
     };
   }, []);
 
-  // CART CALCULATIONS (GST is automatically calculated from product GST %)
-  const subtotal = cartItems.reduce((sum, item) => {
-    const price = Number(item.wholesalePrice) || Number(item.price) || 0;
-    return sum + price * (item.quantity || 1);
-  }, 0);
+  // CART CALCULATIONS (Subtotal = Total Product Price + Total GST; Grand Total = Subtotal - Discount)
+  const subtotal = Math.round(cartItems.reduce((sum, item) => {
+    if (item.isSample) return sum;
+    const itemGst = item.gstPercent !== undefined ? Number(item.gstPercent) : 5;
+    const unitInclusivePrice = item.inclusivePrice !== undefined
+      ? Number(item.inclusivePrice)
+      : Math.round((Number(item.wholesalePrice || item.price || 0) * (1 + itemGst / 100)) * 100) / 100;
+    return sum + (Number(unitInclusivePrice) || 0) * (item.quantity || 1);
+  }, 0) * 100) / 100;
 
   const discountAmount = discountType === "percent" 
     ? Math.round((subtotal * (Number(discount) || 0)) / 100) 
     : Math.min(subtotal, Number(discount) || 0);
 
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  // Grand Total (Total Payable) is Subtotal after discount
+  const grandTotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+
+  // Taxable base (without GST) before discount for invoice breakdowns
+  const taxableBase = cartItems.reduce((sum, item) => {
+    if (item.isSample) return sum;
+    const price = Number(item.wholesalePrice) || Number(item.price) || 0;
+    return sum + price * (item.quantity || 1);
+  }, 0);
 
   // Automatic GST calculation based on each product's specific GST %
   const totalItemGst = cartItems.reduce((sum, item) => {
@@ -529,12 +541,12 @@ export function POSProvider({ children }) {
     return sum + (price * qty * itemGst) / 100;
   }, 0);
 
-  const discountFactor = subtotal > 0 ? taxableAmount / subtotal : 1;
+  const discountFactor = subtotal > 0 ? grandTotal / subtotal : 1;
   const taxAmount = Math.round(totalItemGst * discountFactor * 100) / 100;
+  const taxableAmount = Math.round((grandTotal - taxAmount) * 100) / 100;
   const taxPercent = taxPercentOverride !== null 
     ? taxPercentOverride 
-    : (subtotal > 0 ? Math.round((totalItemGst / subtotal) * 100) : 5);
-  const grandTotal = Math.round((taxableAmount + taxAmount) * 100) / 100;
+    : (taxableAmount > 0 ? Math.round((taxAmount / taxableAmount) * 100) : 5);
   const totalItemsCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
   // CUSTOMER SHOP SELECTION & PRICING TIER ACTIONS
@@ -738,6 +750,7 @@ export function POSProvider({ children }) {
       customer: selectedCustomer,
       items: cartItems,
       subtotal,
+      taxableSubtotal: taxableBase,
       discount: discountAmount,
       discountValue: discount,
       discountType,
@@ -801,6 +814,7 @@ export function POSProvider({ children }) {
       customer: selectedCustomer,
       items: cartItems,
       subtotal,
+      taxableSubtotal: taxableBase,
       discount: discountAmount,
       discountValue: discount,
       discountType,

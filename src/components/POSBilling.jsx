@@ -1201,7 +1201,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
               {/* Subtotal */}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.92rem", marginBottom: "8px" }}>
                 <span style={{ color: "var(--sd-zinc-600)", fontWeight: 600 }}>Subtotal:</span>
-                <span style={{ fontWeight: 800, fontSize: "0.95rem" }}>₹{subtotal}</span>
+                <span style={{ fontWeight: 800, fontSize: "0.95rem" }}>₹{Number(subtotal || 0).toFixed(2)}</span>
               </div>
 
               {/* Discount */}

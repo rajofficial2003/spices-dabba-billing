@@ -122,12 +122,18 @@ export default function InvoiceModal({ order, onClose }) {
 
   const taxPct = Number(order.taxPercent) > 0 
     ? Number(order.taxPercent) 
-    : (order.subtotal > 0 ? Math.round((calculatedTax / order.subtotal) * 100) : 5);
+    : (order.taxableSubtotal > 0 ? Math.round((calculatedTax / order.taxableSubtotal) * 100) : (order.subtotal > 0 ? Math.round((calculatedTax / order.subtotal) * 100) : 5));
 
   const halfTax = calculatedTax / 2;
-  const finalGrandTotal = Number(order.grandTotal) > 0 && Number(order.tax) > 0
+  const finalGrandTotal = Number(order.grandTotal) > 0
     ? Number(order.grandTotal)
-    : Math.round((Number(order.subtotal || 0) - Number(order.discount || 0) + calculatedTax) * 100) / 100;
+    : Math.round((Number(order.subtotal || 0) - Number(order.discount || 0)) * 100) / 100;
+
+  const taxableSubtotalVal = order.taxableSubtotal !== undefined
+    ? Number(order.taxableSubtotal)
+    : (order.taxableAmount !== undefined
+        ? Number(order.taxableAmount)
+        : (finalGrandTotal > calculatedTax ? finalGrandTotal - calculatedTax : Number(order.subtotal || 0)));
 
   // Address resolution for Billing and Shipping
   const customer = order.customer || {};
@@ -168,7 +174,7 @@ export default function InvoiceModal({ order, onClose }) {
     });
 
     msg += `--------------------------------\n`;
-    msg += `Subtotal (Taxable): ₹${Number(order.subtotal || 0).toFixed(2)}\n`;
+    msg += `Subtotal (Taxable): ₹${taxableSubtotalVal.toFixed(2)}\n`;
     if (order.discount > 0) msg += `Discount: -₹${Number(order.discount).toFixed(2)}\n`;
     if (calculatedTax > 0) {
       msg += `CGST (${(taxPct / 2).toFixed(1)}%): +₹${halfTax.toFixed(2)}\n`;
@@ -565,7 +571,7 @@ export default function InvoiceModal({ order, onClose }) {
             <div style={{ fontSize: "0.85rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
                 <span style={{ color: "#52525B" }}>Taxable Subtotal:</span>
-                <span style={{ fontWeight: 600 }}>₹{Number(order.subtotal || 0).toFixed(2)}</span>
+                <span style={{ fontWeight: 600 }}>₹{taxableSubtotalVal.toFixed(2)}</span>
               </div>
 
               {Number(order.discount) > 0 && (

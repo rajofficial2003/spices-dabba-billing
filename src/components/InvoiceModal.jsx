@@ -786,7 +786,7 @@ export default function InvoiceModal({ order, onClose }) {
                 gap: "10px"
               }}>
                 <div style={{ fontSize: "0.76rem", color: "#18181b", lineHeight: 1.45 }}>
-                  <div style={{ fontWeight: 800, color: "#8B1E1E", textTransform: "uppercase", fontSize: "0.72rem", marginBottom: "3px", letterSpacing: "0.4px" }}>
+                  <div style={{ fontWeight: 800, color: "#09090b", textTransform: "uppercase", fontSize: "0.72rem", marginBottom: "3px", letterSpacing: "0.4px" }}>
                     Bank & UPI Payment Details
                   </div>
                   <div><strong>Bank:</strong> Tamilnad Mercantile Bank</div>

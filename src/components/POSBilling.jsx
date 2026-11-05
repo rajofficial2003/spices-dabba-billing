@@ -1152,18 +1152,6 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                                     color: "var(--sd-black)"
                                   }}
                                 />
-                                <span style={{
-                                  fontSize: "0.68rem",
-                                  fontWeight: 800,
-                                  background: "var(--sd-red-subtle)",
-                                  color: "var(--sd-red)",
-                                  border: "1px solid var(--sd-red-border)",
-                                  padding: "2px 6px",
-                                  borderRadius: "4px",
-                                  whiteSpace: "nowrap"
-                                }}>
-                                  GST: {itemGstPercent}%
-                                </span>
                               </>
                             )}
                           </div>
@@ -1192,7 +1180,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                                 textAlign: "right",
                                 whiteSpace: "nowrap"
                               }}>
-                                (Incl. ₹{itemGstAmount.toFixed(2)} GST)
+                                (Incl. GST: {itemGstPercent}% - ₹{itemGstAmount.toFixed(2)})
                               </div>
                             )}
                           </div>

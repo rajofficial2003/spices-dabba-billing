@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import QRCode from "qrcode";
 import { usePOS } from "../context/POSContext";
 import { 
   Printer, 
@@ -48,6 +49,22 @@ function formatAddress(addr) {
 export default function InvoiceModal({ order, onClose }) {
   const { BUSINESS_INFO } = usePOS();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+
+  useEffect(() => {
+    // Generate UPI QR Code: upi://pay?pa=9940159298@upi&pn=SPICES%20DABBA&cu=INR
+    const upiPayload = "upi://pay?pa=9940159298@upi&pn=SPICES%20DABBA&cu=INR";
+    QRCode.toDataURL(upiPayload, {
+      width: 160,
+      margin: 1,
+      color: {
+        dark: "#09090b",
+        light: "#FFFFFF"
+      }
+    })
+      .then(url => setQrCodeUrl(url))
+      .catch(err => console.warn("QR code generation error:", err));
+  }, []);
 
   if (!order) return null;
 
@@ -187,6 +204,13 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `Discount: ${Number(order.discount) > 0 ? `-₹${Number(order.discount).toFixed(2)}` : "₹0.00"}\n`;
     msg += `*TOTAL PAYABLE: ₹${finalGrandTotal.toFixed(2)}*\n`;
     msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}*\n`;
+    msg += `--------------------------------\n`;
+    msg += `*BANK DETAILS FOR PAYMENT:*\n`;
+    msg += `Bank: Tamilnad Mercantile Bank\n`;
+    msg += `A/C Name: SPICES DABBA\n`;
+    msg += `A/C: 180150050800432\n`;
+    msg += `IFSC: TMBL0000180\n`;
+    msg += `UPI: 9940159298 (Vaishno Devi)\n`;
     msg += `--------------------------------\n`;
     msg += `🙏 Thank you for your business!`;
 
@@ -581,8 +605,48 @@ export default function InvoiceModal({ order, onClose }) {
                 </div>
               )}
 
-              <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#71717A" }}>
-                Bank: Canara Bank | A/C: 120001234567 | IFSC: CNRB0001234 | UPI: 9566659298@upi
+              {/* Bank & Payment Details + Sample QR Code */}
+              <div style={{
+                marginTop: "10px",
+                paddingTop: "8px",
+                borderTop: "1px solid #E4E4E7",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px"
+              }}>
+                <div style={{ fontSize: "0.76rem", color: "#18181b", lineHeight: 1.45 }}>
+                  <div style={{ fontWeight: 800, color: "#8B1E1E", textTransform: "uppercase", fontSize: "0.72rem", marginBottom: "3px", letterSpacing: "0.4px" }}>
+                    Bank & UPI Payment Details
+                  </div>
+                  <div><strong>Bank:</strong> Tamilnad Mercantile Bank</div>
+                  <div><strong>A/C Name:</strong> SPICES DABBA</div>
+                  <div><strong>A/C:</strong> 180150050800432</div>
+                  <div><strong>IFSC:</strong> TMBL0000180</div>
+                  <div><strong>UPI:</strong> 9940159298 (Vaishno Devi)</div>
+                </div>
+
+                {qrCodeUrl && (
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    background: "#FFFFFF",
+                    padding: "4px 6px",
+                    borderRadius: "6px",
+                    border: "1px solid #D4D4D8",
+                    flexShrink: 0
+                  }}>
+                    <img
+                      src={qrCodeUrl}
+                      alt="UPI QR Code"
+                      style={{ width: "70px", height: "70px", display: "block" }}
+                    />
+                    <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
+                      Scan & Pay (UPI)
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

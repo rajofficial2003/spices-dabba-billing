@@ -746,7 +746,7 @@ export function POSProvider({ children }) {
     const draftData = {
       type: "draft",
       status: "draft",
-      invoiceNumber: activeDraftId ? (orders.find(o => o.id === activeDraftId)?.invoiceNumber || generateInvoiceNumber("DRF")) : generateInvoiceNumber("DRF"),
+      invoiceNumber: activeDraftId ? (orders.find(o => o.id === activeDraftId)?.invoiceNumber || generateInvoiceNumber("DRF", orders)) : generateInvoiceNumber("DRF", orders),
       customer: selectedCustomer,
       items: cartItems,
       subtotal,
@@ -806,7 +806,7 @@ export function POSProvider({ children }) {
       throw new Error("Cart is empty. Please select products to generate bill.");
     }
 
-    const invoiceNumber = generateInvoiceNumber("SDB");
+    const invoiceNumber = generateInvoiceNumber("SBD", orders);
     const billData = {
       type: "invoice",
       status: "completed",

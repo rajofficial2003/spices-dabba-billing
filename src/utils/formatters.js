@@ -38,13 +38,48 @@ export function formatDate(dateInput) {
 }
 
 /**
- * Generate sequential/random unique invoice number
+ * Calculate Indian Financial Year String: e.g. "26-27" for FY 2026-2027 (April 1 to March 31)
  */
-export function generateInvoiceNumber(prefix = "SDB") {
-  const now = new Date();
-  const dateStr = now.toISOString().slice(2, 10).replace(/-/g, "");
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  return `${prefix}-${dateStr}-${randomSuffix}`;
+export function getFinancialYearString(date = new Date()) {
+  const d = new Date(date);
+  const month = d.getMonth(); // 0 is January, 3 is April
+  const fullYear = d.getFullYear();
+  const startYear = month >= 3 ? fullYear : fullYear - 1;
+  const endYear = startYear + 1;
+  const startYY = String(startYear).slice(-2);
+  const endYY = String(endYear).slice(-2);
+  return `${startYY}-${endYY}`;
+}
+
+/**
+ * Generate sequential invoice number based on Financial Year
+ * Format: SBD/26-27/0001
+ * After April 01, 2027: SBD/27-28/0001
+ */
+export function generateInvoiceNumber(prefix = "SBD", existingOrders = [], date = new Date()) {
+  const fy = getFinancialYearString(date);
+  // Match prefix and current financial year: e.g. SBD/26-27/0001
+  const pattern = new RegExp(`^${prefix}[/-]${fy}[/-](\\d+)`, "i");
+
+  let maxSeq = 0;
+  if (Array.isArray(existingOrders) && existingOrders.length > 0) {
+    for (const ord of existingOrders) {
+      const invNum = ord?.invoiceNumber;
+      if (invNum) {
+        const match = String(invNum).trim().match(pattern);
+        if (match && match[1]) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxSeq) {
+            maxSeq = num;
+          }
+        }
+      }
+    }
+  }
+
+  const nextSeq = maxSeq + 1;
+  const paddedSeq = String(nextSeq).padStart(4, "0");
+  return `${prefix}/${fy}/${paddedSeq}`;
 }
 
 /**

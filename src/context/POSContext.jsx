@@ -821,8 +821,9 @@ export function POSProvider({ children }) {
         });
         draftData.id = docRef.id;
         setOrders(prev => [draftData, ...prev]);
-        setActiveDraftId(docRef.id);
+        setActiveDraftId(null);
       }
+      clearCart();
       return draftData;
     } catch (err) {
       // Local fallback
@@ -830,7 +831,8 @@ export function POSProvider({ children }) {
       const fallbackId = activeDraftId || `local_drf_${Date.now()}`;
       const localDraft = { ...draftData, id: fallbackId };
       setOrders(prev => [localDraft, ...prev.filter(o => o.id !== fallbackId)]);
-      setActiveDraftId(fallbackId);
+      clearCart();
+      setActiveDraftId(null);
       return localDraft;
     }
   };
@@ -862,6 +864,8 @@ export function POSProvider({ children }) {
       cgst: Math.round((taxAmount / 2) * 100) / 100,
       sgst: Math.round((taxAmount / 2) * 100) / 100,
       grandTotal,
+      shippingCharges: 0,
+      shippingCharge: 0,
       totalItemsCount,
       paymentMode,
       paymentStatus,
@@ -890,20 +894,47 @@ export function POSProvider({ children }) {
       billData.id = `local_inv_${Date.now()}`;
     }
 
-    // Deduct stock for products (aggregates regular sales AND free sample quantities!)
-    const stockDeductionMap = {};
+    // Deduct stock for products and variants (aggregates regular sales AND free sample quantities!)
+    const productDeductionMap = {};
     for (const item of cartItems) {
       const pId = item.productId || item.id.split('__')[0];
-      stockDeductionMap[pId] = (stockDeductionMap[pId] || 0) + Number(item.quantity || 0);
+      const vSize = item.variantSize || item.unit;
+      const qty = Number(item.quantity || 0);
+
+      if (!productDeductionMap[pId]) {
+        productDeductionMap[pId] = { totalQty: 0, byVariant: {} };
+      }
+      productDeductionMap[pId].totalQty += qty;
+      if (vSize) {
+        productDeductionMap[pId].byVariant[vSize] = (productDeductionMap[pId].byVariant[vSize] || 0) + qty;
+      }
     }
 
-    for (const [pId, qtyToDeduct] of Object.entries(stockDeductionMap)) {
+    for (const [pId, dedInfo] of Object.entries(productDeductionMap)) {
       try {
         const currentProd = products.find(p => p.id === pId);
         if (currentProd) {
-          const newStock = Math.max(0, (currentProd.stock || 0) - qtyToDeduct);
-          await updateDoc(doc(db, "billing_products", pId), { stock: newStock });
-          setProducts(prev => prev.map(p => p.id === pId ? { ...p, stock: newStock } : p));
+          let updatedVariants = currentProd.variants;
+          let newStock = Math.max(0, (Number(currentProd.stock) || 0) - dedInfo.totalQty);
+
+          if (Array.isArray(currentProd.variants) && currentProd.variants.length > 0) {
+            updatedVariants = currentProd.variants.map((v) => {
+              const deductQty = dedInfo.byVariant[v.size] || 0;
+              const curVarStock = Number(v.stock) || 0;
+              const nextVarStock = Math.max(0, curVarStock - deductQty);
+              return { ...v, stock: nextVarStock };
+            });
+            // Recompute total product stock from variants
+            newStock = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+          }
+
+          const updatePayload = { stock: newStock };
+          if (updatedVariants) {
+            updatePayload.variants = updatedVariants;
+          }
+
+          await updateDoc(doc(db, "billing_products", pId), updatePayload);
+          setProducts(prev => prev.map(p => p.id === pId ? { ...p, ...updatePayload } : p));
         }
       } catch (e) {
         console.warn("Stock update warning:", e.message);
@@ -1600,17 +1631,29 @@ export function POSProvider({ children }) {
     const courierCompany = (shippingData.courierCompany || "").trim();
     const trackingId = (shippingData.trackingId || "").trim();
     const dispatchDate = shippingData.dispatchDate || "";
+    const shippingCharges = Number(shippingData.shippingCharges) || 0;
     const shippingNotes = (shippingData.shippingNotes || "").trim();
+
+    // Check existing order to update grandTotal
+    const existingOrder = orders.find(o => o.id === orderId);
+    let newGrandTotal = existingOrder?.grandTotal;
+    if (existingOrder && existingOrder.subtotal !== undefined) {
+      newGrandTotal = Math.round((Number(existingOrder.subtotal || 0) - Number(existingOrder.discount || 0) + shippingCharges) * 100) / 100;
+    }
 
     const updatedFields = {
       courierCompany,
       trackingId,
       dispatchDate,
+      shippingCharges,
+      shippingCharge: shippingCharges,
+      grandTotal: newGrandTotal !== undefined ? newGrandTotal : existingOrder?.grandTotal,
       shippingNotes,
       shippingDetails: {
         courierCompany,
         trackingId,
         dispatchDate,
+        shippingCharges,
         shippingNotes,
         updatedAt: Date.now()
       }

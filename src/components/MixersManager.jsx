@@ -394,8 +394,8 @@ export default function MixersManager() {
     const isPdf = actionType === "pdf";
     const expectedTotalGrams = Number((scalerPackWeight * numPacks).toFixed(2));
     const diffGrams = Number((totalBatchGrams - expectedTotalGrams).toFixed(2));
-    const expectedTotalKg = (expectedTotalGrams / 1000).toFixed(3);
-    const actualTotalKg = (totalBatchGrams / 1000).toFixed(3);
+    const expectedTotalKg = (expectedTotalGrams / 1000).toFixed(2);
+    const actualTotalKg = (totalBatchGrams / 1000).toFixed(2);
     const isDifferent = Math.abs(diffGrams) > 0.05;
 
     const confirmTitle = hasCustomOverrides
@@ -1060,7 +1060,7 @@ export default function MixersManager() {
                       Customised Weight
                     </div>
                     <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--sd-black)" }}>
-                      {customWeight} Grams {customWeight < 1000 ? `(${customWeight}g Pack)` : `(${(customWeight / 1000).toFixed(3)} KG)`}
+                      {customWeight} Grams {customWeight < 1000 ? `(${customWeight}g Pack)` : `(${(customWeight / 1000).toFixed(2)} KG)`}
                     </div>
                   </div>
 
@@ -1985,7 +1985,7 @@ export default function MixersManager() {
                   <div>
                     <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>Total Batch Weight Required</span>
                     <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--sd-red)" }}>
-                      {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(3)} KG` : `${totalBatchGrams}g`} ({totalBatchGrams.toLocaleString("en-IN")}g)
+                      {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(2)} KG` : `${totalBatchGrams}g`} ({totalBatchGrams.toLocaleString("en-IN")}g)
                     </div>
                   </div>
                 </div>
@@ -2028,7 +2028,7 @@ export default function MixersManager() {
                       marginTop: "4px",
                       display: "inline-block"
                     }}>
-                      TOTAL: {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(3)} KG` : `${totalBatchGrams}g`}
+                      TOTAL: {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(2)} KG` : `${totalBatchGrams}g`}
                     </div>
                   </div>
                 </div>
@@ -2099,7 +2099,7 @@ export default function MixersManager() {
                               <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>g</span>
                               {spiceScaledKg >= 1 && (
                                 <span style={{ fontSize: "0.72rem", color: isEdited ? "#92400E" : "var(--sd-zinc-500)", fontWeight: 700 }}>
-                                  ({spiceScaledKg.toFixed(3)} KG)
+                                  ({spiceScaledKg.toFixed(2)} KG)
                                 </span>
                               )}
                             </div>
@@ -2107,7 +2107,7 @@ export default function MixersManager() {
                             {/* Clean Print / PDF Slip Text */}
                             <span className="print-only-text" style={{ display: "none" }}>
                               {spiceScaledKg >= 1 
-                                ? `${spiceScaledKg.toFixed(3)} KG (${spiceScaledGrams.toLocaleString("en-IN")}g)` 
+                                ? `${spiceScaledKg.toFixed(2)} KG (${spiceScaledGrams.toLocaleString("en-IN")}g)` 
                                 : `${spiceScaledGrams.toLocaleString("en-IN")}g`}
                             </span>
                           </td>
@@ -2124,7 +2124,7 @@ export default function MixersManager() {
                         {scalerPackWeight}g (100%)
                       </td>
                       <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-black)", fontSize: "1rem" }}>
-                        {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(3)} KG` : `${totalBatchGrams}g`} ({totalBatchGrams.toLocaleString("en-IN")}g)
+                        {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(2)} KG` : `${totalBatchGrams}g`} ({totalBatchGrams.toLocaleString("en-IN")}g)
                       </td>
                     </tr>
                   </tfoot>

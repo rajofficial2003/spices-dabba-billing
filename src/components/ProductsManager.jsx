@@ -979,7 +979,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
                   fontWeight: 700,
                   fontFamily: "monospace"
                 }}>
-                  HSN: {product.hsnCode || "0910 91 00"} • GST: {product.gstPercent ?? 5}%
+                  HSN: {product.hsnCode || "0910 91 00"}
                 </span>
 
                 <span style={{

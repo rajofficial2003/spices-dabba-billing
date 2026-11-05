@@ -197,9 +197,12 @@ export default function InvoiceModal({ order, onClose }) {
     : (order.taxableSubtotal > 0 ? Math.round((calculatedTax / order.taxableSubtotal) * 100) : (order.subtotal > 0 ? Math.round((calculatedTax / order.subtotal) * 100) : 5));
 
   const halfTax = calculatedTax / 2;
-  const finalGrandTotal = Number(order.grandTotal) > 0
-    ? Number(order.grandTotal)
-    : Math.round((Number(order.subtotal || 0) - Number(order.discount || 0)) * 100) / 100;
+  const shippingCharges = Number(order.shippingCharges ?? order.shippingCharge ?? order.shippingDetails?.shippingCharges ?? 0);
+  const baseSubtotal = Number(order.subtotal || 0);
+  const baseDiscount = Number(order.discount || 0);
+  const finalGrandTotal = baseSubtotal > 0
+    ? Math.round((baseSubtotal - baseDiscount + shippingCharges) * 100) / 100
+    : (Number(order.grandTotal) > 0 ? Number(order.grandTotal) : 0);
 
   const taxableSubtotalVal = order.taxableSubtotal !== undefined
     ? Number(order.taxableSubtotal)
@@ -317,6 +320,7 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `--------------------------------\n`;
     msg += `Subtotal: ₹${Number(order.subtotal || finalGrandTotal).toFixed(2)}\n`;
     msg += `Discount: ${Number(order.discount) > 0 ? `-₹${Number(order.discount).toFixed(2)}` : "₹0.00"}\n`;
+    msg += `Shipping Charges: ₹${shippingCharges.toFixed(2)}\n`;
     msg += `*TOTAL PAYABLE: ₹${finalGrandTotal.toFixed(2)}*\n`;
     msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}*\n`;
     msg += `--------------------------------\n`;
@@ -522,18 +526,6 @@ export default function InvoiceModal({ order, onClose }) {
                 <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
                   Shipp To
                 </div>
-                {isSameAddress && (billingAddr || finalShippingAddr) && (
-                  <span style={{
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    background: "#E4E4E7",
-                    color: "#27272A",
-                    padding: "1px 6px",
-                    borderRadius: "3px"
-                  }}>
-                    Same as Billing
-                  </span>
-                )}
               </div>
               <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
                 {customer.shopName || customer.businessName || "Retailer Shop"}
@@ -541,13 +533,9 @@ export default function InvoiceModal({ order, onClose }) {
               {customer.customerName && (
                 <div style={{ color: "#52525B", marginTop: "1px" }}>Contact Person: {customer.customerName}</div>
               )}
-              {finalShippingAddr ? (
+              {finalShippingAddr && (
                 <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>
                   Address: {finalShippingAddr}
-                </div>
-              ) : (
-                <div style={{ color: "#71717A", fontStyle: "italic", marginTop: "2px" }}>
-                  Same as Billing Address
                 </div>
               )}
               {customer.phone && (
@@ -667,12 +655,11 @@ export default function InvoiceModal({ order, onClose }) {
             <thead>
               <tr style={{ background: "#09090b", color: "#FFFFFF", textAlign: "left" }}>
                 <th style={{ padding: "8px 4px", width: "26px", textAlign: "center" }}>#</th>
-                <th style={{ padding: "8px 8px" }}>Item Description & Masala</th>
+                <th style={{ padding: "8px 8px" }}>Item Description</th>
                 <th style={{ padding: "8px 6px", width: "80px", textAlign: "center", background: "#18181b" }}>HSN Code</th>
                 <th style={{ padding: "8px 4px", width: "40px", textAlign: "center" }}>Qty</th>
-                <th style={{ padding: "8px 6px", width: "70px", textAlign: "right" }}>Unit price</th>
-                <th style={{ padding: "8px 4px", width: "45px", textAlign: "center" }}>GST</th>
-                <th style={{ padding: "8px 6px", width: "65px", textAlign: "right" }}>IGST</th>
+                <th style={{ padding: "8px 6px", width: "75px", textAlign: "right" }}>Unit price</th>
+                <th style={{ padding: "8px 6px", width: "70px", textAlign: "right" }}>GST</th>
                 <th style={{ padding: "8px 6px", width: "85px", textAlign: "right" }}>Product price</th>
                 <th style={{ padding: "8px 6px", width: "60px", textAlign: "right" }}>MRP</th>
                 <th style={{ padding: "8px 8px", width: "80px", textAlign: "right" }}>Total</th>
@@ -720,7 +707,7 @@ export default function InvoiceModal({ order, onClose }) {
                         </div>
                       )}
                       <div style={{ fontSize: "0.72rem", color: "#52525B", marginTop: "2px", fontWeight: 600 }}>
-                        Pack: {packText}
+                        Pack: {packText} • GST: {item.isSample ? "0%" : `${gstPercent}%`}
                       </div>
                     </td>
                     {/* HSN CODE CELL */}
@@ -735,11 +722,7 @@ export default function InvoiceModal({ order, onClose }) {
                     <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: item.isSample ? 800 : 500, color: item.isSample ? "#DC2626" : "inherit" }}>
                       {item.isSample ? "₹0.00" : `₹${rate.toFixed(2)}`}
                     </td>
-                    {/* GST % */}
-                    <td style={{ padding: "7px 4px", textAlign: "center", fontWeight: 700, color: "#18181b" }}>
-                      {item.isSample ? "0%" : `${gstPercent}%`}
-                    </td>
-                    {/* IGST (GST Amount) */}
+                    {/* GST (Amount) */}
                     <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: 600, color: item.isSample ? "#DC2626" : "#52525B" }}>
                       {item.isSample ? "₹0.00" : `₹${itemGstAmount.toFixed(2)}`}
                     </td>
@@ -836,6 +819,11 @@ export default function InvoiceModal({ order, onClose }) {
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", color: Number(order.discount) > 0 ? "#8B1E1E" : "#52525B" }}>
                 <span>Discount:</span>
                 <span>{Number(order.discount) > 0 ? `-₹${Number(order.discount).toFixed(2)}` : "₹0.00"}</span>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", color: "#52525B" }}>
+                <span>Shipping Charges:</span>
+                <span style={{ fontWeight: 600 }}>₹{shippingCharges.toFixed(2)}</span>
               </div>
 
               {/* Grand Total Row */}

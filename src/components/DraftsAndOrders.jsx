@@ -52,6 +52,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
     customCourierName: "",
     trackingId: "",
     dispatchDate: "",
+    shippingCharges: 0,
     shippingNotes: ""
   });
   const [shippingError, setShippingError] = useState("");
@@ -142,6 +143,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
       customCourierName: !isKnown ? existingCourier : "",
       trackingId: order.trackingId || order.shippingDetails?.trackingId || "",
       dispatchDate: order.dispatchDate || order.shippingDetails?.dispatchDate || todayStr,
+      shippingCharges: order.shippingCharges ?? order.shippingCharge ?? order.shippingDetails?.shippingCharges ?? 0,
       shippingNotes: order.shippingNotes || order.shippingDetails?.shippingNotes || ""
     });
     setShippingError("");
@@ -168,6 +170,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
           courierCompany: finalCourier,
           trackingId: shippingForm.trackingId.trim(),
           dispatchDate: shippingForm.dispatchDate,
+          shippingCharges: Number(shippingForm.shippingCharges) || 0,
           shippingNotes: shippingForm.shippingNotes.trim()
         });
       }
@@ -953,6 +956,23 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                   value={shippingForm.dispatchDate}
                   onChange={(e) => setShippingForm(prev => ({ ...prev, dispatchDate: e.target.value }))}
                   className="text-input"
+                />
+              </div>
+
+              {/* Shipping Charges */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.80rem", fontWeight: 700, color: "var(--sd-zinc-800)", marginBottom: "4px" }}>
+                  Shipping Charges (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={shippingForm.shippingCharges}
+                  onChange={(e) => setShippingForm(prev => ({ ...prev, shippingCharges: e.target.value }))}
+                  className="text-input"
+                  style={{ fontWeight: 700 }}
                 />
               </div>
 

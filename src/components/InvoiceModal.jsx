@@ -168,7 +168,7 @@ export default function InvoiceModal({ order, onClose }) {
     let msg = `*JEES foods*\n`;
     msg += `GSTIN: ${BUSINESS_INFO.gstin} | ${BUSINESS_INFO.address}\n`;
     msg += `--------------------------------\n`;
-    msg += `🧾 *TAX INVOICE: ${order.invoiceNumber || "BILL"}*\n`;
+    msg += `🧾 *INVOICE: ${order.invoiceNumber || "BILL"}*\n`;
     msg += `📅 Date: ${new Date().toLocaleDateString("en-IN")}\n`;
     msg += `🏪 *Shop:* ${order.customer?.shopName || "Retailer"}\n`;
     msg += `📱 Phone: ${order.customer?.phone || "-"}\n`;
@@ -241,7 +241,7 @@ export default function InvoiceModal({ order, onClose }) {
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <FileText size={17} color="#FEF2F2" />
             <span className="font-heading" style={{ fontWeight: 800, fontSize: "1rem" }}>
-              A4 Tax Invoice
+              Invoice Details
             </span>
             <span style={{
               background: order.paymentStatus === "pending" ? "#8B1E1E" : "#18181b",
@@ -335,7 +335,7 @@ export default function InvoiceModal({ order, onClose }) {
                   {BUSINESS_INFO.address}
                 </div>
                 <div style={{ fontSize: "0.8rem", color: "#09090b", marginTop: "2px" }}>
-                  <strong>GSTIN:</strong> {BUSINESS_INFO.gstin} | <strong>State:</strong> 33-Tamil Nadu | <strong>Ph:</strong> {BUSINESS_INFO.phonePrimary}
+                  <strong>GSTIN:</strong> {BUSINESS_INFO.gstin} | <strong>Ph:</strong> {BUSINESS_INFO.phonePrimary}
                 </div>
               </div>
             </div>
@@ -353,10 +353,10 @@ export default function InvoiceModal({ order, onClose }) {
                 display: "inline-block",
                 marginBottom: "6px"
               }}>
-                TAX INVOICE
+                Invoice Details
               </div>
               <div style={{ fontSize: "0.88rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                Invoice #: <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{order.invoiceNumber}</span>
+                Invoice: <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{order.invoiceNumber}</span>
               </div>
               <div style={{ fontSize: "0.8rem", color: "#52525B", marginTop: "2px", whiteSpace: "nowrap" }}>
                 Date: {formatDate(order.timestamp || order.createdAt)}
@@ -379,7 +379,7 @@ export default function InvoiceModal({ order, onClose }) {
             {/* BILLED TO / BUYER */}
             <div>
               <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
-                BILLED TO / BUYER:
+                Bill To
               </div>
               <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
                 {customer.shopName || customer.businessName || "Retailer Customer"}
@@ -404,7 +404,7 @@ export default function InvoiceModal({ order, onClose }) {
             <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
                 <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
-                  SHIPPING ADDRESS / DISPATCH TO:
+                  Shipp To
                 </div>
                 {isSameAddress && (billingAddr || finalShippingAddr) && (
                   <span style={{

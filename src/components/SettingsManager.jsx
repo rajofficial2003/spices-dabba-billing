@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { usePOS } from "../context/POSContext";
+import { useAuth } from "../context/AuthContext";
 import { 
   CreditCard, 
   Upload, 
@@ -13,14 +14,38 @@ import {
   User,
   QrCode,
   Save,
-  Trash2
+  Trash2,
+  LogOut,
+  ShieldCheck
 } from "lucide-react";
 import { compressImage, uploadProductImage } from "../utils/imageCompressor";
 
 export default function SettingsManager() {
-  const { BUSINESS_INFO, updatePaymentSettings } = usePOS();
+  const { BUSINESS_INFO, updatePaymentSettings, showConfirmModal } = usePOS();
+  const { currentUser, logout } = useAuth();
 
   const [activeSection, setActiveSection] = useState("payment-details");
+
+  const handleLogout = async () => {
+    if (!showConfirmModal) {
+      if (window.confirm("Are you sure you want to log out of Spices Dabba?")) {
+        await logout();
+      }
+      return;
+    }
+
+    const confirmed = await showConfirmModal({
+      title: "Confirm Sign Out (வெளியேறுதல்)",
+      message: `Are you sure you want to log out of Spices Dabba? You are currently signed in as "${currentUser?.email || "Staff User"}". You will need to enter your email and password to sign back in.`,
+      confirmText: "Yes, Log Out",
+      cancelText: "Cancel",
+      isDanger: true
+    });
+
+    if (confirmed) {
+      await logout();
+    }
+  };
 
   // Form State initialized from BUSINESS_INFO
   const [formData, setFormData] = useState({
@@ -207,23 +232,49 @@ export default function SettingsManager() {
           </button>
         </div>
 
-        {saveStatus && (
-          <div style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "6px 14px",
-            borderRadius: "8px",
-            fontSize: "0.80rem",
-            fontWeight: 600,
-            background: saveStatus.type === "success" ? "#ECFDF5" : "#FEF2F2",
-            color: saveStatus.type === "success" ? "#065F46" : "#991B1B",
-            border: `1px solid ${saveStatus.type === "success" ? "#A7F3D0" : "#FECACA"}`
-          }}>
-            {saveStatus.type === "success" ? <Check size={14} /> : <AlertCircle size={14} />}
-            <span>{saveStatus.message}</span>
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {saveStatus && (
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "6px 14px",
+              borderRadius: "8px",
+              fontSize: "0.80rem",
+              fontWeight: 600,
+              background: saveStatus.type === "success" ? "#ECFDF5" : "#FEF2F2",
+              color: saveStatus.type === "success" ? "#065F46" : "#991B1B",
+              border: `1px solid ${saveStatus.type === "success" ? "#A7F3D0" : "#FECACA"}`
+            }}>
+              {saveStatus.type === "success" ? <Check size={14} /> : <AlertCircle size={14} />}
+              <span>{saveStatus.message}</span>
+            </div>
+          )}
+
+          {/* Quick Logout Button with Confirmation */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              background: "#FEF2F2",
+              color: "#DC2626",
+              border: "1px solid #FECACA",
+              borderRadius: "8px",
+              padding: "6px 14px",
+              fontSize: "0.80rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.15s ease"
+            }}
+            title="Log Out with confirmation"
+          >
+            <LogOut size={14} />
+            <span>Log Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Grid: Form + Invoice Preview */}
@@ -671,6 +722,69 @@ export default function SettingsManager() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Staff Account & Session Management Card */}
+      <div style={{
+        marginTop: "24px",
+        background: "#FFFFFF",
+        border: "1px solid var(--sd-zinc-200)",
+        borderRadius: "16px",
+        padding: "20px 24px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "16px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{
+            width: "44px",
+            height: "44px",
+            borderRadius: "12px",
+            background: "#FEE2E2",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0
+          }}>
+            <ShieldCheck size={22} color="var(--sd-red)" />
+          </div>
+          <div>
+            <h4 style={{ fontSize: "0.95rem", fontWeight: 800, margin: 0, color: "var(--sd-black)" }}>
+              Staff Account & Session Management
+            </h4>
+            <div style={{ fontSize: "0.78rem", color: "var(--sd-zinc-500)", marginTop: "2px" }}>
+              Signed in as <strong style={{ color: "var(--sd-black)" }}>{currentUser?.email || "Staff User"}</strong> &bull; Authenticated with Firebase
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            background: "#09090B",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: "10px",
+            padding: "10px 18px",
+            fontSize: "0.82rem",
+            fontWeight: 800,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+            transition: "all 0.15s ease"
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#DC2626"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#09090B"; }}
+        >
+          <LogOut size={16} />
+          <span>Sign Out with Confirmation</span>
+        </button>
       </div>
     </div>
   );

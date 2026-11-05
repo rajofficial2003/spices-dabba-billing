@@ -1,6 +1,5 @@
 import React from "react";
 import { usePOS } from "../context/POSContext";
-import { useAuth } from "../context/AuthContext";
 import { 
   ShoppingCart, 
   FileText, 
@@ -12,9 +11,7 @@ import {
   Clock,
   Boxes,
   Receipt,
-  FlaskConical,
-  LogOut,
-  User
+  FlaskConical
 } from "lucide-react";
 
 export default function Header({ activeTab, setActiveTab }) {
@@ -26,8 +23,6 @@ export default function Header({ activeTab, setActiveTab }) {
     clearCart,
     cartItems
   } = usePOS();
-
-  const { currentUser, logout } = useAuth();
 
   const draftCount = orders.filter(o => o.status === "draft").length;
   const totalCartQty = (cartItems || []).reduce((sum, item) => sum + (item.quantity || 1), 0);
@@ -188,48 +183,6 @@ export default function Header({ activeTab, setActiveTab }) {
             </button>
           </nav>
 
-          {/* Desktop User Profile & Logout */}
-          {currentUser && (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }} className="desktop-only-user">
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                background: "var(--sd-zinc-100)",
-                border: "1px solid var(--sd-zinc-200)",
-                padding: "5px 10px",
-                borderRadius: "8px",
-                fontSize: "0.75rem"
-              }}>
-                <User size={13} color="var(--sd-zinc-500)" />
-                <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, color: "var(--sd-black)" }}>
-                  {currentUser.email?.split("@")[0] || "Staff"}
-                </span>
-                <span style={{ color: "var(--sd-zinc-400)", margin: "0 2px" }}>|</span>
-                <button
-                  type="button"
-                  onClick={() => logout()}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--sd-red)",
-                    padding: 0,
-                    fontSize: "0.74rem",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "3px"
-                  }}
-                  title={`Signed in as ${currentUser.email}. Click to Logout`}
-                >
-                  <LogOut size={12} />
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Quick Mobile Cart / Status Button (Visible only on mobile header) */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }} className="mobile-only-header-actions">
             {totalCartQty > 0 && activeTab !== "pos" && (
@@ -252,26 +205,6 @@ export default function Header({ activeTab, setActiveTab }) {
               >
                 <ShoppingCart size={14} />
                 <span>Bill ({totalCartQty})</span>
-              </button>
-            )}
-
-            {currentUser && (
-              <button
-                type="button"
-                onClick={() => logout()}
-                style={{
-                  background: "var(--sd-zinc-100)",
-                  border: "1px solid var(--sd-zinc-200)",
-                  color: "var(--sd-red)",
-                  borderRadius: "8px",
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center"
-                }}
-                title="Logout"
-              >
-                <LogOut size={14} />
               </button>
             )}
           </div>

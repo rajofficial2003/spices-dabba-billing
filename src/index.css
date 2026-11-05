@@ -793,18 +793,18 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
   .a4-invoice-container {
     width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
+    max-width: 790px !important;
+    min-width: 0 !important;
     max-height: none !important;
     height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    margin: 0 auto !important;
+    padding: 8px 12px !important;
     border: none !important;
     box-shadow: none !important;
     overflow: visible !important;
-    font-size: 11pt !important;
     line-height: 1.35 !important;
     page-break-inside: avoid !important;
+    box-sizing: border-box !important;
   }
 
   table {

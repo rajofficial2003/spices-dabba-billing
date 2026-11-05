@@ -68,63 +68,115 @@ export default function InvoiceModal({ order, onClose }) {
 
   if (!order) return null;
 
-  const handlePrint = () => {
-    const originalTitle = document.title;
+  const executePrintOrPdf = (isPdf = false) => {
+    const invoiceEl = document.getElementById("invoice-print-area");
+    if (!invoiceEl) return;
+
+    setIsGeneratingPdf(true);
+
     const cleanInvoiceNum = (order.invoiceNumber || "Bill").replace(/[^a-zA-Z0-9_-]/g, "_");
-    document.title = `${cleanInvoiceNum}_Tax_Invoice`;
-    window.print();
+    const docTitle = `${cleanInvoiceNum}_Tax_Invoice`;
+    const originalTitle = document.title;
+    document.title = docTitle;
+
+    const printIframe = document.createElement("iframe");
+    printIframe.style.position = "fixed";
+    printIframe.style.right = "0";
+    printIframe.style.bottom = "0";
+    printIframe.style.width = "0";
+    printIframe.style.height = "0";
+    printIframe.style.border = "0";
+    document.body.appendChild(printIframe);
+
+    const doc = printIframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${docTitle}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 8mm 10mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: #09090b;
+              margin: 0;
+              padding: 0;
+              background: #FFFFFF;
+              font-size: 13px;
+              line-height: 1.35;
+            }
+            #invoice-print-area {
+              width: 100% !important;
+              max-width: 790px !important;
+              margin: 0 auto !important;
+              padding: 4px 6px !important;
+              min-width: 0 !important;
+            }
+            table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              page-break-inside: auto;
+            }
+            tr {
+              page-break-inside: avoid;
+              page-break-after: auto;
+            }
+            thead {
+              display: table-header-group;
+            }
+            tfoot {
+              display: table-footer-group;
+            }
+            a {
+              color: inherit !important;
+              text-decoration: underline !important;
+            }
+            .font-heading {
+              font-family: inherit !important;
+              font-weight: 900 !important;
+            }
+            .font-tamil {
+              font-family: inherit !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div id="invoice-print-area">
+            ${invoiceEl.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
     setTimeout(() => {
-      document.title = originalTitle;
-    }, 1500);
+      printIframe.contentWindow.focus();
+      printIframe.contentWindow.print();
+      setTimeout(() => {
+        if (document.body.contains(printIframe)) {
+          document.body.removeChild(printIframe);
+        }
+        document.title = originalTitle;
+        setIsGeneratingPdf(false);
+      }, 1500);
+    }, 350);
   };
 
-  const handleDownloadPDF = async () => {
-    setIsGeneratingPdf(true);
-    const invoiceEl = document.getElementById("invoice-print-area");
-    if (!invoiceEl) {
-      setIsGeneratingPdf(false);
-      return;
-    }
+  const handlePrint = () => {
+    executePrintOrPdf(false);
+  };
 
-    const cleanInvoiceNum = (order.invoiceNumber || "Bill").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `${cleanInvoiceNum}_Spices_Dabba_Invoice.pdf`;
-
-    try {
-      if (!window.html2pdf) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-
-      if (window.html2pdf) {
-        const opt = {
-          margin: [8, 10, 8, 10],
-          filename: filename,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-        };
-
-        await window.html2pdf().set(opt).from(invoiceEl).save();
-        setIsGeneratingPdf(false);
-        return;
-      }
-    } catch (err) {
-      console.warn("Direct html2pdf notice:", err.message);
-    }
-
-    // Fallback: Set document title for clean browser 'Save as PDF'
-    const originalTitle = document.title;
-    document.title = filename.replace(".pdf", "");
-    window.print();
-    setTimeout(() => {
-      document.title = originalTitle;
-      setIsGeneratingPdf(false);
-    }, 1500);
+  const handleDownloadPDF = () => {
+    executePrintOrPdf(true);
   };
 
   // Calculate dynamic GST breakdown based on items (supports both new and previous orders)
@@ -356,8 +408,9 @@ export default function InvoiceModal({ order, onClose }) {
             id="invoice-print-area"
             className="a4-invoice-container"
             style={{
-              padding: "24px 28px",
-              minWidth: "680px",
+              padding: "20px 24px",
+              maxWidth: "790px",
+              margin: "0 auto",
               background: "#FFFFFF",
               color: "#09090b",
               fontFamily: "inherit",

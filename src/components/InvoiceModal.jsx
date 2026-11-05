@@ -186,7 +186,7 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `Subtotal: ₹${Number(order.subtotal || finalGrandTotal).toFixed(2)}\n`;
     msg += `Discount: ${Number(order.discount) > 0 ? `-₹${Number(order.discount).toFixed(2)}` : "₹0.00"}\n`;
     msg += `*TOTAL PAYABLE: ₹${finalGrandTotal.toFixed(2)}*\n`;
-    msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}* (${order.paymentMode || "Cash"})\n`;
+    msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}*\n`;
     msg += `--------------------------------\n`;
     msg += `🙏 Thank you for your business!`;
 
@@ -336,9 +336,6 @@ export default function InvoiceModal({ order, onClose }) {
               </div>
               <div style={{ fontSize: "0.8rem", color: "#52525B", marginTop: "2px", whiteSpace: "nowrap" }}>
                 Date: {formatDate(order.timestamp || order.createdAt)}
-              </div>
-              <div style={{ fontSize: "0.8rem", color: "#52525B", marginTop: "2px", whiteSpace: "nowrap" }}>
-                Mode: <strong>{order.paymentMode || "Cash"}</strong>
               </div>
             </div>
           </div>

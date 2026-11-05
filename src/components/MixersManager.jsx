@@ -1166,7 +1166,7 @@ export default function MixersManager() {
                       justifyContent: "center",
                       gap: "5px"
                     }}
-                    title="Scale batch to 50, 100, 250, 500 packs & Download/Print Slip"
+                    title="Scale batch to 25, 50, 100 packs & Download/Print Slip"
                   >
                     <Calculator size={13} color="#FBBF24" />
                     <span>Recipe Ready</span>
@@ -1893,7 +1893,7 @@ export default function MixersManager() {
 
                 {/* Quick Presets for Packs */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-                  {[25, 50, 100, 250, 500, 1000].map(cnt => (
+                  {[25, 50, 100].map(cnt => (
                     <button
                       key={cnt}
                       type="button"

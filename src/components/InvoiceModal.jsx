@@ -457,40 +457,36 @@ export default function InvoiceModal({ order, onClose }) {
               </div>
             </div>
 
-            {/* Invoice Meta */}
-            <div style={{ textAlign: "right", minWidth: "220px", flexShrink: 0 }}>
+            {/* Invoice Header Badge */}
+            <div style={{ textAlign: "right", minWidth: "160px", flexShrink: 0 }}>
               <div style={{
                 background: "#09090b",
                 color: "#FFFFFF",
-                padding: "3px 10px",
+                padding: "4px 12px",
                 borderRadius: "4px",
-                fontSize: "0.75rem",
+                fontSize: "0.80rem",
                 fontWeight: 800,
                 letterSpacing: "0.5px",
-                display: "inline-block",
-                marginBottom: "6px"
+                display: "inline-block"
               }}>
-                Invoice Details
+                TAX INVOICE
               </div>
-              <div style={{ fontSize: "0.88rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                Invoice Code: <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{order.invoiceNumber}</span>
-              </div>
-              <div style={{ fontSize: "0.8rem", color: "#52525B", marginTop: "2px", whiteSpace: "nowrap" }}>
-                Invoice Date: {formatDateOnly(order.timestamp || order.createdAt)}
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, fontFamily: "monospace", marginTop: "4px", color: "#09090b" }}>
+                #{order.invoiceNumber}
               </div>
             </div>
           </div>
 
-          {/* Address Section: FROM | BILL TO | SHIPP TO */}
+          {/* ROW 1: SHIPPING ROW - FROM (Left) & SHIPP TO (Right) */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: "12px",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "14px",
             background: "#F8F9FA",
             padding: "12px 14px",
             borderRadius: "6px",
             border: "1px solid #E4E4E7",
-            marginBottom: "16px",
+            marginBottom: "10px",
             fontSize: "0.80rem"
           }}>
             {/* FROM / SENDER ADDRESS */}
@@ -512,8 +508,44 @@ export default function InvoiceModal({ order, onClose }) {
               </div>
             </div>
 
+            {/* SHIPPING ADDRESS / DISPATCH TO */}
+            <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "14px" }}>
+              <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
+                Shipp To
+              </div>
+              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
+                {customer.shopName || customer.businessName || "Retailer Shop"}
+              </div>
+              {customer.customerName && (
+                <div style={{ color: "#52525B", marginTop: "1px" }}>Contact Person: {customer.customerName}</div>
+              )}
+              {finalShippingAddr && (
+                <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>
+                  Address: {finalShippingAddr}
+                </div>
+              )}
+              {customer.phone && (
+                <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
+                  Phone: {customer.phone}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ROW 2: BELOW SHIPPING ROW - BILL TO (Left) & ORDER DETAILS (Right) */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "14px",
+            background: "#F8F9FA",
+            padding: "12px 14px",
+            borderRadius: "6px",
+            border: "1px solid #E4E4E7",
+            marginBottom: "16px",
+            fontSize: "0.80rem"
+          }}>
             {/* BILLED TO / BUYER */}
-            <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "12px" }}>
+            <div>
               <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
                 Bill To
               </div>
@@ -536,128 +568,39 @@ export default function InvoiceModal({ order, onClose }) {
               )}
             </div>
 
-            {/* SHIPPING ADDRESS / DISPATCH TO */}
-            <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
-                <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
-                  Shipp To
-                </div>
+            {/* ORDER DETAILS */}
+            <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "14px" }}>
+              <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px", marginBottom: "6px" }}>
+                Order Details
               </div>
-              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                {customer.shopName || customer.businessName || "Retailer Shop"}
+              <div style={{ display: "grid", gridTemplateColumns: "105px 1fr", rowGap: "4px", fontSize: "0.80rem" }}>
+                <span style={{ color: "#52525B", fontWeight: 600 }}>Invoice Code:</span>
+                <span style={{ fontFamily: "monospace", fontWeight: 800, color: "#09090b" }}>{order.invoiceNumber}</span>
+
+                <span style={{ color: "#52525B", fontWeight: 600 }}>Invoice Date:</span>
+                <span style={{ fontWeight: 600, color: "#09090b" }}>{formatDateOnly(order.timestamp || order.createdAt)}</span>
+
+                <span style={{ color: "#52525B", fontWeight: 600 }}>Payment Mode:</span>
+                <span style={{ fontWeight: 600, color: "#09090b" }}>{order.paymentMode || "Cash"}</span>
+
+                <span style={{ color: "#52525B", fontWeight: 600 }}>Payment Status:</span>
+                <span>
+                  <span style={{
+                    display: "inline-block",
+                    padding: "1px 7px",
+                    borderRadius: "4px",
+                    fontSize: "0.70rem",
+                    fontWeight: 800,
+                    background: (order.paymentStatus === "pending" || order.paymentStatus === "credit") ? "#FEE2E2" : "#DCFCE7",
+                    color: (order.paymentStatus === "pending" || order.paymentStatus === "credit") ? "#DC2626" : "#15803D"
+                  }}>
+                    {(order.paymentStatus || "PAID").toUpperCase()}
+                  </span>
+                </span>
+
+                <span style={{ color: "#52525B", fontWeight: 600 }}>Total Items:</span>
+                <span style={{ fontWeight: 600, color: "#09090b" }}>{(order.items || []).length} items</span>
               </div>
-              {customer.customerName && (
-                <div style={{ color: "#52525B", marginTop: "1px" }}>Contact Person: {customer.customerName}</div>
-              )}
-              {finalShippingAddr && (
-                <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>
-                  Address: {finalShippingAddr}
-                </div>
-              )}
-              {customer.phone && (
-                <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
-                  Phone: {customer.phone}
-                </div>
-              )}
-
-              {/* Courier Partner & Docket / Tracking Number */}
-              {(order.courierCompany || order.shippingDetails?.courierCompany || order.trackingId || order.shippingDetails?.trackingId) && (
-                <div style={{
-                  marginTop: "8px",
-                  padding: "6px 8px",
-                  background: "#FFFFFF",
-                  borderRadius: "5px",
-                  border: "1px solid #D4D4D8",
-                  fontSize: "0.76rem"
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                    <div>
-                      <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 800, color: "#71717A", display: "block" }}>
-                        COURIER / TRANSPORTER:
-                      </span>
-                      {resolvedTrackingUrl ? (
-                        <a
-                          href={resolvedTrackingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={`Click to open online tracking portal for ${courierName || "Courier"}`}
-                          style={{
-                            color: "#09090b",
-                            fontSize: "0.85rem",
-                            fontWeight: 800,
-                            textDecoration: "underline",
-                            textUnderlineOffset: "3px",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px"
-                          }}
-                        >
-                          <span>{courierName || "Courier Partner"}</span>
-                          <span style={{ fontSize: "0.72rem", color: "#09090b" }}>↗</span>
-                        </a>
-                      ) : (
-                        <strong style={{ color: "#09090b", fontSize: "0.84rem" }}>
-                          {courierName || "Courier Partner"}
-                        </strong>
-                      )}
-                    </div>
-
-                    {(order.trackingId || order.shippingDetails?.trackingId) && (
-                      <div style={{ textAlign: "right" }}>
-                        <span style={{ fontSize: "0.68rem", textTransform: "uppercase", fontWeight: 800, color: "#71717A", display: "block" }}>
-                          TRACKING / DOCKET #:
-                        </span>
-                        {resolvedTrackingUrl ? (
-                          <a
-                            href={resolvedTrackingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Click to track consignment"
-                            style={{
-                              fontFamily: "monospace",
-                              fontWeight: 800,
-                              color: "#09090b",
-                              background: "#F4F4F5",
-                              padding: "2px 7px",
-                              borderRadius: "4px",
-                              border: "1px solid #D4D4D8",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              textDecoration: "underline",
-                              textUnderlineOffset: "2px",
-                              cursor: "pointer"
-                            }}
-                          >
-                            <span>{order.trackingId || order.shippingDetails?.trackingId}</span>
-                            <span style={{ fontSize: "0.68rem", color: "#09090b" }}>↗</span>
-                          </a>
-                        ) : (
-                          <span style={{
-                            fontFamily: "monospace",
-                            fontWeight: 800,
-                            color: "#09090b",
-                            background: "#F4F4F5",
-                            padding: "1px 6px",
-                            borderRadius: "4px",
-                            border: "1px solid #E4E4E7",
-                            display: "inline-block"
-                          }}>
-                            {order.trackingId || order.shippingDetails?.trackingId}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {(order.dispatchDate || order.shippingDetails?.dispatchDate) && (
-                    <div style={{ fontSize: "0.70rem", color: "#71717A", marginTop: "3px" }}>
-                      Dispatch Date: <strong>{order.dispatchDate || order.shippingDetails?.dispatchDate}</strong>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
@@ -674,9 +617,9 @@ export default function InvoiceModal({ order, onClose }) {
                 <th style={{ padding: "8px 8px" }}>Item Description</th>
                 <th style={{ padding: "8px 6px", width: "80px", textAlign: "center", background: "#18181b" }}>HSN Code</th>
                 <th style={{ padding: "8px 4px", width: "40px", textAlign: "center" }}>Qty</th>
-                <th style={{ padding: "8px 6px", width: "75px", textAlign: "right" }}>Unit price</th>
+                <th style={{ padding: "8px 6px", width: "75px", textAlign: "right" }}>Unit Price</th>
                 <th style={{ padding: "8px 6px", width: "70px", textAlign: "right" }}>GST</th>
-                <th style={{ padding: "8px 6px", width: "85px", textAlign: "right" }}>Product price</th>
+                <th style={{ padding: "8px 6px", width: "85px", textAlign: "right" }}>Product Price</th>
                 <th style={{ padding: "8px 6px", width: "60px", textAlign: "right" }}>MRP</th>
                 <th style={{ padding: "8px 8px", width: "80px", textAlign: "right" }}>Total</th>
               </tr>
@@ -758,6 +701,31 @@ export default function InvoiceModal({ order, onClose }) {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr style={{ background: "#F4F4F5", borderTop: "2px solid #09090b", fontWeight: 800 }}>
+                <td colSpan="3" style={{ padding: "8px 6px", textAlign: "right", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+                  Total:
+                </td>
+                <td style={{ padding: "8px 4px", textAlign: "center", fontWeight: 800 }}>
+                  {(order.items || []).reduce((sum, it) => sum + Number(it.quantity || 0), 0)}
+                </td>
+                <td style={{ padding: "8px 6px", textAlign: "right", color: "#71717A" }}>-</td>
+                <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 800, color: "#09090b" }}>
+                  ₹{calculatedTax.toFixed(2)}
+                </td>
+                <td style={{ padding: "8px 6px", textAlign: "right", color: "#71717A" }}>-</td>
+                <td style={{ padding: "8px 6px", textAlign: "right", color: "#71717A" }}>-</td>
+                <td style={{ padding: "8px 8px", textAlign: "right", fontWeight: 900, color: "#09090b" }}>
+                  ₹{(order.items || []).reduce((sum, it) => {
+                    if (it.isSample) return sum;
+                    const rate = Number(it.wholesalePrice) || Number(it.price) || 0;
+                    const gst = Number(it.gstPercent ?? 5);
+                    const inc = it.inclusivePrice !== undefined ? Number(it.inclusivePrice) : Math.round(rate * (1 + gst / 100) * 100) / 100;
+                    return sum + Math.round(inc * (it.quantity || 1) * 100) / 100;
+                  }, 0).toFixed(2)}
+                </td>
+              </tr>
+            </tfoot>
           </table>
 
           {/* Summary Breakdown & Totals */}

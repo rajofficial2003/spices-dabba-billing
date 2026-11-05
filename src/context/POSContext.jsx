@@ -1047,17 +1047,43 @@ export function POSProvider({ children }) {
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, ...formatted } : p));
   };
 
-  const restockProduct = async (productId, incomingQuantity, batchInfo = "") => {
+  const restockProduct = async (productId, incomingQuantity, batchInfo = "", variantSize = null) => {
     const target = products.find(p => p.id === productId);
     if (!target) throw new Error("Product not found");
-    const currentStock = Number(target.stock) || 0;
     const additional = Number(incomingQuantity) || 0;
-    const newStock = Math.max(0, currentStock + additional);
-    await updateProduct(productId, { 
+
+    let updatedVariants = target.variants;
+    let newStock = Math.max(0, (Number(target.stock) || 0) + additional);
+
+    if (Array.isArray(target.variants) && target.variants.length > 0) {
+      const targetSize = variantSize || target.variants[0]?.size;
+      let matched = false;
+      updatedVariants = target.variants.map(v => {
+        if (v.size === targetSize || (!matched && target.variants.length === 1)) {
+          matched = true;
+          return { ...v, stock: Math.max(0, (Number(v.stock) || 0) + additional) };
+        }
+        return v;
+      });
+      if (!matched && updatedVariants.length > 0) {
+        updatedVariants[0] = {
+          ...updatedVariants[0],
+          stock: Math.max(0, (Number(updatedVariants[0].stock) || 0) + additional)
+        };
+      }
+      newStock = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+    }
+
+    const payload = { 
       stock: newStock,
       lastRestockedAt: new Date().toISOString(),
       ...(batchInfo ? { lastBatchInfo: batchInfo } : {})
-    });
+    };
+    if (updatedVariants) {
+      payload.variants = updatedVariants;
+    }
+
+    await updateProduct(productId, payload);
     return newStock;
   };
 

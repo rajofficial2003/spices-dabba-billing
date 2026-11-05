@@ -56,6 +56,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
   // Quick Restock State
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [restockTarget, setRestockTarget] = useState(null);
+  const [restockVariantIdx, setRestockVariantIdx] = useState(0);
   const [incomingQty, setIncomingQty] = useState(50);
   const [batchNote, setBatchNote] = useState("");
 
@@ -354,8 +355,9 @@ export default function ProductsManager({ initialSubView = "products" }) {
     setShowModal(true);
   };
 
-  const handleOpenRestock = (product) => {
+  const handleOpenRestock = (product, variantIdx = 0) => {
     setRestockTarget(product);
+    setRestockVariantIdx(variantIdx);
     setIncomingQty(50);
     setBatchNote("");
     setShowRestockModal(true);
@@ -365,9 +367,10 @@ export default function ProductsManager({ initialSubView = "products" }) {
     e.preventDefault();
     if (!restockTarget || !incomingQty || incomingQty <= 0) return;
     try {
-      const newStock = await restockProduct(restockTarget.id, incomingQty, batchNote);
+      const selectedVariantSize = restockTarget.variants?.[restockVariantIdx]?.size || restockTarget.unit;
+      const newStock = await restockProduct(restockTarget.id, incomingQty, batchNote, selectedVariantSize);
       setShowRestockModal(false);
-      setToastMsg(`Successfully added +${incomingQty} packs to "${restockTarget.name}". Total available stock: ${newStock} packs.`);
+      setToastMsg(`Successfully added +${incomingQty} packs to "${restockTarget.name}" (${selectedVariantSize}). Total available stock: ${newStock} packs.`);
       setTimeout(() => setToastMsg(null), 4000);
     } catch (err) {
       alert("Failed to restock: " + err.message);
@@ -1111,7 +1114,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
                   {/* + Add Stock / Restock Button */}
                   <button
                     type="button"
-                    onClick={() => handleOpenRestock(product)}
+                    onClick={() => handleOpenRestock(product, activeVariantIdx)}
                     className="btn-primary"
                     style={{ padding: "4px 9px", fontSize: "0.76rem" }}
                     title="Add new incoming production stock"
@@ -1743,105 +1746,137 @@ export default function ProductsManager({ initialSubView = "products" }) {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmRestock} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              {/* Product Info Card */}
-              <div style={{
-                background: "var(--sd-zinc-50)",
-                border: "1px solid var(--sd-zinc-200)",
-                borderRadius: "10px",
-                padding: "12px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <div>
-                  <span style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", textTransform: "uppercase", fontWeight: 700 }}>
-                    Current Stock in Hand:
-                  </span>
-                  <div className="font-heading" style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--sd-black)", marginTop: "2px" }}>
-                    {restockTarget.stock || 0} <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--sd-zinc-500)" }}>{restockTarget.unit}</span>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right", fontSize: "0.76rem", color: "var(--sd-zinc-500)" }}>
-                  HSN: <strong>{restockTarget.hsnCode}</strong>
-                </div>
-              </div>
+            {(() => {
+              const currentRestockVariant = (restockTarget.variants && restockTarget.variants.length > 0)
+                ? (restockTarget.variants[restockVariantIdx] || restockTarget.variants[0])
+                : null;
+              const currentRestockStock = currentRestockVariant && currentRestockVariant.stock !== undefined
+                ? Number(currentRestockVariant.stock)
+                : (Number(restockTarget.stock) || 0);
+              const currentRestockUnit = currentRestockVariant?.size || restockTarget.unit || "Pack";
 
-              {/* Incoming Quantity */}
-              <div>
-                <label className="input-label">
-                  New Incoming Quantity (+ புதிய வரவு) <span className="input-required">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 50, 100, 250"
-                  value={incomingQty}
-                  onChange={(e) => setIncomingQty(Math.max(1, parseInt(e.target.value) || 0))}
-                  required
-                  autoFocus
-                  className="text-input"
-                  style={{ fontSize: "1.1rem", fontWeight: 800 }}
-                />
-              </div>
+              return (
+                <form onSubmit={handleConfirmRestock} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {/* Variant Selector if multi-variant */}
+                  {restockTarget.variants && restockTarget.variants.length > 1 && (
+                    <div>
+                      <label className="input-label">Select Pack / Variant (எடைப் பிரிவு) <span className="input-required">*</span></label>
+                      <select
+                        value={restockVariantIdx}
+                        onChange={(e) => setRestockVariantIdx(Number(e.target.value))}
+                        className="text-input"
+                        style={{ fontWeight: 800 }}
+                      >
+                        {restockTarget.variants.map((v, i) => (
+                          <option key={i} value={i}>
+                            {v.size} (Current Stock: {v.stock !== undefined ? v.stock : restockTarget.stock || 0} packs)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-              {/* Batch / Note */}
-              <div>
-                <label className="input-label">Batch / Lot / Mfg Note (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Batch #OCT-22B, Production Date 22/10/2026"
-                  value={batchNote}
-                  onChange={(e) => setBatchNote(e.target.value)}
-                  className="text-input"
-                />
-              </div>
+                  {/* Product Info Card */}
+                  <div style={{
+                    background: "var(--sd-zinc-50)",
+                    border: "1px solid var(--sd-zinc-200)",
+                    borderRadius: "10px",
+                    padding: "12px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", textTransform: "uppercase", fontWeight: 700 }}>
+                        Current Stock ({currentRestockUnit}):
+                      </span>
+                      <div className="font-heading" style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--sd-black)", marginTop: "2px" }}>
+                        {currentRestockStock} <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--sd-zinc-500)" }}>packs</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", fontSize: "0.76rem", color: "var(--sd-zinc-500)" }}>
+                      <div>Total Product Stock: <strong>{restockTarget.stock || 0}</strong></div>
+                      <div>HSN: <strong>{restockTarget.hsnCode}</strong></div>
+                    </div>
+                  </div>
 
-              {/* Calculation Preview Box */}
-              <div style={{
-                background: "var(--sd-black)",
-                color: "var(--sd-white)",
-                borderRadius: "12px",
-                padding: "12px 14px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", textTransform: "uppercase", fontWeight: 700 }}>
-                    Calculation Preview
+                  {/* Incoming Quantity */}
+                  <div>
+                    <label className="input-label">
+                      New Incoming Quantity for {currentRestockUnit} (+ புதிய வரவு) <span className="input-required">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 50, 100, 250"
+                      value={incomingQty}
+                      onChange={(e) => setIncomingQty(Math.max(1, parseInt(e.target.value) || 0))}
+                      required
+                      autoFocus
+                      className="text-input"
+                      style={{ fontSize: "1.1rem", fontWeight: 800 }}
+                    />
                   </div>
-                  <div style={{ fontSize: "0.82rem", color: "var(--sd-zinc-300)", marginTop: "2px" }}>
-                    {restockTarget.stock || 0} + {incomingQty || 0}
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", textTransform: "uppercase", fontWeight: 700 }}>
-                    New Total Stock
-                  </div>
-                  <div className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 900, color: "#FFFFFF" }}>
-                    {(Number(restockTarget.stock) || 0) + (Number(incomingQty) || 0)} {restockTarget.unit}
-                  </div>
-                </div>
-              </div>
 
-              {/* Modal Buttons */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "6px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowRestockModal(false)}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-accent"
-                >
-                  Confirm & Update Stock
-                </button>
-              </div>
-            </form>
+                  {/* Batch / Note */}
+                  <div>
+                    <label className="input-label">Batch / Lot / Mfg Note (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Batch #OCT-22B, Production Date 22/10/2026"
+                      value={batchNote}
+                      onChange={(e) => setBatchNote(e.target.value)}
+                      className="text-input"
+                    />
+                  </div>
+
+                  {/* Calculation Preview Box */}
+                  <div style={{
+                    background: "var(--sd-black)",
+                    color: "var(--sd-white)",
+                    borderRadius: "12px",
+                    padding: "12px 14px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", textTransform: "uppercase", fontWeight: 700 }}>
+                        Calculation Preview ({currentRestockUnit})
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "var(--sd-zinc-300)", marginTop: "2px" }}>
+                        {currentRestockStock} + {incomingQty || 0}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", textTransform: "uppercase", fontWeight: 700 }}>
+                        New Stock for {currentRestockUnit}
+                      </div>
+                      <div className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 900, color: "#FFFFFF" }}>
+                        {currentRestockStock + (Number(incomingQty) || 0)} packs
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modal Buttons */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "6px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowRestockModal(false)}
+                      className="btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-accent"
+                    >
+                      Confirm & Update Stock
+                    </button>
+                  </div>
+                </form>
+              );
+            })()}
           </div>
         </div>
       )}

@@ -36,11 +36,14 @@ import {
   Settings,
   Tag,
   Edit2,
-  Loader2
+  Loader2,
+  FileSpreadsheet,
+  BarChart3
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import { compressImage, formatBytes } from "../utils/imageCompressor";
 import DateRangePicker from "./DateRangePicker";
+import FinanceReportModal from "./FinanceReportModal";
 
 // PDF Detection Helpers
 const isPdfFile = (file) => {
@@ -85,8 +88,12 @@ export default function FinanceERP() {
     addExpenseCategory,
     updateExpenseCategory,
     deleteExpenseCategory,
-    showConfirmModal
+    showConfirmModal,
+    BUSINESS_INFO = {}
   } = usePOS();
+
+  // Report Modal State
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Primary Split Switcher: "raw_materials" or "other_expenses"
   const [activeSection, setActiveSection] = useState("raw_materials"); // 'raw_materials' or 'other_expenses'
@@ -835,7 +842,31 @@ export default function FinanceERP() {
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              style={{
+                background: "var(--sd-black)",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "10px",
+                padding: "9px 16px",
+                fontSize: "0.82rem",
+                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+              }}
+              title="Generate Purchases & Expenses Audit Statement"
+            >
+              <FileSpreadsheet size={16} />
+              <span>Generate Report</span>
+            </button>
+
             <button
               type="button"
               onClick={handleOpenRawMaterialModal}
@@ -1042,6 +1073,30 @@ export default function FinanceERP() {
               Filtered Outflow: {formatCurrency(totalAllExpenses)}
             </span>
           )}
+
+          {/* Quick Report Action */}
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            style={{
+              background: "var(--sd-black)",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "8px",
+              padding: "6px 12px",
+              fontSize: "0.74rem",
+              fontWeight: 800,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              cursor: "pointer",
+              transition: "opacity 0.15s ease"
+            }}
+            title="Open Purchase & Expenses Report Generator"
+          >
+            <BarChart3 size={13} />
+            <span>Report</span>
+          </button>
         </div>
       </div>
 
@@ -3524,6 +3579,22 @@ export default function FinanceERP() {
           </div>
         </div>
       )}
+
+      {/* Purchase & Expenses Report Generator Modal */}
+      <FinanceReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        expenses={expenses}
+        orders={orders}
+        rawMaterials={rawMaterials}
+        suppliers={suppliers}
+        expenseCategories={expenseCategories}
+        BUSINESS_INFO={BUSINESS_INFO}
+        initialSection={activeSection}
+        initialDatePreset={datePreset}
+        initialStartDate={startDate}
+        initialEndDate={endDate}
+      />
     </div>
   );
 }

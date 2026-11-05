@@ -252,6 +252,9 @@ export function POSProvider({ children }) {
     }
   });
 
+  // Dynamic Staff Members & Permissions State
+  const [staffMembers, setStaffMembers] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
 
@@ -356,6 +359,7 @@ export function POSProvider({ children }) {
     let unsubscribeCouriers = () => {};
     let unsubscribeMixers = () => {};
     let unsubscribeSettings = () => {};
+    let unsubscribeStaff = () => {};
 
     try {
       // 1. Products listener
@@ -525,6 +529,16 @@ export function POSProvider({ children }) {
         console.warn("Firestore settings listener note:", err.message);
       });
 
+      // 13. Dynamic Staff Members & Permissions listener
+      const staffCol = collection(db, "billing_staff");
+      unsubscribeStaff = onSnapshot(staffCol, (snapshot) => {
+        const staff = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        staff.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        setStaffMembers(staff);
+      }, (err) => {
+        console.warn("Firestore staff listener note:", err.message);
+      });
+
     } catch (error) {
       console.warn("Firebase listener initialization error:", error);
       setLoading(false);
@@ -543,6 +557,7 @@ export function POSProvider({ children }) {
       unsubscribeCouriers();
       unsubscribeMixers();
       unsubscribeSettings();
+      unsubscribeStaff();
     };
   }, []);
 
@@ -1786,6 +1801,73 @@ export function POSProvider({ children }) {
     }
   };
 
+  // Staff & Role-Based Access Control (RBAC) CRUD
+  const addStaff = async (staffData) => {
+    const username = String(staffData.username || "").toLowerCase().trim();
+    if (!username) throw new Error("Staff username is required.");
+
+    const exists = staffMembers.some(s => s.username?.toLowerCase() === username);
+    if (exists) {
+      throw new Error(`Username "${username}" is already taken. Please choose another username.`);
+    }
+
+    const docData = {
+      name: String(staffData.name || "").trim(),
+      username,
+      email: staffData.email ? String(staffData.email).toLowerCase().trim() : "",
+      phone: staffData.phone ? String(staffData.phone).trim() : "",
+      role: staffData.role ? String(staffData.role).trim() : "Staff",
+      password: String(staffData.password || "").trim(),
+      permissions: staffData.permissions || {},
+      isActive: staffData.isActive !== false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    const docRef = await addDoc(collection(db, "billing_staff"), docData);
+    const newStaff = { id: docRef.id, ...docData };
+    setStaffMembers(prev => [...prev.filter(s => s.id !== docRef.id), newStaff].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+    return newStaff;
+  };
+
+  const updateStaff = async (staffId, updates) => {
+    if (!staffId) throw new Error("Staff ID is required.");
+
+    if (updates.username) {
+      const username = String(updates.username).toLowerCase().trim();
+      const exists = staffMembers.some(s => s.id !== staffId && s.username?.toLowerCase() === username);
+      if (exists) {
+        throw new Error(`Username "${username}" is already in use by another staff member.`);
+      }
+      updates.username = username;
+    }
+
+    const docRef = doc(db, "billing_staff", staffId);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+
+    setStaffMembers(prev => prev.map(s => s.id === staffId ? { ...s, ...updates } : s));
+  };
+
+  const deleteStaff = async (staffId) => {
+    if (!staffId) throw new Error("Staff ID is required.");
+    await deleteDoc(doc(db, "billing_staff", staffId));
+    setStaffMembers(prev => prev.filter(s => s.id !== staffId));
+  };
+
+  const toggleStaffStatus = async (staffId, currentStatus) => {
+    if (!staffId) return;
+    const docRef = doc(db, "billing_staff", staffId);
+    const nextStatus = !currentStatus;
+    await updateDoc(docRef, {
+      isActive: nextStatus,
+      updatedAt: serverTimestamp()
+    });
+    setStaffMembers(prev => prev.map(s => s.id === staffId ? { ...s, isActive: nextStatus } : s));
+  };
+
   return (
     <POSContext.Provider
       value={{
@@ -1907,6 +1989,13 @@ export function POSProvider({ children }) {
         updateMixer,
         deleteMixer,
         duplicateMixer,
+
+        // Staff & Role-Based Access Control (RBAC)
+        staffMembers,
+        addStaff,
+        updateStaff,
+        deleteStaff,
+        toggleStaffStatus,
 
         // Global Delete / Action Confirm Modal
         showConfirmModal

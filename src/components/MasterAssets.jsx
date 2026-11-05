@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Package, Store, Boxes, IndianRupee, Tag, Building2, Settings as SettingsIcon } from "lucide-react";
 import ProductsManager from "./ProductsManager";
 import CustomersManager from "./CustomersManager";
@@ -7,6 +7,7 @@ import SuppliersManager from "./SuppliersManager";
 import RawMaterialsManager from "./RawMaterialsManager";
 import SettingsManager from "./SettingsManager";
 import { usePOS } from "../context/POSContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function MasterAssets({ 
   activeSubTab = "products", 
@@ -14,6 +15,28 @@ export default function MasterAssets({
   onStartBillForCustomer 
 }) {
   const { products, customers, suppliers = [], expenseCategories = [], rawMaterials = [] } = usePOS();
+  const { hasPermission } = useAuth();
+
+  const canAccessProducts = hasPermission("products");
+  const canAccessCustomers = hasPermission("customers");
+  const canAccessFinance = hasPermission("finance_assets");
+  const canAccessSettings = hasPermission("settings");
+
+  // Auto-switch to first available sub-tab if current sub-tab is restricted
+  useEffect(() => {
+    const isCurrentAllowed = 
+      ((activeSubTab === "products" || activeSubTab === "categories") && canAccessProducts) ||
+      ((activeSubTab === "customers" || activeSubTab === "customer-categories" || activeSubTab === "couriers") && canAccessCustomers) ||
+      ((activeSubTab === "finance" || activeSubTab === "suppliers" || activeSubTab === "expense-categories" || activeSubTab === "raw-materials") && canAccessFinance) ||
+      ((activeSubTab === "settings" || activeSubTab === "payment-details") && canAccessSettings);
+
+    if (!isCurrentAllowed) {
+      if (canAccessProducts) onSubTabChange("products");
+      else if (canAccessCustomers) onSubTabChange("customers");
+      else if (canAccessFinance) onSubTabChange("finance");
+      else if (canAccessSettings) onSubTabChange("settings");
+    }
+  }, [activeSubTab, canAccessProducts, canAccessCustomers, canAccessFinance, canAccessSettings, onSubTabChange]);
 
   const [financeSubView, setFinanceSubView] = useState(() => {
     if (activeSubTab === "suppliers") return "suppliers";
@@ -73,105 +96,113 @@ export default function MasterAssets({
             overflowX: "auto",
             maxWidth: "100%"
           }}>
-            <button
-              type="button"
-              onClick={() => onSubTabChange("products")}
-              className={`pos-mobile-toggle-btn ${isProductsActive ? "active" : ""}`}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "10px",
-                fontSize: "0.82rem",
-                fontWeight: isProductsActive ? 800 : 700,
-                background: isProductsActive ? "var(--sd-black)" : "transparent",
-                color: isProductsActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease",
-                boxShadow: isProductsActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
-              }}
-            >
-              <Package size={15} />
-              <span>Products ({products.length})</span>
-            </button>
+            {canAccessProducts && (
+              <button
+                type="button"
+                onClick={() => onSubTabChange("products")}
+                className={`pos-mobile-toggle-btn ${isProductsActive ? "active" : ""}`}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  fontSize: "0.82rem",
+                  fontWeight: isProductsActive ? 800 : 700,
+                  background: isProductsActive ? "var(--sd-black)" : "transparent",
+                  color: isProductsActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s ease",
+                  boxShadow: isProductsActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+                }}
+              >
+                <Package size={15} />
+                <span>Products ({products.length})</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => onSubTabChange("customers")}
-              className={`pos-mobile-toggle-btn ${isCustomersActive ? "active" : ""}`}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "10px",
-                fontSize: "0.82rem",
-                fontWeight: isCustomersActive ? 800 : 700,
-                background: isCustomersActive ? "var(--sd-black)" : "transparent",
-                color: isCustomersActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease",
-                boxShadow: isCustomersActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
-              }}
-            >
-              <Store size={15} />
-              <span>Customers ({customers.length})</span>
-            </button>
+            {canAccessCustomers && (
+              <button
+                type="button"
+                onClick={() => onSubTabChange("customers")}
+                className={`pos-mobile-toggle-btn ${isCustomersActive ? "active" : ""}`}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  fontSize: "0.82rem",
+                  fontWeight: isCustomersActive ? 800 : 700,
+                  background: isCustomersActive ? "var(--sd-black)" : "transparent",
+                  color: isCustomersActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s ease",
+                  boxShadow: isCustomersActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+                }}
+              >
+                <Store size={15} />
+                <span>Customers ({customers.length})</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => onSubTabChange("finance")}
-              className={`pos-mobile-toggle-btn ${isFinanceActive ? "active" : ""}`}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "10px",
-                fontSize: "0.82rem",
-                fontWeight: isFinanceActive ? 800 : 700,
-                background: isFinanceActive ? "var(--sd-black)" : "transparent",
-                color: isFinanceActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease",
-                boxShadow: isFinanceActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
-              }}
-            >
-              <IndianRupee size={15} />
-              <span>Finance</span>
-            </button>
+            {canAccessFinance && (
+              <button
+                type="button"
+                onClick={() => onSubTabChange("finance")}
+                className={`pos-mobile-toggle-btn ${isFinanceActive ? "active" : ""}`}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  fontSize: "0.82rem",
+                  fontWeight: isFinanceActive ? 800 : 700,
+                  background: isFinanceActive ? "var(--sd-black)" : "transparent",
+                  color: isFinanceActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s ease",
+                  boxShadow: isFinanceActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+                }}
+              >
+                <IndianRupee size={15} />
+                <span>Finance</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => onSubTabChange("settings")}
-              className={`pos-mobile-toggle-btn ${isSettingsActive ? "active" : ""}`}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "10px",
-                fontSize: "0.82rem",
-                fontWeight: isSettingsActive ? 800 : 700,
-                background: isSettingsActive ? "var(--sd-black)" : "transparent",
-                color: isSettingsActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease",
-                boxShadow: isSettingsActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
-              }}
-            >
-              <SettingsIcon size={15} />
-              <span>Settings</span>
-            </button>
+            {canAccessSettings && (
+              <button
+                type="button"
+                onClick={() => onSubTabChange("settings")}
+                className={`pos-mobile-toggle-btn ${isSettingsActive ? "active" : ""}`}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  fontSize: "0.82rem",
+                  fontWeight: isSettingsActive ? 800 : 700,
+                  background: isSettingsActive ? "var(--sd-black)" : "transparent",
+                  color: isSettingsActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s ease",
+                  boxShadow: isSettingsActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+                }}
+              >
+                <SettingsIcon size={15} />
+                <span>Settings</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

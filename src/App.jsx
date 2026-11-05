@@ -14,9 +14,40 @@ import InvoiceModal from "./components/InvoiceModal";
 import MixersManager from "./components/MixersManager";
 
 function POSApp() {
-  const [activeTab, setActiveTab] = useState("stats"); // 'stats' (Overview) default on website load
-  const [assetsSubTab, setAssetsSubTab] = useState("products"); // 'products', 'categories', 'customers'
+  const { hasPermission, isSuperAdmin, isStaff } = useAuth();
+
+  const isTabAllowed = (tab) => {
+    if (tab === "stats") return hasPermission("stats");
+    if (tab === "pos") return hasPermission("pos");
+    if (tab === "orders") return hasPermission("orders");
+    if (tab === "finance") return hasPermission("finance");
+    if (tab === "mixers") return hasPermission("mixers");
+    if (tab === "assets" || tab === "products" || tab === "categories" || tab === "customers" || tab === "customer-categories" || tab === "suppliers" || tab === "expense-categories" || tab === "raw-materials" || tab === "settings" || tab === "payment-details") {
+      return hasPermission("products") || hasPermission("customers") || hasPermission("finance_assets") || hasPermission("settings");
+    }
+    return false;
+  };
+
+  const getFirstAllowedTab = () => {
+    if (hasPermission("stats")) return "stats";
+    if (hasPermission("pos")) return "pos";
+    if (hasPermission("orders")) return "orders";
+    if (hasPermission("finance")) return "finance";
+    if (hasPermission("mixers")) return "mixers";
+    if (hasPermission("products") || hasPermission("customers") || hasPermission("finance_assets") || hasPermission("settings")) return "assets";
+    return "stats";
+  };
+
+  const [activeTab, setActiveTab] = useState(() => getFirstAllowedTab());
+  const [assetsSubTab, setAssetsSubTab] = useState("products");
   const [activeInvoice, setActiveInvoice] = useState(null);
+
+  // Auto-redirect if current tab is restricted
+  React.useEffect(() => {
+    if (!isTabAllowed(activeTab)) {
+      setActiveTab(getFirstAllowedTab());
+    }
+  }, [hasPermission, activeTab]);
 
   const { 
     loadDraftIntoCart, 
@@ -25,8 +56,10 @@ function POSApp() {
     setLastGeneratedInvoice 
   } = usePOS();
 
-  // Navigation handler that seamlessly routes master sub-tabs (customers, customer-categories, products, categories, suppliers, raw-materials, settings)
+  // Navigation handler that seamlessly routes master sub-tabs with permission safety
   const handleNavigate = (tab, subTab = null) => {
+    if (!isTabAllowed(tab)) return;
+
     if (tab === "customers" || tab === "customer-categories" || tab === "products" || tab === "categories" || tab === "suppliers" || tab === "expense-categories" || tab === "raw-materials" || tab === "settings" || tab === "payment-details") {
       setActiveTab("assets");
       setAssetsSubTab(tab === "payment-details" ? "settings" : tab);

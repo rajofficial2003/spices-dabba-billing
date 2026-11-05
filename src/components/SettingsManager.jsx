@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { usePOS } from "../context/POSContext";
 import { useAuth } from "../context/AuthContext";
+import StaffManager from "./StaffManager";
 import { 
   CreditCard, 
   Upload, 
@@ -16,13 +17,14 @@ import {
   Save,
   Trash2,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Users
 } from "lucide-react";
 import { compressImage, uploadProductImage } from "../utils/imageCompressor";
 
 export default function SettingsManager() {
   const { BUSINESS_INFO, updatePaymentSettings, showConfirmModal } = usePOS();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isSuperAdmin } = useAuth();
 
   const [activeSection, setActiveSection] = useState("payment-details");
 
@@ -230,6 +232,31 @@ export default function SettingsManager() {
             <CreditCard size={14} />
             <span>Payment Details</span>
           </button>
+
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveSection("staff-management")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "0.80rem",
+                fontWeight: activeSection === "staff-management" ? 800 : 600,
+                background: activeSection === "staff-management" ? "var(--sd-black)" : "transparent",
+                color: activeSection === "staff-management" ? "#FFFFFF" : "var(--sd-zinc-700)",
+                border: "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: activeSection === "staff-management" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <Users size={14} />
+              <span>Staff & Permissions (ஊழியர்கள்)</span>
+            </button>
+          )}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -277,13 +304,17 @@ export default function SettingsManager() {
         </div>
       </div>
 
-      {/* Main Grid: Form + Invoice Preview */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-        gap: "24px",
-        alignItems: "start"
-      }}>
+      {activeSection === "staff-management" && isSuperAdmin ? (
+        <StaffManager />
+      ) : (
+        <>
+          {/* Main Grid: Form + Invoice Preview */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: "24px",
+            alignItems: "start"
+          }}>
         {/* Form Card */}
         <div style={{
           background: "#FFFFFF",
@@ -723,6 +754,8 @@ export default function SettingsManager() {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Staff Account & Session Management Card */}
       <div style={{
@@ -753,10 +786,10 @@ export default function SettingsManager() {
           </div>
           <div>
             <h4 style={{ fontSize: "0.95rem", fontWeight: 800, margin: 0, color: "var(--sd-black)" }}>
-              Staff Account & Session Management
+              Account & Session Management
             </h4>
             <div style={{ fontSize: "0.78rem", color: "var(--sd-zinc-500)", marginTop: "2px" }}>
-              Signed in as <strong style={{ color: "var(--sd-black)" }}>{currentUser?.email || "Staff User"}</strong> &bull; Authenticated with Firebase
+              Signed in as <strong style={{ color: "var(--sd-black)" }}>{currentUser?.name || currentUser?.email || "User"}</strong> &bull; {isSuperAdmin ? "Super Admin (Full Access)" : `Employee Role: ${currentUser?.role || "Staff"}`}
             </div>
           </div>
         </div>

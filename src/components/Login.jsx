@@ -10,7 +10,8 @@ import {
   Loader2, 
   CheckCircle2, 
   LogIn, 
-  KeyRound
+  KeyRound,
+  User
 } from "lucide-react";
 import { BUSINESS_INFO } from "../data/initialData";
 
@@ -30,12 +31,15 @@ export default function Login() {
 
   // Friendly error formatter
   const formatAuthError = (err) => {
+    if (err.message && !err.code) {
+      return err.message;
+    }
     const code = err.code || "";
     if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
-      return "Incorrect email or password. Please check your credentials.";
+      return "Incorrect email/username or password. Please check your credentials.";
     }
     if (code === "auth/invalid-email") {
-      return "Please enter a valid email address.";
+      return "Please enter a valid email or staff username.";
     }
     if (code === "auth/too-many-requests") {
       return "Too many failed attempts. Please wait a few moments or reset your password.";
@@ -179,7 +183,7 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {/* Email Field */}
+            {/* Email or Username Field */}
             <div>
               <label style={{
                 display: "block",
@@ -188,15 +192,16 @@ export default function Login() {
                 color: "#18181B",
                 marginBottom: "6px"
               }}>
-                Email Address
+                Email or Staff Username (மின்னஞ்சல் / பயனர் பெயர்)
               </label>
               <div style={{ position: "relative" }}>
-                <Mail size={16} color="#71717A" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                <User size={16} color="#71717A" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
                 <input
-                  type="email"
+                  type="text"
                   required
                   autoFocus
-                  placeholder="admin@spicesdabba.com"
+                  autoComplete="username"
+                  placeholder="admin@spicesdabba.com or staff username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{

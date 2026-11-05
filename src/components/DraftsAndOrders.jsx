@@ -17,10 +17,13 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  Truck
+  Truck,
+  BarChart3,
+  FileSpreadsheet
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import DateRangePicker from "./DateRangePicker";
+import OrdersReportModal from "./OrdersReportModal";
 
 const formatAddress = (addr) => {
   if (!addr) return "";
@@ -37,12 +40,17 @@ const formatAddress = (addr) => {
 export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
   const { 
     orders, 
+    customers = [],
+    BUSINESS_INFO = {},
     deleteOrder, 
     markOrderPaymentStatus,
     courierPartners = [],
     updateOrderShippingDetails,
     showConfirmModal
   } = usePOS();
+
+  // Reports Generator Modal State
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Dispatch & Courier Tracking Edit State
   const [shippingModalOrder, setShippingModalOrder] = useState(null);
@@ -251,17 +259,43 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
           </p>
         </div>
 
-        {/* Search */}
-        <div style={{ position: "relative", width: "100%", maxWidth: "340px", minWidth: 0, flex: "1 1 220px" }}>
-          <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
-          <input
-            type="text"
-            placeholder="Search by Shop, Phone, Bill #..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="text-input"
-            style={{ width: "100%", paddingLeft: "36px", paddingRight: "12px", fontSize: "0.82rem" }}
-          />
+        {/* Actions: Search & Generate Report */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 360px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: "280px", minWidth: 0, flex: "1 1 180px" }}>
+            <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
+            <input
+              type="text"
+              placeholder="Search by Shop, Phone, Bill #..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="text-input"
+              style={{ width: "100%", paddingLeft: "36px", paddingRight: "12px", fontSize: "0.82rem" }}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "10px",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              background: "var(--sd-black)",
+              color: "#FFFFFF",
+              border: "none",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
+              whiteSpace: "nowrap",
+              transition: "all 0.15s ease"
+            }}
+          >
+            <BarChart3 size={15} />
+            <span>Generate Report</span>
+          </button>
         </div>
       </div>
 
@@ -383,6 +417,31 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
               Revenue: {formatCurrency(filteredTotalAmount)}
             </span>
           )}
+
+          {/* Quick Report Button */}
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              background: "#FFFFFF",
+              border: "1px solid var(--sd-zinc-300)",
+              borderRadius: "8px",
+              padding: "6px 11px",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              color: "var(--sd-zinc-800)",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+            }}
+            title="Generate & export report for this filtered view"
+          >
+            <FileSpreadsheet size={14} color="#16A34A" />
+            <span>Report</span>
+          </button>
         </div>
       </div>
 
@@ -1016,6 +1075,17 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
           </div>
         </div>
       )}
+
+      {/* Sales & Orders Report Generator Modal */}
+      <OrdersReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        orders={orders}
+        customers={customers}
+        BUSINESS_INFO={BUSINESS_INFO}
+        initialFilterTab={filterTab}
+        initialDatePreset={datePreset}
+      />
     </div>
   );
 }

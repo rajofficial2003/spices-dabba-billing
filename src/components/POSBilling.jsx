@@ -958,9 +958,10 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {cartItems.map((item, index) => {
                     const itemRate = Number(item.wholesalePrice) || 0;
-                    const itemTotal = Math.round(itemRate * item.quantity * 100) / 100;
+                    const itemBaseTotal = Math.round(itemRate * item.quantity * 100) / 100;
                     const itemGstPercent = item.isSample ? 0 : (item.gstPercent !== undefined ? Number(item.gstPercent) : 5);
-                    const itemGstAmount = Math.round((itemTotal * itemGstPercent / 100) * 100) / 100;
+                    const itemGstAmount = Math.round((itemBaseTotal * itemGstPercent / 100) * 100) / 100;
+                    const itemTotalWithGst = Math.round((itemBaseTotal + itemGstAmount) * 100) / 100;
 
                     return (
                       <div
@@ -1024,7 +1025,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                                 padding: "1px 6px",
                                 borderRadius: "3px"
                               }}>
-                                GST: {item.isSample ? "0%" : `${itemGstPercent}% (+₹${itemGstAmount.toFixed(2)})`}
+                                GST: {item.isSample ? "0%" : `${itemGstPercent}%`}
                               </span>
                             </div>
                           </div>
@@ -1163,26 +1164,27 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "flex-end",
-                            minWidth: "75px"
+                            minWidth: "85px"
                           }}>
                             <div style={{
                               fontWeight: 900,
-                              fontSize: "1rem",
+                              fontSize: "1.05rem",
                               color: item.isSample ? "var(--sd-red)" : "var(--sd-black)",
-                              textAlign: "right"
+                              textAlign: "right",
+                              letterSpacing: "-0.3px"
                             }}>
-                              {item.isSample ? "₹0.00" : `₹${itemTotal.toFixed(2)}`}
+                              {item.isSample ? "₹0.00" : `₹${itemTotalWithGst.toFixed(2)}`}
                             </div>
                             {!item.isSample && (
                               <div style={{
                                 fontSize: "0.72rem",
-                                fontWeight: 800,
-                                color: "var(--sd-red)",
+                                fontWeight: 700,
+                                color: "var(--sd-zinc-500)",
                                 marginTop: "1px",
                                 textAlign: "right",
                                 whiteSpace: "nowrap"
                               }}>
-                                +₹{itemGstAmount.toFixed(2)} ({itemGstPercent}% GST)
+                                (Incl. ₹{itemGstAmount.toFixed(2)} GST)
                               </div>
                             )}
                           </div>

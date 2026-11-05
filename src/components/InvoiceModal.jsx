@@ -427,7 +427,7 @@ export default function InvoiceModal({ order, onClose }) {
           {/* Header row: Company Details & Invoice Metadata */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #09090b", paddingBottom: "16px", marginBottom: "16px" }}>
             {/* Company Info */}
-            <div style={{ display: "flex", gap: "14px" }}>
+            <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
               <div style={{
                 width: "60px",
                 height: "60px",
@@ -448,28 +448,11 @@ export default function InvoiceModal({ order, onClose }) {
               </div>
 
               <div>
-                <div style={{
-                  display: "inline-block",
-                  background: "#09090b",
-                  color: "#FFFFFF",
-                  fontSize: "0.68rem",
-                  fontWeight: 800,
-                  padding: "1px 6px",
-                  borderRadius: "3px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  marginBottom: "4px"
-                }}>
-                  From (Sender)
-                </div>
-                <h1 className="font-heading" style={{ fontSize: "1.45rem", fontWeight: 900, color: "#09090b", margin: 0, lineHeight: 1.1 }}>
+                <h1 className="font-heading" style={{ fontSize: "1.5rem", fontWeight: 900, color: "#09090b", margin: 0, lineHeight: 1.1 }}>
                   JEES foods
                 </h1>
-                <div style={{ fontSize: "0.8rem", color: "#52525B", marginTop: "3px" }}>
-                  {BUSINESS_INFO.address}
-                </div>
-                <div style={{ fontSize: "0.8rem", color: "#09090b", marginTop: "2px" }}>
-                  <strong>GSTIN:</strong> {BUSINESS_INFO.gstin} | <strong>Ph:</strong> {BUSINESS_INFO.phonePrimary}
+                <div style={{ fontSize: "0.82rem", color: "#52525B", marginTop: "3px", fontWeight: 600 }}>
+                  Spices Dabba &bull; We Prepare . You Cook
                 </div>
               </div>
             </div>
@@ -498,20 +481,39 @@ export default function InvoiceModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* Retailer / Billed To & Shipping Address Section */}
+          {/* Address Section: FROM | BILL TO | SHIPP TO */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: "12px",
             background: "#F8F9FA",
-            padding: "12px 16px",
+            padding: "12px 14px",
             borderRadius: "6px",
             border: "1px solid #E4E4E7",
             marginBottom: "16px",
-            fontSize: "0.84rem"
+            fontSize: "0.80rem"
           }}>
-            {/* BILLED TO / BUYER */}
+            {/* FROM / SENDER ADDRESS */}
             <div>
+              <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
+                From
+              </div>
+              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
+                JEES foods
+              </div>
+              <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>
+                Address: {BUSINESS_INFO.address}
+              </div>
+              <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
+                Phone: {BUSINESS_INFO.phonePrimary}{BUSINESS_INFO.phoneSecondary ? `, ${BUSINESS_INFO.phoneSecondary}` : ""}
+              </div>
+              <div style={{ color: "#52525B", marginTop: "2px" }}>
+                GSTIN: <strong style={{ fontFamily: "monospace", color: "#09090b" }}>{BUSINESS_INFO.gstin}</strong>
+              </div>
+            </div>
+
+            {/* BILLED TO / BUYER */}
+            <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "12px" }}>
               <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
                 Bill To
               </div>
@@ -535,10 +537,10 @@ export default function InvoiceModal({ order, onClose }) {
             </div>
 
             {/* SHIPPING ADDRESS / DISPATCH TO */}
-            <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "16px" }}>
+            <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "12px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
                 <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
-                  To / Shipp To
+                  Shipp To
                 </div>
               </div>
               <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>

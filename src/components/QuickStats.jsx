@@ -279,7 +279,7 @@ export default function QuickStats({ onNavigate }) {
       </div>
 
       {/* Secondary Row: Raw Materials Procurement & Active Drafts */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+      <div className="quickstats-secondary-grid">
         {/* Raw Materials Highlight */}
         <div 
           className="bw-card" 
@@ -348,7 +348,7 @@ export default function QuickStats({ onNavigate }) {
       </div>
 
       {/* Main Two Column Section: Expense Breakdown & Recent Cash Flow Activity */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
+      <div className="quickstats-main-grid">
         
         {/* Left: Expense Breakdown by Category */}
         <div className="bw-card" style={{ padding: "20px" }}>

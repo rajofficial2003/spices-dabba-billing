@@ -766,7 +766,7 @@ export default function MixersManager() {
       {/* Stats Cards Row */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
         gap: "12px",
         marginBottom: "20px"
       }}>
@@ -980,11 +980,7 @@ export default function MixersManager() {
           </button>
         </div>
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-          gap: "16px"
-        }}>
+        <div className="responsive-cards-grid">
           {filteredMixers.map(mixer => {
             const totalGrams = Number((mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0).toFixed(2));
             const customWeight = Number(mixer.customisedWeight) || Number(mixer.baseWeightGrams) || totalGrams;

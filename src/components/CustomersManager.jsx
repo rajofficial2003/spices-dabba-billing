@@ -1622,7 +1622,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                <div className="form-grid-3col">
                   <div>
                     <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
                       City <span className="input-required">*</span>
@@ -1739,7 +1739,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                    <div className="form-grid-3col">
                       <div>
                         <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-600)", display: "block", marginBottom: "4px" }}>
                           City <span className="input-required">*</span>

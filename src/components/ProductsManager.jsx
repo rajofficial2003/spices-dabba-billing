@@ -1213,7 +1213,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
               )}
 
               {/* Names */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+              <div className="form-grid-2col">
                 <div>
                   <label className="input-label">
                     Name (English) <span className="input-required">*</span>
@@ -1241,7 +1241,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
               </div>
 
               {/* Category & Subcategory */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+              <div className="form-grid-2col">
                 <div>
                   <label className="input-label">
                     Main Category <span className="input-required">*</span>
@@ -1292,7 +1292,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
               </div>
 
               {/* HSN Code, GST Rate (%) & Low Stock Alert */}
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 1fr", gap: "10px", marginBottom: "12px" }}>
+              <div className="form-grid-3col">
                 <div>
                   <label className="input-label">
                     GST HSN Code <span className="input-required">*</span>

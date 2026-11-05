@@ -421,11 +421,7 @@ export default function StaffManager() {
           )}
         </div>
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))",
-          gap: "16px"
-        }}>
+        <div className="responsive-cards-grid">
           {filteredStaff.map((staff) => {
             const allowedList = ALL_PERMISSIONS.filter(p => staff.permissions?.[p.key]);
             const isStaffActive = staff.isActive !== false;
@@ -672,7 +668,7 @@ export default function StaffManager() {
               )}
 
               {/* Grid: Basic Details */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+              <div className="form-grid-2col">
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-black)", marginBottom: "4px" }}>
                     Full Name <span style={{ color: "#DC2626" }}>*</span>
@@ -716,7 +712,7 @@ export default function StaffManager() {
               </div>
 
               {/* Grid: Username & Password */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+              <div className="form-grid-2col">
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-black)", marginBottom: "4px" }}>
                     Login ID (Username or Email) <span style={{ color: "#DC2626" }}>*</span>
@@ -788,7 +784,7 @@ export default function StaffManager() {
               </div>
 
               {/* Phone & Status */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "18px" }}>
+              <div className="form-grid-2col">
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--sd-black)", marginBottom: "4px" }}>
                     Phone Number (Optional)
@@ -924,7 +920,7 @@ export default function StaffManager() {
                 </div>
 
                 {/* Individual Module Checkbox List */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))", gap: "10px" }}>
                   {ALL_PERMISSIONS.map((perm) => {
                     const isChecked = Boolean(formData.permissions[perm.key]);
 

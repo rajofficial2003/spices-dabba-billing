@@ -890,7 +890,7 @@ export default function FinanceERP() {
         {/* 4 Executive KPI Cards */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
           gap: "12px"
         }}>
           {/* Card 1: Billing Inflow */}
@@ -2090,8 +2090,9 @@ export default function FinanceERP() {
                   </button>
                 </div>
 
-                {/* Items Repeater Rows */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {/* Items Repeater Rows with horizontal scroll for mobile/tablet */}
+                <div style={{ overflowX: "auto", paddingBottom: "6px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "680px" }}>
                   {rawBillItems.map((item, idx) => {
                     const rowTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
 
@@ -2310,6 +2311,7 @@ export default function FinanceERP() {
                       </div>
                     );
                   })}
+                  </div>
                 </div>
 
                 {/* Grand Total Bar */}

@@ -434,10 +434,10 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 @media (max-width: 768px) {
   .responsive-page-container {
-    padding: 12px 14px;
+    padding: 10px 12px;
   }
   .app-container {
-    padding-bottom: 74px; /* Space for fixed mobile bottom navigation */
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important; /* Space for fixed mobile bottom navigation + safe area */
   }
 }
 
@@ -458,6 +458,12 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
 }
 
+@media (max-width: 360px) {
+  .responsive-product-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 @media (min-width: 641px) and (max-width: 1024px) {
   .responsive-product-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -465,10 +471,10 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
 }
 
-/* Responsive Cards Grid (Orders, Retailers, Categories) */
+/* Responsive Cards Grid (Orders, Retailers, Categories, Staff, Mixers) */
 .responsive-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 14px;
   width: 100%;
   max-width: 100%;
@@ -487,7 +493,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 /* Responsive Metrics Grid (Overview Stats) */
 .responsive-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
   gap: 14px;
   margin-bottom: 24px;
 }
@@ -500,12 +506,77 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
 }
 
+@media (max-width: 360px) {
+  .responsive-metrics-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* QuickStats Helper Responsive Grids */
+.quickstats-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.quickstats-main-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .quickstats-secondary-grid,
+  .quickstats-main-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+}
+
+/* Form Helper Responsive Grids */
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 540px) {
+  .form-grid-2col {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}
+
+.form-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 640px) {
+  .form-grid-3col {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}
+
 /* Desktop Navigation vs Mobile Bottom Navigation */
 .desktop-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.desktop-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-bottom-nav {
@@ -522,14 +593,16 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(12px);
     border-top: 1px solid var(--sd-zinc-200);
     z-index: 55;
     align-items: center;
     justify-content: space-around;
-    padding: 0 4px;
+    padding-left: 4px;
+    padding-right: 4px;
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
   }
   .mobile-nav-btn {
@@ -613,21 +686,45 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
 }
 
-/* Floating Bottom Cart Bar for On-Field Mobile Billing */
+/* Floating Bottom Cart Bar for On-Field Mobile & Tablet Billing */
 .mobile-floating-cart-bar {
   display: none;
 }
 
-@media (max-width: 1024px) {
+/* On Tablets (769px - 1024px), Bottom Nav is hidden, so Cart Bar sits neatly at 16px from bottom */
+@media (min-width: 769px) and (max-width: 1024px) {
   .mobile-floating-cart-bar {
     display: flex;
     position: fixed;
-    bottom: 68px;
-    left: 12px;
-    right: 12px;
+    bottom: 16px;
+    left: 20px;
+    right: 20px;
+    max-width: 580px;
+    margin: 0 auto;
     background: var(--sd-black);
     color: var(--sd-white);
-    padding: 10px 16px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 52;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    cursor: pointer;
+    animation: slideUpFloat 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* On Mobile (<= 768px), Cart Bar floats above Mobile Bottom Nav Bar with safe-area spacing */
+@media (max-width: 768px) {
+  .mobile-floating-cart-bar {
+    display: flex;
+    position: fixed;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    left: 10px;
+    right: 10px;
+    background: var(--sd-black);
+    color: var(--sd-white);
+    padding: 10px 14px;
     border-radius: 14px;
     align-items: center;
     justify-content: space-between;
@@ -706,6 +803,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
   .text-input, .custom-select {
     font-size: 16px !important; /* Prevents auto-zoom on mobile safari */
+  }
+  .no-mobile {
+    display: none !important;
   }
 }
 

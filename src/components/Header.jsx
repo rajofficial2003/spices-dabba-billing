@@ -109,10 +109,11 @@ export default function Header({ activeTab, setActiveTab }) {
               style={{ height: "40px", width: "auto", objectFit: "contain" }}
             />
             <span className="font-heading" style={{
-              fontSize: "1.25rem",
+              fontSize: "clamp(1.05rem, 3.8vw, 1.25rem)",
               fontWeight: 900,
               color: "var(--sd-black)",
-              letterSpacing: "-0.3px"
+              letterSpacing: "-0.3px",
+              whiteSpace: "nowrap"
             }}>
               Spices Dabba
             </span>
@@ -226,7 +227,7 @@ export default function Header({ activeTab, setActiveTab }) {
               {isSuperAdmin ? <ShieldCheck size={14} /> : <User size={14} />}
               <span>{isSuperAdmin ? "Super Admin" : (currentUser?.name || "Staff")}</span>
               {isStaff && (
-                <span style={{ color: "#71717A", fontWeight: 600, fontSize: "0.68rem" }}>
+                <span className="no-mobile" style={{ color: "#71717A", fontWeight: 600, fontSize: "0.68rem" }}>
                   ({currentUser?.role || "Staff"})
                 </span>
               )}

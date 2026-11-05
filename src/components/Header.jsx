@@ -176,7 +176,7 @@ export default function Header({ activeTab, setActiveTab }) {
 
             <button
               onClick={() => setActiveTab("assets")}
-              className={`nav-tab-btn ${activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" ? "active" : ""}`}
+              className={`nav-tab-btn ${activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "settings" ? "active" : ""}`}
             >
               <Boxes size={15} />
               <span>Master Assets</span>
@@ -267,7 +267,7 @@ export default function Header({ activeTab, setActiveTab }) {
         <button
           type="button"
           onClick={() => setActiveTab("assets")}
-          className={`mobile-nav-btn ${activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" ? "active" : ""}`}
+          className={`mobile-nav-btn ${activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "settings" ? "active" : ""}`}
         >
           <Boxes size={18} />
           <span>Assets</span>

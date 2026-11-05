@@ -23,11 +23,11 @@ function POSApp() {
     setLastGeneratedInvoice 
   } = usePOS();
 
-  // Navigation handler that seamlessly routes master sub-tabs (customers, customer-categories, products, categories, suppliers, raw-materials)
+  // Navigation handler that seamlessly routes master sub-tabs (customers, customer-categories, products, categories, suppliers, raw-materials, settings)
   const handleNavigate = (tab, subTab = null) => {
-    if (tab === "customers" || tab === "customer-categories" || tab === "products" || tab === "categories" || tab === "suppliers" || tab === "expense-categories" || tab === "raw-materials") {
+    if (tab === "customers" || tab === "customer-categories" || tab === "products" || tab === "categories" || tab === "suppliers" || tab === "expense-categories" || tab === "raw-materials" || tab === "settings" || tab === "payment-details") {
       setActiveTab("assets");
-      setAssetsSubTab(tab);
+      setAssetsSubTab(tab === "payment-details" ? "settings" : tab);
     } else if (tab === "assets") {
       setActiveTab("assets");
       if (subTab) setAssetsSubTab(subTab);
@@ -59,7 +59,7 @@ function POSApp() {
   // Pre-cache and retain visited tabs in DOM so images and state don't reload
   React.useEffect(() => {
     setVisitedTabs(prev => {
-      const tabToRecord = (activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "customer-categories" || activeTab === "suppliers" || activeTab === "expense-categories" || activeTab === "raw-materials") ? "assets" : activeTab;
+      const tabToRecord = (activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "customer-categories" || activeTab === "suppliers" || activeTab === "expense-categories" || activeTab === "raw-materials" || activeTab === "settings") ? "assets" : activeTab;
       if (prev.has(tabToRecord)) return prev;
       const next = new Set(prev);
       next.add(tabToRecord);
@@ -93,7 +93,7 @@ function POSApp() {
         )}
 
         {visitedTabs.has("assets") && (
-          <div style={{ display: (activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "customer-categories" || activeTab === "suppliers" || activeTab === "expense-categories" || activeTab === "raw-materials") ? "block" : "none" }}>
+          <div style={{ display: (activeTab === "assets" || activeTab === "products" || activeTab === "categories" || activeTab === "customers" || activeTab === "customer-categories" || activeTab === "suppliers" || activeTab === "expense-categories" || activeTab === "raw-materials" || activeTab === "settings") ? "block" : "none" }}>
             <MasterAssets 
               activeSubTab={assetsSubTab}
               onSubTabChange={(sub) => setAssetsSubTab(sub)}

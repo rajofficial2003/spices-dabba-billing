@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Package, Store, Boxes, IndianRupee, Tag, Building2 } from "lucide-react";
+import { Package, Store, Boxes, IndianRupee, Tag, Building2, Settings as SettingsIcon } from "lucide-react";
 import ProductsManager from "./ProductsManager";
 import CustomersManager from "./CustomersManager";
 import ExpenseCategoriesManager from "./ExpenseCategoriesManager";
 import SuppliersManager from "./SuppliersManager";
 import RawMaterialsManager from "./RawMaterialsManager";
+import SettingsManager from "./SettingsManager";
 import { usePOS } from "../context/POSContext";
 
 export default function MasterAssets({ 
@@ -33,6 +34,7 @@ export default function MasterAssets({
   const isProductsActive = activeSubTab === "products" || activeSubTab === "categories";
   const isCustomersActive = activeSubTab === "customers" || activeSubTab === "customer-categories" || activeSubTab === "couriers";
   const isFinanceActive = activeSubTab === "finance" || activeSubTab === "suppliers" || activeSubTab === "expense-categories" || activeSubTab === "raw-materials";
+  const isSettingsActive = activeSubTab === "settings" || activeSubTab === "payment-details";
 
   return (
     <div className="master-assets-container">
@@ -144,6 +146,31 @@ export default function MasterAssets({
             >
               <IndianRupee size={15} />
               <span>Finance</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onSubTabChange("settings")}
+              className={`pos-mobile-toggle-btn ${isSettingsActive ? "active" : ""}`}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "10px",
+                fontSize: "0.82rem",
+                fontWeight: isSettingsActive ? 800 : 700,
+                background: isSettingsActive ? "var(--sd-black)" : "transparent",
+                color: isSettingsActive ? "var(--sd-white)" : "var(--sd-zinc-600)",
+                border: "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+                boxShadow: isSettingsActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+              }}
+            >
+              <SettingsIcon size={15} />
+              <span>Settings</span>
             </button>
           </div>
         </div>
@@ -269,6 +296,11 @@ export default function MasterAssets({
             </>
           );
         })()}
+      </div>
+
+      {/* Settings Section: Payment Details */}
+      <div style={{ display: isSettingsActive ? "block" : "none" }}>
+        <SettingsManager />
       </div>
     </div>
   );

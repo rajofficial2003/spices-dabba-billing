@@ -242,6 +242,16 @@ export function POSProvider({ children }) {
     }
   });
 
+  // Dynamic Business & Payment Settings State
+  const [businessInfo, setBusinessInfo] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sdb_business_info");
+      return saved ? { ...BUSINESS_INFO, ...JSON.parse(saved) } : BUSINESS_INFO;
+    } catch {
+      return BUSINESS_INFO;
+    }
+  });
+
   const [loading, setLoading] = useState(true);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
 
@@ -345,6 +355,7 @@ export function POSProvider({ children }) {
     let unsubscribeSuppliers = () => {};
     let unsubscribeCouriers = () => {};
     let unsubscribeMixers = () => {};
+    let unsubscribeSettings = () => {};
 
     try {
       // 1. Products listener
@@ -488,6 +499,32 @@ export function POSProvider({ children }) {
         console.warn("Firestore mixers listener note:", err.message);
       });
 
+      // 12. Dynamic Business & Payment Settings listener
+      const settingsDoc = doc(db, "billing_settings", "payment_settings");
+      unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setBusinessInfo(prev => {
+            const next = {
+              ...prev,
+              bankName: data.bankName !== undefined ? data.bankName : prev.bankName,
+              accountName: data.accountName !== undefined ? data.accountName : prev.accountName,
+              accountNumber: data.accountNumber !== undefined ? data.accountNumber : prev.accountNumber,
+              ifscCode: data.ifscCode !== undefined ? data.ifscCode : prev.ifscCode,
+              upiId: data.upiId !== undefined ? data.upiId : prev.upiId,
+              upiHolder: data.upiHolder !== undefined ? data.upiHolder : prev.upiHolder,
+              qrCodePath: data.qrCodePath !== undefined ? data.qrCodePath : prev.qrCodePath
+            };
+            try {
+              localStorage.setItem("sdb_business_info", JSON.stringify(next));
+            } catch (err) {}
+            return next;
+          });
+        }
+      }, (err) => {
+        console.warn("Firestore settings listener note:", err.message);
+      });
+
     } catch (error) {
       console.warn("Firebase listener initialization error:", error);
       setLoading(false);
@@ -505,6 +542,7 @@ export function POSProvider({ children }) {
       unsubscribeSuppliers();
       unsubscribeCouriers();
       unsubscribeMixers();
+      unsubscribeSettings();
     };
   }, []);
 
@@ -1654,10 +1692,37 @@ export function POSProvider({ children }) {
     return await addMixer(cloned);
   };
 
+  // Payment & Business Settings Update
+  const updatePaymentSettings = async (paymentData) => {
+    try {
+      const next = {
+        ...businessInfo,
+        ...paymentData
+      };
+      setBusinessInfo(next);
+      try {
+        localStorage.setItem("sdb_business_info", JSON.stringify(next));
+      } catch (e) {}
+
+      const settingsDoc = doc(db, "billing_settings", "payment_settings");
+      await setDoc(settingsDoc, {
+        ...paymentData,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to update payment settings:", error);
+      return { success: false, error };
+    }
+  };
+
   return (
     <POSContext.Provider
       value={{
-        BUSINESS_INFO,
+        BUSINESS_INFO: businessInfo,
+        businessInfo,
+        updatePaymentSettings,
         products,
         categories,
         customers,

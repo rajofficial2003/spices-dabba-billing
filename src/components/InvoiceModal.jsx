@@ -52,8 +52,11 @@ export default function InvoiceModal({ order, onClose }) {
   const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   useEffect(() => {
-    // Generate UPI QR Code: upi://pay?pa=9940159298@upi&pn=SPICES%20DABBA&cu=INR
-    const upiPayload = "upi://pay?pa=9940159298@upi&pn=SPICES%20DABBA&cu=INR";
+    // Generate UPI QR Code dynamically based on upiId & accountName
+    const rawUpi = (BUSINESS_INFO?.upiId || "9940159298").replace(/\s*\(.*?\)/g, "").trim();
+    const upiPa = rawUpi.includes("@") ? rawUpi : `${rawUpi}@upi`;
+    const upiPn = encodeURIComponent(BUSINESS_INFO?.accountName || BUSINESS_INFO?.name || "SPICES DABBA");
+    const upiPayload = `upi://pay?pa=${upiPa}&pn=${upiPn}&cu=INR`;
     QRCode.toDataURL(upiPayload, {
       width: 160,
       margin: 1,
@@ -64,7 +67,7 @@ export default function InvoiceModal({ order, onClose }) {
     })
       .then(url => setQrCodeUrl(url))
       .catch(err => console.warn("QR code generation error:", err));
-  }, []);
+  }, [BUSINESS_INFO?.upiId, BUSINESS_INFO?.accountName, BUSINESS_INFO?.name]);
 
   if (!order) return null;
 
@@ -318,11 +321,11 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}*\n`;
     msg += `--------------------------------\n`;
     msg += `*BANK DETAILS FOR PAYMENT:*\n`;
-    msg += `Bank: Tamilnad Mercantile Bank\n`;
-    msg += `A/C Name: SPICES DABBA\n`;
-    msg += `A/C: 180150050800432\n`;
-    msg += `IFSC: TMBL0000180\n`;
-    msg += `UPI: 9940159298 (Vaishno Devi)\n`;
+    msg += `Bank: ${BUSINESS_INFO?.bankName || "Tamilnad Mercantile Bank"}\n`;
+    msg += `A/C Name: ${BUSINESS_INFO?.accountName || "SPICES DABBA"}\n`;
+    msg += `A/C: ${BUSINESS_INFO?.accountNumber || "180150050800432"}\n`;
+    msg += `IFSC: ${BUSINESS_INFO?.ifscCode || "TMBL0000180"}\n`;
+    msg += `UPI: ${BUSINESS_INFO?.upiId || "9940159298 (Vaishno Devi)"}\n`;
     msg += `--------------------------------\n`;
     msg += `🙏 Thank you for your business!`;
 
@@ -789,11 +792,11 @@ export default function InvoiceModal({ order, onClose }) {
                   <div style={{ fontWeight: 800, color: "#09090b", textTransform: "uppercase", fontSize: "0.72rem", marginBottom: "3px", letterSpacing: "0.4px" }}>
                     Bank & UPI Payment Details
                   </div>
-                  <div><strong>Bank:</strong> Tamilnad Mercantile Bank</div>
-                  <div><strong>A/C Name:</strong> SPICES DABBA</div>
-                  <div><strong>A/C:</strong> 180150050800432</div>
-                  <div><strong>IFSC:</strong> TMBL0000180</div>
-                  <div><strong>UPI:</strong> 9940159298 (Vaishno Devi)</div>
+                  <div><strong>Bank:</strong> {BUSINESS_INFO?.bankName || "Tamilnad Mercantile Bank"}</div>
+                  <div><strong>A/C Name:</strong> {BUSINESS_INFO?.accountName || "SPICES DABBA"}</div>
+                  <div><strong>A/C:</strong> {BUSINESS_INFO?.accountNumber || "180150050800432"}</div>
+                  <div><strong>IFSC:</strong> {BUSINESS_INFO?.ifscCode || "TMBL0000180"}</div>
+                  <div><strong>UPI:</strong> {BUSINESS_INFO?.upiId || "9940159298 (Vaishno Devi)"}</div>
                 </div>
 
                 <div style={{

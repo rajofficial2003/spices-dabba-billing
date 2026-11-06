@@ -88,159 +88,19 @@ export function POSProvider({ children }) {
   const [rawMaterials, setRawMaterials] = useState([]);
 
   // Dynamic Expense Categories for Operational Expenses
-  const DEFAULT_EXPENSE_CATEGORIES = [
-    { id: "cat_petrol", name: "Petrol & Fuel", color: "#EA580C" },
-    { id: "cat_tempo", name: "Tempo & Transport", color: "#0284C7" },
-    { id: "cat_salary", name: "Employee Salary", color: "#16A34A" },
-    { id: "cat_packaging", name: "Packaging Material", color: "#9333EA" },
-    { id: "cat_rent", name: "Shop & Godown Rent", color: "#D97706" },
-    { id: "cat_utility", name: "Electricity & Utility", color: "#EAB308" },
-    { id: "cat_refreshments", name: "Tea & Refreshments", color: "#64748B" },
-    { id: "cat_misc", name: "General Misc", color: "#475569" }
-  ];
-  const [expenseCategories, setExpenseCategories] = useState(DEFAULT_EXPENSE_CATEGORIES);
+  const [expenseCategories, setExpenseCategories] = useState([]);
 
   // Static Customer Categories (SS, D, R, C)
   const customerCategories = STATIC_CUSTOMER_CATEGORIES;
 
   // Dynamic Courier Partners State (The Professional Couriers, ST Courier, DTDC, etc.)
-  const DEFAULT_COURIER_PARTNERS = [
-    { id: "courier_tpc", name: "The Professional Couriers", code: "TPC", trackingUrl: "https://www.tpcindia.com", phone: "044-22250000", isActive: true },
-    { id: "courier_st", name: "ST Courier", code: "STC", trackingUrl: "https://stcourier.com/track", phone: "044-40004000", isActive: true },
-    { id: "courier_dtdc", name: "DTDC Express", code: "DTDC", trackingUrl: "https://www.dtdc.in/tracking.asp", phone: "080-25365032", isActive: true },
-    { id: "courier_indiapost", name: "India Post (Speed Post)", code: "IPOST", trackingUrl: "https://www.indiapost.gov.in", phone: "18002666868", isActive: true },
-    { id: "courier_bluedart", name: "Blue Dart", code: "BLUEDART", trackingUrl: "https://www.bluedart.com/tracking", phone: "18602331234", isActive: true },
-    { id: "courier_trackon", name: "Trackon Couriers", code: "TRACKON", trackingUrl: "https://trackon.in", phone: "011-45593500", isActive: true },
-    { id: "courier_direct", name: "Direct / Local Transport", code: "LOCAL", trackingUrl: "", phone: "", isActive: true }
-  ];
-  const [courierPartners, setCourierPartners] = useState(() => {
-    try {
-      const saved = localStorage.getItem("sdb_courier_partners");
-      return saved ? JSON.parse(saved) : DEFAULT_COURIER_PARTNERS;
-    } catch {
-      return DEFAULT_COURIER_PARTNERS;
-    }
-  });
+  const [courierPartners, setCourierPartners] = useState([]);
 
-  // Dynamic Product Mixers & Raw Material Formulation State (Default Base: 1 KG)
-  const DEFAULT_MIXERS = [
-    {
-      id: "mix_sambar",
-      name: "Madras Sambar Powder",
-      tamilName: "பாரம்பரிய சாம்பார் பொடி",
-      baseQuantity: 1, // 1 KG
-      baseUnit: "Kg",
-      productId: "prod_sambar",
-      description: "Authentic South Indian aromatic sambar masala blend (1 KG standard base)",
-      instructions: "Sun-dry raw spices, mild roast coriander & chilli separately, grind to fine mesh.",
-      ingredients: [
-        { rawMaterialId: "rm_coriander", rawMaterialName: "Coriander Seeds (Dhaniya)", grams: 450, percentage: 45 },
-        { rawMaterialId: "rm_chilli", rawMaterialName: "Red Chilli (Guntur)", grams: 300, percentage: 30 },
-        { rawMaterialId: "rm_cumin", rawMaterialName: "Cumin Seeds (Jeera)", grams: 100, percentage: 10 },
-        { rawMaterialId: "rm_pepper", rawMaterialName: "Black Pepper", grams: 50, percentage: 5 },
-        { rawMaterialId: "rm_turmeric", rawMaterialName: "Turmeric Finger (Haldi)", grams: 50, percentage: 5 },
-        { rawMaterialId: "rm_fenugreek", rawMaterialName: "Fenugreek Seeds (Vendhayam)", grams: 30, percentage: 3 },
-        { rawMaterialId: "rm_asafoetida", rawMaterialName: "Asafoetida (Perungayam)", grams: 20, percentage: 2 }
-      ],
-      isActive: true,
-      timestamp: Date.now()
-    },
-    {
-      id: "mix_biryani",
-      name: "Dindigul Thalappakatti Biryani Masala",
-      tamilName: "திண்டுக்கல் பிரியாணி மசாலா",
-      baseQuantity: 1,
-      baseUnit: "Kg",
-      productId: "prod_biryani",
-      description: "Royal Seeraga Samba Biryani aromatic whole spices blend (1 KG base)",
-      instructions: "Slow roast whole spices on gentle heat until fragrant. Coarse grind for long-lasting aroma.",
-      ingredients: [
-        { rawMaterialId: "rm_coriander", rawMaterialName: "Coriander Seeds (Dhaniya)", grams: 300, percentage: 30 },
-        { rawMaterialId: "rm_cumin", rawMaterialName: "Cumin Seeds (Jeera)", grams: 200, percentage: 20 },
-        { rawMaterialId: "rm_fennel", rawMaterialName: "Fennel Seeds (Sombu)", grams: 180, percentage: 18 },
-        { rawMaterialId: "rm_cinnamon", rawMaterialName: "Cinnamon (Pattai)", grams: 120, percentage: 12 },
-        { rawMaterialId: "rm_cloves", rawMaterialName: "Cloves (Lavangam)", grams: 80, percentage: 8 },
-        { rawMaterialId: "rm_cardamom", rawMaterialName: "Cardamom (Elaichi)", grams: 60, percentage: 6 },
-        { rawMaterialId: "rm_pepper", rawMaterialName: "Black Pepper", grams: 60, percentage: 6 }
-      ],
-      isActive: true,
-      timestamp: Date.now()
-    },
-    {
-      id: "mix_chicken",
-      name: "Chettinad Chicken Kulambu Masala",
-      tamilName: "செட்டிநாடு சிக்கன் குழம்பு மசாலா",
-      baseQuantity: 1,
-      baseUnit: "Kg",
-      productId: "prod_chicken",
-      description: "Spicy & peppery traditional Chettinad chicken curry formulation (1 KG base)",
-      instructions: "Medium roast with curry leaves, grind while warm.",
-      ingredients: [
-        { rawMaterialId: "rm_coriander", rawMaterialName: "Coriander Seeds (Dhaniya)", grams: 380, percentage: 38 },
-        { rawMaterialId: "rm_chilli", rawMaterialName: "Red Chilli (Guntur)", grams: 320, percentage: 32 },
-        { rawMaterialId: "rm_pepper", rawMaterialName: "Black Pepper", grams: 120, percentage: 12 },
-        { rawMaterialId: "rm_cumin", rawMaterialName: "Cumin Seeds (Jeera)", grams: 100, percentage: 10 },
-        { rawMaterialId: "rm_fennel", rawMaterialName: "Fennel Seeds (Sombu)", grams: 50, percentage: 5 },
-        { rawMaterialId: "rm_turmeric", rawMaterialName: "Turmeric Finger (Haldi)", grams: 30, percentage: 3 }
-      ],
-      isActive: true,
-      timestamp: Date.now()
-    }
-  ];
-
-  const [mixers, setMixers] = useState(() => {
-    try {
-      const saved = localStorage.getItem("sdb_mixers");
-      return saved ? JSON.parse(saved) : DEFAULT_MIXERS;
-    } catch {
-      return DEFAULT_MIXERS;
-    }
-  });
+  // Dynamic Product Mixers & Raw Material Formulation State
+  const [mixers, setMixers] = useState([]);
 
   // Dynamic Suppliers Directory State
-  const DEFAULT_SUPPLIERS = [
-    { 
-      id: "sup_1", 
-      name: "Sri Murugan Spices Mandi", 
-      contactPerson: "Murugan",
-      phone: "9842123456", 
-      city: "Bodinayakanur", 
-      gstin: "33AAAAA0000A1Z5", 
-      address: "Bazaar Street, Bodinayakanur, Theni", 
-      notes: "Cardamom and black pepper direct procurement",
-      isActive: true 
-    },
-    { 
-      id: "sup_2", 
-      name: "Guntur Chilli Traders", 
-      contactPerson: "Ramarao",
-      phone: "9876543210", 
-      city: "Guntur", 
-      gstin: "37BBBBB1111B2Z6", 
-      address: "Mirchi Yard, Guntur, AP", 
-      notes: "Bulk Red Chilli",
-      isActive: true 
-    },
-    { 
-      id: "sup_3", 
-      name: "Erode Manjal Mandi", 
-      contactPerson: "Selvam",
-      phone: "9443210987", 
-      city: "Erode", 
-      gstin: "", 
-      address: "Semmampalayam, Erode", 
-      notes: "Turmeric fingers and bulbs",
-      isActive: true 
-    }
-  ];
-  const [suppliers, setSuppliers] = useState(() => {
-    try {
-      const saved = localStorage.getItem("sdb_suppliers");
-      return saved ? JSON.parse(saved) : DEFAULT_SUPPLIERS;
-    } catch {
-      return DEFAULT_SUPPLIERS;
-    }
-  });
+  const [suppliers, setSuppliers] = useState([]);
 
   // Dynamic Business & Payment Settings State
   const [businessInfo, setBusinessInfo] = useState(() => {
@@ -271,41 +131,15 @@ export function POSProvider({ children }) {
   const [activeDraftId, setActiveDraftId] = useState(null); // When editing a draft order
   const [lastGeneratedInvoice, setLastGeneratedInvoice] = useState(null);
 
-  // Sync with LocalStorage as offline buffer
-  useEffect(() => {
-    localStorage.setItem("sdb_products", JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem("sdb_categories", JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem("sdb_customers", JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem("sdb_suppliers", JSON.stringify(suppliers));
-  }, [suppliers]);
-
-  useEffect(() => {
-    localStorage.setItem("sdb_courier_partners", JSON.stringify(courierPartners));
-  }, [courierPartners]);
-
-  useEffect(() => {
-    localStorage.setItem("sdb_mixers", JSON.stringify(mixers));
-  }, [mixers]);
-
-  useEffect(() => {
-    localStorage.setItem("sdb_orders", JSON.stringify(orders));
-  }, [orders]);
-
   // Purge any old mock data from previous sessions or seeded documents
   useEffect(() => {
     localStorage.removeItem("sdb_products");
     localStorage.removeItem("sdb_categories");
     localStorage.removeItem("sdb_customers");
     localStorage.removeItem("sdb_orders");
+    localStorage.removeItem("sdb_suppliers");
+    localStorage.removeItem("sdb_courier_partners");
+    localStorage.removeItem("sdb_mixers");
 
     const purgeOldMockDocuments = async () => {
       const purgeKey = "sdb_mock_purged_final_v1";
@@ -430,13 +264,9 @@ export function POSProvider({ children }) {
       // 7. Dynamic Expense Categories listener
       const expCatCol = collection(db, "billing_expense_categories");
       unsubscribeExpenseCategories = onSnapshot(expCatCol, (snapshot) => {
-        if (!snapshot.empty) {
-          const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          cats.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-          setExpenseCategories(cats);
-        } else {
-          setExpenseCategories(DEFAULT_EXPENSE_CATEGORIES);
-        }
+        const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        cats.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        setExpenseCategories(cats);
       }, (err) => {
         console.warn("Firestore expense categories listener note:", err.message);
       });
@@ -444,13 +274,9 @@ export function POSProvider({ children }) {
       // 8. Dynamic Suppliers listener
       const suppCol = collection(db, "billing_suppliers");
       unsubscribeSuppliers = onSnapshot(suppCol, (snapshot) => {
-        if (!snapshot.empty) {
-          const sups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          sups.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-          setSuppliers(sups);
-        } else {
-          setSuppliers(DEFAULT_SUPPLIERS);
-        }
+        const sups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        sups.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        setSuppliers(sups);
       }, (err) => {
         console.warn("Firestore suppliers listener note:", err.message);
       });
@@ -458,13 +284,9 @@ export function POSProvider({ children }) {
       // 10. Dynamic Courier Partners listener
       const courierCol = collection(db, "billing_courier_partners");
       unsubscribeCouriers = onSnapshot(courierCol, (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-          setCourierPartners(list);
-        } else {
-          setCourierPartners(DEFAULT_COURIER_PARTNERS);
-        }
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        setCourierPartners(list);
       }, (err) => {
         console.warn("Firestore couriers listener note:", err.message);
       });
@@ -472,13 +294,9 @@ export function POSProvider({ children }) {
       // 11. Dynamic Mixers & Product Formulation listener
       const mixersCol = collection(db, "billing_mixers");
       unsubscribeMixers = onSnapshot(mixersCol, (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-          setMixers(list);
-        } else {
-          setMixers(DEFAULT_MIXERS);
-        }
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        setMixers(list);
       }, (err) => {
         console.warn("Firestore mixers listener note:", err.message);
       });

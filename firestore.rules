@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. Employee / Staff directory (used for login and staff management)
+    // 1. Employee / Staff Directory (used for employee login & management)
     match /billing_staff/{staffId} {
       allow read, write: if true;
     }
@@ -17,7 +17,7 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // 4. Customers & Retailer Accounts
+    // 4. Customers & Retailer Directory
     match /billing_customers/{customerId} {
       allow read, write: if true;
     }
@@ -62,13 +62,13 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // 13. Company Profile & Settings (Bank Details, UPI QR, Invoice Settings)
+    // 13. Company Settings (Bank Details, UPI QR, Invoice Details)
     match /billing_settings/{settingId} {
       allow read, write: if true;
     }
 
-    // Fallback for any other billing documents
-    match /billing_{collection}/{docId} {
+    // Catch-all for any other collections in the billing system
+    match /{document=**} {
       allow read, write: if true;
     }
   }

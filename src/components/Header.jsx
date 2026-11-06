@@ -47,57 +47,62 @@ export default function Header({ activeTab, setActiveTab }) {
           <div style={{
             background: "#09090b",
             color: "#FFFFFF",
-            padding: "7px 16px",
-            fontSize: "0.8rem",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
             borderBottom: "1px solid #27272a"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              <Clock size={14} color="#FEF2F2" style={{ flexShrink: 0 }} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                Draft: <strong>{selectedCustomer?.shopName || "Retailer"}</strong>
-              </span>
+            <div style={{
+              maxWidth: "1440px",
+              margin: "0 auto",
+              padding: "7px 20px",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              boxSizing: "border-box"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <Clock size={14} color="#FEF2F2" style={{ flexShrink: 0 }} />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  Draft: <strong>{selectedCustomer?.shopName || "Retailer"}</strong>
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  clearCart();
+                  setActiveTab("pos");
+                }}
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  color: "#FFFFFF",
+                  padding: "3px 10px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  marginLeft: "8px"
+                }}
+              >
+                Fresh Bill
+              </button>
             </div>
-            <button
-              onClick={() => {
-                clearCart();
-                setActiveTab("pos");
-              }}
-              style={{
-                background: "rgba(255,255,255,0.15)",
-                border: "1px solid rgba(255,255,255,0.3)",
-                color: "#FFFFFF",
-                padding: "3px 10px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                flexShrink: 0,
-                marginLeft: "8px"
-              }}
-            >
-              Fresh Bill
-            </button>
           </div>
         )}
 
         {/* Main Header Bar */}
-        <div style={{
-          maxWidth: "1440px",
-          margin: "0 auto",
-          padding: "10px 16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px"
-        }}>
+        <div className="brand-header-inner">
           {/* Logo & Brand Name */}
           <div 
             onClick={() => setActiveTab("stats")}
-            style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "10px", 
+              cursor: "pointer", 
+              flexShrink: 0,
+              userSelect: "none"
+            }}
             title="Spices Dabba Overview"
           >
             <img 
@@ -106,10 +111,10 @@ export default function Header({ activeTab, setActiveTab }) {
               onError={(e) => { 
                 e.target.style.display = 'none'; 
               }}
-              style={{ height: "40px", width: "auto", objectFit: "contain" }}
+              style={{ height: "38px", width: "auto", objectFit: "contain" }}
             />
             <span className="font-heading" style={{
-              fontSize: "clamp(1.05rem, 3.8vw, 1.25rem)",
+              fontSize: "1.25rem",
               fontWeight: 900,
               color: "var(--sd-black)",
               letterSpacing: "-0.3px",
@@ -209,25 +214,25 @@ export default function Header({ activeTab, setActiveTab }) {
           </nav>
 
           {/* User Badge & Actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
             {/* User Identity Pill */}
             <div style={{
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
-              padding: "4px 10px",
-              borderRadius: "8px",
-              background: isSuperAdmin ? "rgba(220, 38, 38, 0.1)" : "#F4F4F5",
+              padding: "6px 12px",
+              borderRadius: "10px",
+              background: isSuperAdmin ? "rgba(220, 38, 38, 0.08)" : "#F4F4F5",
               color: isSuperAdmin ? "#DC2626" : "#27272A",
-              fontSize: "0.75rem",
+              fontSize: "0.78rem",
               fontWeight: 800,
-              border: `1px solid ${isSuperAdmin ? "rgba(220, 38, 38, 0.25)" : "#E4E4E7"}`,
+              border: `1px solid ${isSuperAdmin ? "rgba(220, 38, 38, 0.2)" : "#E4E4E7"}`,
               whiteSpace: "nowrap"
             }}>
-              {isSuperAdmin ? <ShieldCheck size={14} /> : <User size={14} />}
+              {isSuperAdmin ? <ShieldCheck size={15} /> : <User size={15} />}
               <span>{isSuperAdmin ? "Super Admin" : (currentUser?.name || "Staff")}</span>
               {isStaff && (
-                <span className="no-mobile" style={{ color: "#71717A", fontWeight: 600, fontSize: "0.68rem" }}>
+                <span className="no-mobile" style={{ color: "#71717A", fontWeight: 600, fontSize: "0.72rem" }}>
                   ({currentUser?.role || "Staff"})
                 </span>
               )}
@@ -246,15 +251,16 @@ export default function Header({ activeTab, setActiveTab }) {
                 style={{
                   background: "#FEF2F2",
                   border: "1px solid #FECACA",
-                  borderRadius: "8px",
-                  padding: "5px 9px",
+                  borderRadius: "10px",
+                  padding: "6px 12px",
                   cursor: "pointer",
                   color: "#DC2626",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "4px",
-                  fontSize: "0.72rem",
-                  fontWeight: 700
+                  gap: "5px",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  transition: "all 0.15s ease"
                 }}
               >
                 <LogOut size={13} />

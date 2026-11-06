@@ -849,18 +849,20 @@ export default function InvoiceModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* Computer Generated Invoice Disclaimer Footer */}
+          {/* Computer Generated Invoice Disclaimer & Brand Line Footer */}
           <div style={{
             marginTop: "18px",
             paddingTop: "10px",
             borderTop: "1px solid #E4E4E7",
             textAlign: "center",
-            fontSize: "0.74rem",
-            color: "#71717A",
-            fontWeight: 700,
             letterSpacing: "0.3px"
           }}>
-            This is computer generated invoice and hence no signature is required.
+            <div style={{ fontSize: "0.74rem", color: "#71717A", fontWeight: 700 }}>
+              This is computer generated invoice and hence no signature is required.
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "#09090b", fontWeight: 800, marginTop: "4px", letterSpacing: "0.4px" }}>
+              Spices Dabba. We Prepare. You Cook.
+            </div>
           </div>
         </div>
         </div>

@@ -101,8 +101,8 @@ export default function Header({ activeTab, setActiveTab }) {
             title="Spices Dabba Overview"
           >
             <img 
-              src={BUSINESS_INFO.logoPath} 
-              alt="Spices Dabba" 
+              src={BUSINESS_INFO?.logoPath || "/images/logo/logo.png"} 
+              alt={BUSINESS_INFO?.brandName || "Spices Dabba"} 
               onError={(e) => { 
                 e.target.style.display = 'none'; 
               }}
@@ -115,7 +115,7 @@ export default function Header({ activeTab, setActiveTab }) {
               letterSpacing: "-0.3px",
               whiteSpace: "nowrap"
             }}>
-              Spices Dabba
+              {BUSINESS_INFO?.brandName || "Spices Dabba"}
             </span>
           </div>
 

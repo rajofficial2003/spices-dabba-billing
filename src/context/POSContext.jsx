@@ -511,13 +511,7 @@ export function POSProvider({ children }) {
           setBusinessInfo(prev => {
             const next = {
               ...prev,
-              bankName: data.bankName !== undefined ? data.bankName : prev.bankName,
-              accountName: data.accountName !== undefined ? data.accountName : prev.accountName,
-              accountNumber: data.accountNumber !== undefined ? data.accountNumber : prev.accountNumber,
-              ifscCode: data.ifscCode !== undefined ? data.ifscCode : prev.ifscCode,
-              upiId: data.upiId !== undefined ? data.upiId : prev.upiId,
-              upiHolder: data.upiHolder !== undefined ? data.upiHolder : prev.upiHolder,
-              qrCodePath: data.qrCodePath !== undefined ? data.qrCodePath : prev.qrCodePath
+              ...data
             };
             try {
               localStorage.setItem("sdb_business_info", JSON.stringify(next));
@@ -1801,6 +1795,49 @@ export function POSProvider({ children }) {
     }
   };
 
+  // Company Profile & Invoice Details Update
+  const updateCompanySettings = async (companyData) => {
+    try {
+      const addrComponents = [
+        companyData.address1,
+        companyData.address2,
+        companyData.city,
+        companyData.state ? (companyData.pincode ? `${companyData.state} - ${companyData.pincode}` : companyData.state) : companyData.pincode
+      ].filter(Boolean);
+      const combinedAddress = addrComponents.length > 0 ? addrComponents.join(", ") : (companyData.address || businessInfo.address);
+
+      const next = {
+        ...businessInfo,
+        ...companyData,
+        manufacturer: companyData.companyName || companyData.manufacturer || businessInfo.manufacturer,
+        companyName: companyData.companyName || businessInfo.companyName || businessInfo.manufacturer,
+        name: companyData.brandName || companyData.name || businessInfo.name,
+        brandName: companyData.brandName || businessInfo.brandName || businessInfo.name,
+        address: combinedAddress
+      };
+      setBusinessInfo(next);
+      try {
+        localStorage.setItem("sdb_business_info", JSON.stringify(next));
+      } catch (e) {}
+
+      const settingsDoc = doc(db, "billing_settings", "payment_settings");
+      await setDoc(settingsDoc, {
+        ...companyData,
+        manufacturer: next.manufacturer,
+        companyName: next.companyName,
+        name: next.name,
+        brandName: next.brandName,
+        address: combinedAddress,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to update company settings:", error);
+      return { success: false, error };
+    }
+  };
+
   // Staff & Role-Based Access Control (RBAC) CRUD
   const addStaff = async (staffData) => {
     const username = String(staffData.username || "").toLowerCase().trim();
@@ -1874,6 +1911,7 @@ export function POSProvider({ children }) {
         BUSINESS_INFO: businessInfo,
         businessInfo,
         updatePaymentSettings,
+        updateCompanySettings,
         products,
         categories,
         customers,

@@ -458,7 +458,7 @@ export default function FinanceReportModal({
           <div class="header">
             <div>
               <h1 style="font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">
-                ${BUSINESS_INFO?.manufacturer || "JEES FOODS"} &bull; SPICES DABBA
+                ${BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES FOODS"} &bull; ${BUSINESS_INFO?.brandName || "SPICES DABBA"}
               </h1>
               <div style="font-size: 11px; color: #52525B; margin-top: 3px;">
                 ${BUSINESS_INFO?.address || "Bodinayakanur, Theni District-625513, Tamilnadu, India"}

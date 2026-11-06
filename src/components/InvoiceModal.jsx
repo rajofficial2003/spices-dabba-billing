@@ -290,8 +290,9 @@ export default function InvoiceModal({ order, onClose }) {
     const cleanPhone = cleanPhoneNumber(order.customer.phone);
     const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
-    let msg = `*JEES foods*\n`;
-    msg += `GSTIN: ${BUSINESS_INFO.gstin} | ${BUSINESS_INFO.address}\n`;
+    let msg = `*${BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES foods"}*\n`;
+    if (BUSINESS_INFO?.brandName) msg += `_${BUSINESS_INFO.brandName}_\n`;
+    msg += `GSTIN: ${BUSINESS_INFO?.gstin || ""} | ${BUSINESS_INFO?.address || ""}\n`;
     msg += `--------------------------------\n`;
     msg += `🧾 *Invoice Code: ${order.invoiceNumber || "BILL"}*\n`;
     msg += `📅 Invoice Date: ${formatDateOnly(order.timestamp || order.createdAt || Date.now())}\n`;
@@ -447,10 +448,11 @@ export default function InvoiceModal({ order, onClose }) {
                 alignItems: "center",
                 justifyContent: "center",
                 overflow: "hidden",
-                flexShrink: 0
+                flexShrink: 0,
+                background: "#FFFFFF"
               }}>
                 <img
-                  src={BUSINESS_INFO.logoPath}
+                  src={BUSINESS_INFO?.logoPath || "/images/logo/logo.png"}
                   alt="Logo"
                   onError={(e) => { e.target.style.display = 'none'; }}
                   style={{ width: "95%", height: "95%", objectFit: "contain" }}
@@ -459,10 +461,10 @@ export default function InvoiceModal({ order, onClose }) {
 
               <div>
                 <h1 className="font-heading" style={{ fontSize: "1.5rem", fontWeight: 900, color: "#09090b", margin: 0, lineHeight: 1.1 }}>
-                  JEES foods
+                  {BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES foods"}
                 </h1>
                 <div style={{ fontSize: "0.82rem", color: "#52525B", marginTop: "3px", fontWeight: 600 }}>
-                  Spices Dabba &bull; We Prepare . You Cook
+                  {BUSINESS_INFO?.brandName || BUSINESS_INFO?.name || "Spices Dabba"} &bull; {BUSINESS_INFO?.tagline || "We Prepare . You Cook"}
                 </div>
               </div>
             </div>
@@ -505,16 +507,21 @@ export default function InvoiceModal({ order, onClose }) {
                 From
               </div>
               <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                JEES foods
+                {BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES foods"}
               </div>
+              {BUSINESS_INFO?.brandName && (
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#71717A" }}>
+                  Brand: {BUSINESS_INFO.brandName}
+                </div>
+              )}
               <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>
-                Address: {BUSINESS_INFO.address}
+                Address: {BUSINESS_INFO?.address || [BUSINESS_INFO?.address1, BUSINESS_INFO?.address2, BUSINESS_INFO?.city, BUSINESS_INFO?.state ? `${BUSINESS_INFO?.state} - ${BUSINESS_INFO?.pincode}` : BUSINESS_INFO?.pincode].filter(Boolean).join(", ")}
               </div>
               <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
-                Phone: {BUSINESS_INFO.phonePrimary}{BUSINESS_INFO.phoneSecondary ? `, ${BUSINESS_INFO.phoneSecondary}` : ""}
+                Phone: {BUSINESS_INFO?.phonePrimary || BUSINESS_INFO?.phone}{BUSINESS_INFO?.phoneSecondary ? `, ${BUSINESS_INFO.phoneSecondary}` : ""}
               </div>
               <div style={{ color: "#52525B", marginTop: "2px" }}>
-                GSTIN: <strong style={{ fontFamily: "monospace", color: "#09090b" }}>{BUSINESS_INFO.gstin}</strong>
+                GSTIN: <strong style={{ fontFamily: "monospace", color: "#09090b" }}>{BUSINESS_INFO?.gstin}</strong>
               </div>
             </div>
 

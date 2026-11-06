@@ -1,0 +1,46 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper: validate that the uploaded file is an image and <= 10MB
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*')
+          && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // 1. Product Images
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if isValidImage();
+      allow delete: if true;
+    }
+
+    // 2. Company Brand Logo
+    match /brand_logo/{allPaths=**} {
+      allow read: if true;
+      allow write: if isValidImage();
+      allow delete: if true;
+    }
+
+    // 3. Payment & Settings (UPI QR codes)
+    match /settings/{allPaths=**} {
+      allow read: if true;
+      allow write: if isValidImage();
+      allow delete: if true;
+    }
+
+    // 4. Expense Bills & Proof Receipts
+    match /expense_bills/{allPaths=**} {
+      allow read: if true;
+      allow write: if isValidImage();
+      allow delete: if true;
+    }
+
+    // Fallback for all other assets
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 10 * 1024 * 1024;
+      allow delete: if true;
+    }
+  }
+}

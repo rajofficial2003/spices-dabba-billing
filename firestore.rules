@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Employee / Staff directory (used for login and staff management)
+    match /billing_staff/{staffId} {
+      allow read, write: if true;
+    }
+
+    // 2. Billing Products Catalog
+    match /billing_products/{productId} {
+      allow read, write: if true;
+    }
+
+    // 3. Categories & Subcategories
+    match /billing_categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    // 4. Customers & Retailer Accounts
+    match /billing_customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    // 5. Invoices, Orders & Drafts
+    match /billing_orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    // 6. Expenses & Purchase Records
+    match /billing_expenses/{expenseId} {
+      allow read, write: if true;
+    }
+
+    // 7. Raw Materials Inventory
+    match /billing_raw_materials/{rawMaterialId} {
+      allow read, write: if true;
+    }
+
+    // 8. Expense Categories
+    match /billing_expense_categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    // 9. Customer Pricing Tiers / Categories
+    match /billing_customer_categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    // 10. Suppliers Directory
+    match /billing_suppliers/{supplierId} {
+      allow read, write: if true;
+    }
+
+    // 11. Courier Partners
+    match /billing_courier_partners/{courierId} {
+      allow read, write: if true;
+    }
+
+    // 12. Mixers & Product Formulations (Recipes)
+    match /billing_mixers/{mixerId} {
+      allow read, write: if true;
+    }
+
+    // 13. Company Profile & Settings (Bank Details, UPI QR, Invoice Settings)
+    match /billing_settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Fallback for any other billing documents
+    match /billing_{collection}/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

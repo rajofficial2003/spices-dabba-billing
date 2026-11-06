@@ -466,6 +466,11 @@ export default function InvoiceModal({ order, onClose }) {
                 <div style={{ fontSize: "0.82rem", color: "#52525B", marginTop: "3px", fontWeight: 600 }}>
                   {BUSINESS_INFO?.brandName || BUSINESS_INFO?.name || "Spices Dabba"} &bull; {BUSINESS_INFO?.tagline || "We Prepare . You Cook"}
                 </div>
+                <div style={{ fontSize: "0.76rem", color: "#2563EB", marginTop: "2px", fontWeight: 600 }}>
+                  <a href="https://spicesdabba.com/" target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "none" }}>
+                    https://spicesdabba.com/
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -849,7 +854,7 @@ export default function InvoiceModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* Computer Generated Invoice Disclaimer & Brand Line Footer */}
+          {/* Computer Generated Invoice Disclaimer Footer */}
           <div style={{
             marginTop: "18px",
             paddingTop: "10px",
@@ -859,9 +864,6 @@ export default function InvoiceModal({ order, onClose }) {
           }}>
             <div style={{ fontSize: "0.74rem", color: "#71717A", fontWeight: 700 }}>
               This is computer generated invoice and hence no signature is required.
-            </div>
-            <div style={{ fontSize: "0.78rem", color: "#09090b", fontWeight: 800, marginTop: "4px", letterSpacing: "0.4px" }}>
-              Spices Dabba. We Prepare. You Cook.
             </div>
           </div>
         </div>

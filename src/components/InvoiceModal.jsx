@@ -489,7 +489,7 @@ export default function InvoiceModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* ROW 1: SHIPPING ROW - FROM (Left) & SHIPP TO (Right) */}
+          {/* ROW 1: SHIPPING ROW - FROM (Left) & SHIP TO (Right) */}
           <div style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
@@ -528,10 +528,10 @@ export default function InvoiceModal({ order, onClose }) {
             {/* SHIPPING ADDRESS / DISPATCH TO */}
             <div style={{ borderLeft: "1px dashed #D4D4D8", paddingLeft: "14px" }}>
               <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
-                Shipp To
+                Ship To
               </div>
-              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                {customer.shopName || customer.businessName || "Retailer Shop"}
+              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px", textTransform: "uppercase" }}>
+                {(customer.shopName || customer.businessName || "Retailer Shop").toUpperCase()}
               </div>
               {customer.customerName && (
                 <div style={{ color: "#52525B", marginTop: "1px" }}>Contact Person: {customer.customerName}</div>
@@ -566,8 +566,8 @@ export default function InvoiceModal({ order, onClose }) {
               <div style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "#09090b", letterSpacing: "0.5px" }}>
                 Bill To
               </div>
-              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                {customer.shopName || customer.businessName || "Retailer Customer"}
+              <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px", textTransform: "uppercase" }}>
+                {(customer.shopName || customer.businessName || "Retailer Customer").toUpperCase()}
               </div>
               {customer.customerName && (
                 <div style={{ color: "#52525B", marginTop: "1px" }}>Contact Person: {customer.customerName}</div>
@@ -828,36 +828,39 @@ export default function InvoiceModal({ order, onClose }) {
                 <span>Total Payable:</span>
                 <span>₹{finalGrandTotal.toFixed(2)}</span>
               </div>
+
+              {/* Terms & Conditions right below Total Payable */}
+              <div style={{
+                marginTop: "12px",
+                padding: "10px 12px",
+                background: "#F8F9FA",
+                border: "1px solid #E4E4E7",
+                borderRadius: "6px",
+                fontSize: "0.72rem"
+              }}>
+                <div style={{ fontWeight: 800, color: "#09090b", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: "4px" }}>
+                  Terms & Conditions:
+                </div>
+                <div style={{ color: "#3F3F46", lineHeight: "1.45" }}>
+                  <div>1. Goods once sold will not be taken back or exchanged.</div>
+                  <div style={{ marginTop: "3px" }}>2. Sellers is not responsible for any loss or damage goods in transit.</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Terms & Authorized Signature Block */}
+          {/* Computer Generated Invoice Disclaimer Footer */}
           <div style={{
-            display: "grid",
-            gridTemplateColumns: "1.5fr 1fr",
-            gap: "20px",
-            marginTop: "24px",
-            paddingTop: "14px",
+            marginTop: "18px",
+            paddingTop: "10px",
             borderTop: "1px solid #E4E4E7",
-            fontSize: "0.75rem"
+            textAlign: "center",
+            fontSize: "0.74rem",
+            color: "#71717A",
+            fontWeight: 700,
+            letterSpacing: "0.3px"
           }}>
-            <div>
-              <div style={{ fontWeight: 800, color: "#09090b" }}>Terms & Conditions:</div>
-              <ul style={{ paddingLeft: "14px", marginTop: "3px", color: "#71717A", lineHeight: "1.4" }}>
-                <li>Goods once sold will not be taken back or exchanged.</li>
-                <li>Payment due immediately upon delivery unless prior credit terms approved.</li>
-                <li>All disputes subject to Theni jurisdiction only.</li>
-              </ul>
-            </div>
-
-            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-              <div style={{ fontWeight: 700, color: "#09090b", marginBottom: "40px" }}>
-                For JEES foods
-              </div>
-              <div style={{ borderTop: "1px dashed #A1A1AA", display: "inline-block", paddingTop: "4px", color: "#52525B" }}>
-                Authorized Signatory / Seal
-              </div>
-            </div>
+            This is computer generated invoice and hence no signature is required.
           </div>
         </div>
         </div>

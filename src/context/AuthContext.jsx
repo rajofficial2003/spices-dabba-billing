@@ -6,7 +6,7 @@ import {
   sendPasswordResetEmail, 
   onAuthStateChanged 
 } from "firebase/auth";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, limit, getDocs, doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 
 const AuthContext = createContext();
@@ -92,17 +92,20 @@ export function AuthProvider({ children }) {
     try {
       let matchedStaff = null;
 
-      // Query by username
-      const qUser = query(collection(db, "billing_staff"), where("username", "==", lowerId));
-      const snapUser = await getDocs(qUser);
-      if (!snapUser.empty) {
-        matchedStaff = { id: snapUser.docs[0].id, ...snapUser.docs[0].data() };
-      } else {
-        // Query by email
-        const qEmail = query(collection(db, "billing_staff"), where("email", "==", lowerId));
+      // Smart targeted query with limit(1) to avoid redundant reads
+      if (lowerId.includes("@")) {
+        // Query only by email
+        const qEmail = query(collection(db, "billing_staff"), where("email", "==", lowerId), limit(1));
         const snapEmail = await getDocs(qEmail);
         if (!snapEmail.empty) {
           matchedStaff = { id: snapEmail.docs[0].id, ...snapEmail.docs[0].data() };
+        }
+      } else {
+        // Query only by username
+        const qUser = query(collection(db, "billing_staff"), where("username", "==", lowerId), limit(1));
+        const snapUser = await getDocs(qUser);
+        if (!snapUser.empty) {
+          matchedStaff = { id: snapUser.docs[0].id, ...snapUser.docs[0].data() };
         }
       }
 

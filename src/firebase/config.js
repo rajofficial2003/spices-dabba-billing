@@ -2,7 +2,9 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { 
   getFirestore, 
-  enableIndexedDbPersistence,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection, 
   doc, 
   getDocs, 
@@ -13,6 +15,7 @@ import {
   deleteDoc, 
   query, 
   where, 
+  limit,
   orderBy, 
   onSnapshot,
   serverTimestamp 
@@ -40,8 +43,22 @@ const firebaseConfig = {
 // Initialize Firebase App singleton
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firestore
-export const db = getFirestore(app);
+// Initialize Firestore with Persistent IndexedDB Multi-Tab Cache
+// This drastically minimizes server reads by caching data locally on the device (IndexedDB).
+// Subsequent app loads/refreshes read directly from device cache (0 server reads for unchanged docs).
+let firestoreInstance;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
+} catch (cacheErr) {
+  console.warn("Firestore persistent cache fallback to default:", cacheErr);
+  firestoreInstance = getFirestore(app);
+}
+
+export const db = firestoreInstance;
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
@@ -73,6 +90,7 @@ export {
   deleteDoc, 
   query, 
   where, 
+  limit,
   orderBy, 
   onSnapshot, 
   serverTimestamp,

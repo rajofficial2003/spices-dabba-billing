@@ -21,7 +21,9 @@ import {
   User,
   Layers,
   ExternalLink,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { formatCurrency, cleanPhoneNumber } from "../utils/formatters";
 import { STATIC_CUSTOMER_CATEGORIES } from "../utils/constants";
@@ -72,6 +74,15 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Customer Directory Pagination States (12 customers per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+
+  // Reset to first page when search, filter or itemsPerPage changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, categoryFilter, activeSubView, itemsPerPage]);
 
   // Customer Category Manager States
   const [newCatName, setNewCatName] = useState("");
@@ -574,6 +585,13 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
            (c.billingAddress?.city && c.billingAddress.city.toLowerCase().includes(q));
   });
 
+  // Customer Pagination Calculation
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1;
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (validCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
+
   const totalOutstanding = customers.reduce((sum, c) => sum + (Number(c.outstandingBalance) || 0), 0);
   const activeCount = customers.filter(c => c.isActive !== false).length;
   const inactiveCount = customers.filter(c => c.isActive === false).length;
@@ -854,7 +872,7 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
         </div>
       ) : (
         <div className="responsive-cards-grid">
-          {filteredCustomers.map(customer => {
+          {paginatedCustomers.map(customer => {
             const cleanPhone = cleanPhoneNumber(customer.phone);
             const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
             const isAct = customer.isActive !== false;
@@ -1054,6 +1072,151 @@ export default function CustomersManager({ onStartBillForCustomer, initialSubVie
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Customer Pagination Bar */}
+      {filteredCustomers.length > 0 && (
+        <div style={{
+          marginTop: "20px",
+          padding: "14px 18px",
+          background: "var(--sd-white)",
+          borderRadius: "12px",
+          border: "1px solid var(--sd-zinc-200)",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+        }}>
+          {/* Summary and Items Per Page */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <div style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", fontWeight: 600 }}>
+              Showing <strong style={{ color: "var(--sd-black)" }}>{startIndex + 1}</strong> to <strong style={{ color: "var(--sd-black)" }}>{Math.min(endIndex, filteredCustomers.length)}</strong> of <strong style={{ color: "var(--sd-black)" }}>{filteredCustomers.length}</strong> customers
+              {totalPages > 1 && ` • Page ${validCurrentPage} of ${totalPages}`}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+              <span>Per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--sd-zinc-300)",
+                  background: "var(--sd-white)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  color: "var(--sd-black)"
+                }}
+              >
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={48}>48</option>
+                <option value={96}>96</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Page Navigation Controls */}
+          {totalPages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage(prev => Math.max(prev - 1, 1));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                disabled={validCurrentPage === 1}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--sd-zinc-300)",
+                  background: validCurrentPage === 1 ? "var(--sd-zinc-100)" : "var(--sd-white)",
+                  color: validCurrentPage === 1 ? "var(--sd-zinc-400)" : "var(--sd-zinc-800)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: validCurrentPage === 1 ? "not-allowed" : "pointer",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                <ChevronLeft size={14} />
+                <span>Prev</span>
+              </button>
+
+              {/* Numbered Pills */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => page === 1 || page === totalPages || Math.abs(page - validCurrentPage) <= 1)
+                .map((page, index, array) => {
+                  const showEllipsisBefore = index > 0 && page - array[index - 1] > 1;
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsisBefore && (
+                        <span style={{ padding: "0 4px", color: "var(--sd-zinc-400)", fontSize: "0.8rem" }}>...</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentPage(page);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "8px",
+                          border: page === validCurrentPage ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                          background: page === validCurrentPage ? "var(--sd-black)" : "var(--sd-white)",
+                          color: page === validCurrentPage ? "var(--sd-white)" : "var(--sd-zinc-800)",
+                          fontSize: "0.78rem",
+                          fontWeight: page === validCurrentPage ? 800 : 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                disabled={validCurrentPage === totalPages}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--sd-zinc-300)",
+                  background: validCurrentPage === totalPages ? "var(--sd-zinc-100)" : "var(--sd-white)",
+                  color: validCurrentPage === totalPages ? "var(--sd-zinc-400)" : "var(--sd-zinc-800)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: validCurrentPage === totalPages ? "not-allowed" : "pointer",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       )}
       </div>

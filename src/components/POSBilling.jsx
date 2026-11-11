@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { usePOS } from "../context/POSContext";
 import { 
   Search, 
@@ -20,7 +20,10 @@ import {
   Package,
   ArrowRight,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Users,
+  ChevronDown,
+  Building2
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
 import { DEFAULT_PRODUCT_IMAGE } from "../utils/constants";
@@ -72,6 +75,31 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [showCustomerSearchModal, setShowCustomerSearchModal] = useState(false);
+  const [modalCustomerSearch, setModalCustomerSearch] = useState("");
+  const [modalCustomerCategoryFilter, setModalCustomerCategoryFilter] = useState("all");
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const customerComboboxRef = useRef(null);
+
+  // Close customer dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (customerComboboxRef.current && !customerComboboxRef.current.contains(event.target)) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectCustomerAndClose = (cust) => {
+    setSelectedCustomer(cust);
+    setIsCustomerDropdownOpen(false);
+    setCustomerSearch("");
+    setShowCustomerSearchModal(false);
+    setModalCustomerSearch("");
+  };
+
   const [feedbackMsg, setFeedbackMsg] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(null); // 'order' | 'draft' | null
@@ -120,10 +148,43 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
     const q = customerSearch.toLowerCase().trim();
     if (!q) return true;
-    return (c.shopName && c.shopName.toLowerCase().includes(q)) || 
-           (c.businessName && c.businessName.toLowerCase().includes(q)) ||
-           (c.phone && c.phone.includes(q)) || 
-           (c.customerName && c.customerName.toLowerCase().includes(q));
+    return (
+      (c.shopName && c.shopName.toLowerCase().includes(q)) || 
+      (c.businessName && c.businessName.toLowerCase().includes(q)) ||
+      (c.customerName && c.customerName.toLowerCase().includes(q)) ||
+      (c.phone && c.phone.includes(q)) ||
+      (c.gstin && c.gstin.toLowerCase().includes(q)) ||
+      (c.category && c.category.toLowerCase().includes(q)) ||
+      (c.categoryName && c.categoryName.toLowerCase().includes(q)) ||
+      (c.address && c.address.toLowerCase().includes(q)) ||
+      (c.billingAddress?.city && c.billingAddress.city.toLowerCase().includes(q)) ||
+      (c.billingAddress?.address && c.billingAddress.address.toLowerCase().includes(q)) ||
+      (c.shippingAddress?.city && c.shippingAddress.city.toLowerCase().includes(q))
+    );
+  });
+
+  const modalFilteredCustomers = customers.filter(c => {
+    if (c.isActive === false) return false;
+    if (modalCustomerCategoryFilter !== "all") {
+      const raw = String(c.category || c.categoryName || "").toUpperCase();
+      const target = modalCustomerCategoryFilter.toUpperCase();
+      if (!raw.includes(target) && raw !== target) return false;
+    }
+    const q = modalCustomerSearch.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (c.shopName && c.shopName.toLowerCase().includes(q)) || 
+      (c.businessName && c.businessName.toLowerCase().includes(q)) ||
+      (c.customerName && c.customerName.toLowerCase().includes(q)) ||
+      (c.phone && c.phone.includes(q)) ||
+      (c.gstin && c.gstin.toLowerCase().includes(q)) ||
+      (c.category && c.category.toLowerCase().includes(q)) ||
+      (c.categoryName && c.categoryName.toLowerCase().includes(q)) ||
+      (c.address && c.address.toLowerCase().includes(q)) ||
+      (c.billingAddress?.city && c.billingAddress.city.toLowerCase().includes(q)) ||
+      (c.billingAddress?.address && c.billingAddress.address.toLowerCase().includes(q)) ||
+      (c.shippingAddress?.city && c.shippingAddress.city.toLowerCase().includes(q))
+    );
   });
 
   const handleCreateCustomer = async (e) => {
@@ -718,15 +779,27 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   Customer Selection <span className="input-required">*</span>
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowAddCustomerModal(true)}
-                className="btn-secondary"
-                style={{ padding: "2px 8px", fontSize: "0.72rem" }}
-              >
-                <UserPlus size={12} />
-                <span>New Customer</span>
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerSearchModal(true)}
+                  className="btn-secondary"
+                  title="Search customer with complete details"
+                  style={{ padding: "2px 8px", fontSize: "0.72rem" }}
+                >
+                  <Search size={12} />
+                  <span>Search by Details</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomerModal(true)}
+                  className="btn-secondary"
+                  style={{ padding: "2px 8px", fontSize: "0.72rem" }}
+                >
+                  <UserPlus size={12} />
+                  <span>New Customer</span>
+                </button>
+              </div>
             </div>
 
             {selectedCustomer ? (
@@ -813,23 +886,180 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 </div>
               </div>
             ) : (
-              <div>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    const cust = customers.find(c => c.id === e.target.value);
-                    if (cust) setSelectedCustomer(cust);
-                  }}
-                  className="custom-select"
-                  style={{ padding: "7px 32px 7px 10px", fontSize: "0.82rem", fontWeight: 600 }}
-                >
-                  <option value="" disabled>-- Select Customer (Search / Choose) --</option>
-                  {filteredCustomers.map(cust => (
-                    <option key={cust.id} value={cust.id}>
-                      {cust.categoryName || cust.category ? `[${cust.categoryName || cust.category}] ` : ''}{cust.businessName || cust.shopName} - 📞 {cust.phone} {cust.customerName ? `(${cust.customerName})` : ''} {cust.isActive === false ? ' [Inactive]' : ''}
-                    </option>
-                  ))}
-                </select>
+              <div ref={customerComboboxRef} style={{ position: "relative" }}>
+                {/* Search & Select Combobox Input */}
+                <div style={{ position: "relative", marginBottom: "6px" }}>
+                  <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
+                  <input
+                    type="text"
+                    placeholder="Search customer by Shop, Person, Phone, City, GST..."
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      setIsCustomerDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsCustomerDropdownOpen(true)}
+                    className="text-input"
+                    style={{
+                      paddingLeft: "32px",
+                      paddingRight: customerSearch ? "30px" : "10px",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      height: "36px"
+                    }}
+                  />
+                  {customerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomerSearch("")}
+                      style={{
+                        position: "absolute",
+                        right: "8px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "var(--sd-zinc-400)",
+                        cursor: "pointer",
+                        padding: "2px"
+                      }}
+                      title="Clear search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Autocomplete Dropdown Menu */}
+                {isCustomerDropdownOpen && (
+                  <div style={{
+                    position: "absolute",
+                    top: "40px",
+                    left: 0,
+                    right: 0,
+                    background: "var(--sd-white)",
+                    borderRadius: "10px",
+                    border: "1px solid var(--sd-zinc-300)",
+                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.18), 0 4px 6px -2px rgba(0,0,0,0.05)",
+                    zIndex: 60,
+                    maxHeight: "260px",
+                    overflowY: "auto"
+                  }}>
+                    {filteredCustomers.length === 0 ? (
+                      <div style={{ padding: "14px", textAlign: "center", color: "var(--sd-zinc-500)", fontSize: "0.78rem" }}>
+                        <div>No customers found matching <strong>"{customerSearch}"</strong></div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomerDropdownOpen(false);
+                            setShowAddCustomerModal(true);
+                          }}
+                          className="btn-primary"
+                          style={{ marginTop: "8px", padding: "4px 10px", fontSize: "0.74rem" }}
+                        >
+                          <UserPlus size={12} />
+                          <span>Register New Customer</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{
+                          padding: "6px 10px",
+                          background: "var(--sd-zinc-100)",
+                          borderBottom: "1px solid var(--sd-zinc-200)",
+                          fontSize: "0.7rem",
+                          fontWeight: 700,
+                          color: "var(--sd-zinc-600)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}>
+                          <span>{customerSearch ? `Matching Customers (${filteredCustomers.length})` : `Active Customers (${filteredCustomers.length})`}</span>
+                          <span style={{ fontSize: "0.68rem", fontWeight: 500, color: "var(--sd-zinc-400)" }}>Tap to select</span>
+                        </div>
+                        {filteredCustomers.slice(0, 30).map(cust => {
+                          const rawTier = cust.category || cust.categoryName || "";
+                          const catObj = customerCategories.find(c => c.id === rawTier || c.name === rawTier || c.code === rawTier);
+                          const tierBadge = catObj ? (catObj.shortName || catObj.name) : (rawTier || "Retailer");
+                          const city = cust.billingAddress?.city || cust.city || "";
+
+                          return (
+                            <div
+                              key={cust.id}
+                              onClick={() => selectCustomerAndClose(cust)}
+                              style={{
+                                padding: "8px 10px",
+                                borderBottom: "1px solid var(--sd-zinc-100)",
+                                cursor: "pointer",
+                                transition: "background 0.12s ease",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "8px"
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = "var(--sd-zinc-50)"}
+                              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                            >
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                  <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--sd-black)" }}>
+                                    {cust.businessName || cust.shopName}
+                                  </span>
+                                  {cust.customerName && (
+                                    <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>
+                                      ({cust.customerName})
+                                    </span>
+                                  )}
+                                  <span style={{
+                                    fontSize: "0.65rem",
+                                    fontWeight: 800,
+                                    background: "var(--sd-zinc-100)",
+                                    color: "var(--sd-zinc-700)",
+                                    padding: "0 4px",
+                                    borderRadius: "3px",
+                                    border: "1px solid var(--sd-zinc-300)"
+                                  }}>
+                                    {tierBadge}
+                                  </span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px", fontSize: "0.72rem", color: "var(--sd-zinc-600)", flexWrap: "wrap" }}>
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                    <Phone size={10} color="var(--sd-red)" />
+                                    <span>{cust.phone}</span>
+                                  </span>
+                                  {city && (
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                      <MapPin size={10} color="var(--sd-zinc-400)" />
+                                      <span>{city}</span>
+                                    </span>
+                                  )}
+                                  {cust.gstin && (
+                                    <span style={{ color: "var(--sd-zinc-400)" }}>GST: {cust.gstin}</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {Number(cust.outstandingBalance) > 0 && (
+                                <span style={{
+                                  background: "var(--sd-red-subtle)",
+                                  color: "var(--sd-red)",
+                                  border: "1px solid var(--sd-red-border)",
+                                  padding: "1px 5px",
+                                  borderRadius: "4px",
+                                  fontWeight: 800,
+                                  fontSize: "0.68rem",
+                                  flexShrink: 0
+                                }}>
+                                  Khata: ₹{cust.outstandingBalance}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* Customer Category Pricing Rate Selector when no customer is selected */}
                 <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "0.7rem", marginTop: "8px" }}>
@@ -1628,6 +1858,255 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DEDICATED SEARCH & SELECT CUSTOMER MODAL */}
+      {showCustomerSearchModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "680px", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+            {/* Modal Header */}
+            <div style={{
+              background: "var(--sd-white)",
+              color: "var(--sd-black)",
+              padding: "16px 20px",
+              borderTopLeftRadius: "18px",
+              borderTopRightRadius: "18px",
+              borderBottom: "1px solid var(--sd-zinc-200)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Store size={18} color="var(--sd-red)" />
+                <div>
+                  <h3 className="font-heading" style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>Search & Select Customer</h3>
+                  <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--sd-zinc-500)" }}>Find retailer by shop name, contact person, phone, city or GST number</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomerSearchModal(false);
+                  setModalCustomerSearch("");
+                }}
+                style={{ background: "none", border: "none", color: "var(--sd-zinc-500)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Search Bar & Filters */}
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--sd-zinc-200)", background: "var(--sd-zinc-50)" }}>
+              <div style={{ position: "relative", marginBottom: "10px" }}>
+                <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--sd-zinc-400)" }} />
+                <input
+                  type="text"
+                  placeholder="Search by shop name, contact person, phone number, city, or GST..."
+                  value={modalCustomerSearch}
+                  onChange={(e) => setModalCustomerSearch(e.target.value)}
+                  className="text-input"
+                  autoFocus
+                  style={{ paddingLeft: "36px", paddingRight: "32px", fontSize: "0.85rem", background: "var(--sd-white)" }}
+                />
+                {modalCustomerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setModalCustomerSearch("")}
+                    style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--sd-zinc-400)", cursor: "pointer" }}
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              {/* Category Filter Pills */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--sd-zinc-500)" }}>Category:</span>
+                {["all", ...customerCategories.map(c => c.id)].map(catId => {
+                  const isSel = modalCustomerCategoryFilter === catId;
+                  const catObj = customerCategories.find(c => c.id === catId);
+                  const label = catId === "all" ? "All Customers" : (catObj?.shortName || catObj?.name || catId);
+                  return (
+                    <button
+                      key={catId}
+                      type="button"
+                      onClick={() => setModalCustomerCategoryFilter(catId)}
+                      style={{
+                        padding: "3px 10px",
+                        borderRadius: "99px",
+                        fontSize: "0.72rem",
+                        fontWeight: isSel ? 800 : 600,
+                        background: isSel ? "var(--sd-black)" : "var(--sd-white)",
+                        color: isSel ? "var(--sd-white)" : "var(--sd-zinc-700)",
+                        border: isSel ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease"
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Customer List */}
+            <div style={{ padding: "16px 20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              {modalFilteredCustomers.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "36px 16px", color: "var(--sd-zinc-400)" }}>
+                  <Store size={36} color="var(--sd-zinc-300)" style={{ margin: "0 auto 8px" }} />
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--sd-zinc-700)" }}>No matching customers found</div>
+                  <p style={{ fontSize: "0.78rem", color: "var(--sd-zinc-500)", marginTop: "4px" }}>
+                    {modalCustomerSearch ? `No customers matched "${modalCustomerSearch}".` : "No customers available in this category."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCustomerSearchModal(false);
+                      setShowAddCustomerModal(true);
+                    }}
+                    className="btn-primary"
+                    style={{ marginTop: "12px", padding: "6px 14px", fontSize: "0.78rem" }}
+                  >
+                    <UserPlus size={14} />
+                    <span>Register New Customer</span>
+                  </button>
+                </div>
+              ) : (
+                modalFilteredCustomers.map(cust => {
+                  const rawTier = cust.category || cust.categoryName || "";
+                  const catObj = customerCategories.find(c => c.id === rawTier || c.name === rawTier || c.code === rawTier);
+                  const tierBadge = catObj ? (catObj.shortName || catObj.name) : (rawTier || "Retailer");
+                  const city = cust.billingAddress?.city || cust.city || "";
+                  const area = cust.billingAddress?.address || cust.address || "";
+
+                  return (
+                    <div
+                      key={cust.id}
+                      onClick={() => selectCustomerAndClose(cust)}
+                      className="bw-card"
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "10px",
+                        border: "1px solid var(--sd-zinc-200)",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "10px"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "var(--sd-black)";
+                        e.currentTarget.style.background = "var(--sd-zinc-50)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "var(--sd-zinc-200)";
+                        e.currentTarget.style.background = "var(--sd-white)";
+                      }}
+                    >
+                      {/* Left side details */}
+                      <div style={{ flex: 1, minWidth: "220px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "var(--sd-black)" }}>
+                            {cust.businessName || cust.shopName}
+                          </span>
+                          {cust.customerName && (
+                            <span style={{ fontSize: "0.76rem", color: "var(--sd-zinc-600)", fontWeight: 600 }}>
+                              ({cust.customerName})
+                            </span>
+                          )}
+                          <span style={{
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            background: "var(--sd-zinc-100)",
+                            color: "var(--sd-zinc-800)",
+                            border: "1px solid var(--sd-zinc-300)"
+                          }}>
+                            {tierBadge}
+                          </span>
+                        </div>
+
+                        {/* Contact & Location */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px", flexWrap: "wrap", fontSize: "0.76rem", color: "var(--sd-zinc-600)" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <Phone size={12} color="var(--sd-red)" />
+                            <strong style={{ color: "var(--sd-black)" }}>{cust.phone}</strong>
+                          </span>
+                          {(city || area) && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              <MapPin size={12} color="var(--sd-zinc-400)" />
+                              <span>{[city, area].filter(Boolean).join(", ")}</span>
+                            </span>
+                          )}
+                          {cust.gstin && (
+                            <span style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)" }}>
+                              GST: <strong>{cust.gstin}</strong>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side balance & select button */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                        {Number(cust.outstandingBalance) > 0 && (
+                          <span style={{
+                            background: "var(--sd-red-subtle)",
+                            color: "var(--sd-red)",
+                            border: "1px solid var(--sd-red-border)",
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            fontWeight: 800,
+                            fontSize: "0.72rem"
+                          }}>
+                            Khata: ₹{cust.outstandingBalance}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                        >
+                          Select
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: "12px 20px",
+              background: "var(--sd-zinc-50)",
+              borderTop: "1px solid var(--sd-zinc-200)",
+              borderBottomLeftRadius: "18px",
+              borderBottomRightRadius: "18px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <span style={{ fontSize: "0.78rem", color: "var(--sd-zinc-600)" }}>
+                Showing <strong>{modalFilteredCustomers.length}</strong> of <strong>{customers.filter(c => c.isActive !== false).length}</strong> active customers
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomerSearchModal(false);
+                  setModalCustomerSearch("");
+                }}
+                className="btn-secondary"
+                style={{ padding: "5px 12px", fontSize: "0.78rem" }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

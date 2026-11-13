@@ -59,6 +59,35 @@ export default function MixersManager() {
     ingredients: []
   });
 
+  // Searchable Finished Product Combobox State
+  const [prodSearchQuery, setProdSearchQuery] = useState("");
+  const [isProdDropdownOpen, setIsProdDropdownOpen] = useState(false);
+  const prodDropdownRef = useRef(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Close finished product dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (prodDropdownRef.current && !prodDropdownRef.current.contains(event.target)) {
+        setIsProdDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter catalog products for searchable dropdown
+  const filteredCatalogProducts = useMemo(() => {
+    if (!prodSearchQuery.trim()) return products;
+    const q = prodSearchQuery.toLowerCase().trim();
+    return products.filter(prod => 
+      (prod.name && prod.name.toLowerCase().includes(q)) ||
+      (prod.tamilName && prod.tamilName.toLowerCase().includes(q)) ||
+      (prod.category && prod.category.toLowerCase().includes(q)) ||
+      (prod.subcategory && (typeof prod.subcategory === "string" ? prod.subcategory : prod.subcategory?.name || "").toLowerCase().includes(q))
+    );
+  }, [products, prodSearchQuery]);
+
   // Searchable Raw Material Combobox State
   const [rmSearchQuery, setRmSearchQuery] = useState("");
   const [selectedRm, setSelectedRm] = useState(null);
@@ -114,6 +143,8 @@ export default function MixersManager() {
       description: "",
       ingredients: []
     });
+    setProdSearchQuery("");
+    setIsProdDropdownOpen(false);
     setSelectedRm(null);
     setRmSearchQuery("");
     setSelectedRmGrams(10);
@@ -135,6 +166,9 @@ export default function MixersManager() {
         grams: Number(ing.grams) || 0
       }))
     });
+    const matched = products.find(p => p.id === mixer.productId);
+    setProdSearchQuery(matched ? `${matched.name}${matched.tamilName ? ` (${matched.tamilName})` : ''}` : "");
+    setIsProdDropdownOpen(false);
     setSelectedRm(null);
     setRmSearchQuery("");
     setSelectedRmGrams(10);
@@ -146,6 +180,8 @@ export default function MixersManager() {
   const handleProductSelect = (prodId) => {
     if (!prodId) {
       setFormData(prev => ({ ...prev, productId: "" }));
+      setProdSearchQuery("");
+      setIsProdDropdownOpen(false);
       return;
     }
     const found = products.find(p => p.id === prodId);
@@ -157,6 +193,8 @@ export default function MixersManager() {
         tamilName: prev.tamilName ? prev.tamilName : (found.tamilName || ""),
         description: prev.description || `Formulation for ${found.name}`
       }));
+      setProdSearchQuery(`${found.name}${found.tamilName ? ` (${found.tamilName})` : ""}`);
+      setIsProdDropdownOpen(false);
     }
   };
 
@@ -275,6 +313,7 @@ export default function MixersManager() {
       timestamp: Date.now()
     };
 
+    setIsSaving(true);
     try {
       if (editingMixer) {
         await updateMixer(editingMixer.id, payload);
@@ -287,6 +326,8 @@ export default function MixersManager() {
     } catch (err) {
       console.error("Save Recipe Error:", err);
       alert("Failed to save recipe: " + err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1304,26 +1345,149 @@ export default function MixersManager() {
                   </span>
                 </div>
 
-                <select
-                  value={formData.productId}
-                  onChange={(e) => handleProductSelect(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "9px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--sd-zinc-300)",
-                    fontSize: "0.85rem",
-                    background: "#FFFFFF",
-                    marginBottom: "12px"
-                  }}
-                >
-                  <option value="">-- Choose Existing Finished Product (or enter custom below) --</option>
-                  {products.map(prod => (
-                    <option key={prod.id} value={prod.id}>
-                      {prod.name} {prod.tamilName ? `(${prod.tamilName})` : ""} - {prod.category || "General"}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ position: "relative", marginBottom: "12px" }} ref={prodDropdownRef}>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="text"
+                      placeholder="Type to search finished product from catalog (e.g. Sambar Powder, Chilli...)"
+                      value={prodSearchQuery}
+                      onFocus={() => setIsProdDropdownOpen(true)}
+                      onChange={(e) => {
+                        setProdSearchQuery(e.target.value);
+                        setIsProdDropdownOpen(true);
+                        if (formData.productId) {
+                          setFormData(prev => ({ ...prev, productId: "" }));
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "9px 32px 9px 12px",
+                        borderRadius: "8px",
+                        border: formData.productId ? "1.5px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                        fontSize: "0.85rem",
+                        background: formData.productId ? "var(--sd-zinc-100)" : "#FFFFFF",
+                        fontWeight: formData.productId ? 700 : 500,
+                        color: "var(--sd-black)",
+                        outline: "none"
+                      }}
+                    />
+                    {prodSearchQuery ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, productId: "" }));
+                          setProdSearchQuery("");
+                        }}
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          color: "var(--sd-zinc-500)",
+                          cursor: "pointer",
+                          padding: "2px"
+                        }}
+                      >
+                        <X size={15} />
+                      </button>
+                    ) : (
+                      <ChevronDown
+                        size={15}
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "var(--sd-zinc-400)",
+                          pointerEvents: "none"
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Dropdown Options */}
+                  {isProdDropdownOpen && (
+                    <div style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      zIndex: 100,
+                      marginTop: "4px",
+                      maxHeight: "220px",
+                      overflowY: "auto",
+                      background: "#FFFFFF",
+                      borderRadius: "8px",
+                      border: "1px solid var(--sd-zinc-300)",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
+                    }}>
+                      <div
+                        onMouseDown={() => {
+                          handleProductSelect("");
+                        }}
+                        style={{
+                          padding: "8px 12px",
+                          fontSize: "0.78rem",
+                          color: "var(--sd-zinc-500)",
+                          cursor: "pointer",
+                          borderBottom: "1px solid var(--sd-zinc-100)"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--sd-zinc-50)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        -- Do not link catalog product (Enter custom name below) --
+                      </div>
+
+                      {filteredCatalogProducts.length > 0 ? (
+                        filteredCatalogProducts.map(prod => (
+                          <div
+                            key={prod.id}
+                            onMouseDown={() => {
+                              handleProductSelect(prod.id);
+                            }}
+                            style={{
+                              padding: "8px 12px",
+                              cursor: "pointer",
+                              borderBottom: "1px solid var(--sd-zinc-100)",
+                              fontSize: "0.82rem",
+                              background: prod.id === formData.productId ? "var(--sd-zinc-100)" : "transparent",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "var(--sd-zinc-100)"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = prod.id === formData.productId ? "var(--sd-zinc-100)" : "transparent"}
+                          >
+                            <div>
+                              <span style={{ fontWeight: 700, color: "var(--sd-black)" }}>
+                                {prod.name}
+                              </span>
+                              {prod.tamilName && (
+                                <span className="font-tamil" style={{ marginLeft: "6px", fontSize: "0.78rem", color: "var(--sd-zinc-600)" }}>
+                                  ({prod.tamilName})
+                                </span>
+                              )}
+                              <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-400)", marginTop: "2px" }}>
+                                {prod.category || "General"} {prod.subcategory ? `• ${typeof prod.subcategory === "string" ? prod.subcategory : prod.subcategory?.name || ""}` : ""}
+                              </div>
+                            </div>
+                            {prod.id === formData.productId && (
+                              <span style={{ fontSize: "0.72rem", color: "#16A34A", fontWeight: 800 }}>
+                                Selected &check;
+                              </span>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: "10px 12px", fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+                          No finished products matched "{prodSearchQuery}". You can enter custom recipe details below.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
                   <div>
@@ -1737,6 +1901,7 @@ export default function MixersManager() {
 
                 <button
                   type="submit"
+                  disabled={isSaving}
                   style={{
                     background: "var(--sd-black)",
                     color: "#FFFFFF",
@@ -1745,10 +1910,21 @@ export default function MixersManager() {
                     padding: "8px 20px",
                     fontSize: "0.82rem",
                     fontWeight: 800,
-                    cursor: "pointer"
+                    cursor: isSaving ? "not-allowed" : "pointer",
+                    opacity: isSaving ? 0.7 : 1,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
                   }}
                 >
-                  {editingMixer ? "Update Recipe" : "Save Recipe Formulation"}
+                  {isSaving ? (
+                    <>
+                      <Loader2 size={15} className="spin" />
+                      <span>{editingMixer ? "Updating Recipe..." : "Saving Formulation..."}</span>
+                    </>
+                  ) : (
+                    <span>{editingMixer ? "Update Recipe" : "Save Recipe Formulation"}</span>
+                  )}
                 </button>
               </div>
             </form>

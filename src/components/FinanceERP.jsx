@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { usePOS } from "../context/POSContext";
 import { 
   IndianRupee, 
@@ -72,6 +72,376 @@ const QUICK_SPICE_TEMPLATES = [
   { name: "Cinnamon (Pattai)", tamilName: "பட்டை", hsnCode: "0906 11 10", unit: "Kg", standardRate: 320 },
   { name: "Asafoetida (Perungayam)", tamilName: "பெருங்காயம்", hsnCode: "1301 90 13", unit: "Kg", standardRate: 1100 }
 ];
+
+// Interactive Searchable Combobox for Supplier Selection
+function SupplierSearchCombobox({ suppliers = [], value, onSelect, onChangeValue }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState(value || "");
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    setQuery(value || "");
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const activeSuppliers = useMemo(() => {
+    return suppliers.filter(s => s.isActive !== false);
+  }, [suppliers]);
+
+  const filtered = useMemo(() => {
+    const q = (query || "").toLowerCase().trim();
+    if (!q) return activeSuppliers;
+    return activeSuppliers.filter(s => 
+      (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.city && s.city.toLowerCase().includes(q)) ||
+      (s.phone && s.phone.toLowerCase().includes(q)) ||
+      (s.gstin && s.gstin.toLowerCase().includes(q))
+    );
+  }, [activeSuppliers, query]);
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <div style={{ position: "relative" }}>
+        <input
+          type="text"
+          required
+          placeholder="Search or type Supplier / Mandi..."
+          value={query}
+          onFocus={() => setIsOpen(true)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setQuery(val);
+            onChangeValue(val);
+            setIsOpen(true);
+          }}
+          style={{
+            width: "100%",
+            padding: "8px 28px 8px 10px",
+            borderRadius: "8px",
+            border: "1px solid var(--sd-zinc-300)",
+            fontSize: "0.82rem",
+            background: "#FFFFFF",
+            outline: "none",
+            fontWeight: 600,
+            color: "var(--sd-black)"
+          }}
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              onChangeValue("");
+            }}
+            style={{
+              position: "absolute",
+              right: "8px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              color: "var(--sd-zinc-400)",
+              cursor: "pointer",
+              padding: "2px"
+            }}
+          >
+            <X size={14} />
+          </button>
+        ) : (
+          <ChevronDown
+            size={14}
+            style={{
+              position: "absolute",
+              right: "8px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--sd-zinc-400)",
+              pointerEvents: "none"
+            }}
+          />
+        )}
+      </div>
+
+      {isOpen && (
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          right: 0,
+          zIndex: 999,
+          marginTop: "4px",
+          maxHeight: "220px",
+          overflowY: "auto",
+          background: "#FFFFFF",
+          borderRadius: "8px",
+          border: "1px solid var(--sd-zinc-300)",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
+        }}>
+          {filtered.length > 0 ? (
+            filtered.map(sup => (
+              <div
+                key={sup.id}
+                onMouseDown={() => {
+                  setQuery(sup.name);
+                  onSelect(sup);
+                  setIsOpen(false);
+                }}
+                style={{
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  borderBottom: "1px solid var(--sd-zinc-100)",
+                  fontSize: "0.8rem",
+                  background: sup.name === value ? "var(--sd-zinc-100)" : "transparent",
+                  transition: "background 0.15s ease"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--sd-zinc-100)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = sup.name === value ? "var(--sd-zinc-100)" : "transparent"}
+              >
+                <div style={{ fontWeight: 700, color: "var(--sd-black)" }}>
+                  {sup.name}
+                </div>
+                {(sup.city || sup.phone) && (
+                  <div style={{ fontSize: "0.72rem", color: "var(--sd-zinc-500)", marginTop: "1px" }}>
+                    {sup.city ? `📍 ${sup.city}` : ""} {sup.phone ? `• 📞 ${sup.phone}` : ""}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: "10px 12px", fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+              No existing supplier matched "{query}". You can continue using this name.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Interactive Searchable Combobox for Raw Material Selection in Purchase Bill
+function RawMaterialSearchCombobox({ rawMaterials = [], value, onSelect, onAddNew }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapperRef = useRef(null);
+
+  const selectedMaterial = useMemo(() => {
+    return rawMaterials.find(r => r.id === value) || null;
+  }, [rawMaterials, value]);
+
+  useEffect(() => {
+    if (selectedMaterial) {
+      setQuery(selectedMaterial.name);
+    } else {
+      setQuery("");
+    }
+  }, [selectedMaterial]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+        if (selectedMaterial) {
+          setQuery(selectedMaterial.name);
+        } else {
+          setQuery("");
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [selectedMaterial]);
+
+  const filtered = useMemo(() => {
+    const q = (query || "").toLowerCase().trim();
+    if (!q) return rawMaterials;
+    return rawMaterials.filter(rm => 
+      (rm.name && rm.name.toLowerCase().includes(q)) ||
+      (rm.tamilName && rm.tamilName.toLowerCase().includes(q)) ||
+      (rm.hsnCode && rm.hsnCode.toLowerCase().includes(q)) ||
+      (rm.category && rm.category.toLowerCase().includes(q))
+    );
+  }, [rawMaterials, query]);
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      {/* Hidden input to satisfy HTML form required constraint */}
+      <input
+        type="text"
+        required
+        value={value || ""}
+        onChange={() => {}}
+        style={{
+          position: "absolute",
+          opacity: 0,
+          pointerEvents: "none",
+          width: "1px",
+          height: "1px",
+          bottom: 0
+        }}
+        tabIndex={-1}
+      />
+      <div style={{ position: "relative" }}>
+        <input
+          type="text"
+          placeholder="Search raw material product..."
+          value={query}
+          onFocus={() => setIsOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          style={{
+            width: "100%",
+            padding: "8px 28px 8px 10px",
+            borderRadius: "6px",
+            border: selectedMaterial ? "1.5px solid var(--sd-zinc-400)" : "1.5px solid var(--sd-zinc-300)",
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            outline: "none",
+            background: "#FFFFFF",
+            color: "var(--sd-black)"
+          }}
+        />
+        {value ? (
+          <button
+            type="button"
+            onClick={() => {
+              onSelect("");
+              setQuery("");
+            }}
+            style={{
+              position: "absolute",
+              right: "8px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              color: "var(--sd-zinc-400)",
+              cursor: "pointer",
+              padding: "2px"
+            }}
+          >
+            <X size={14} />
+          </button>
+        ) : (
+          <ChevronDown
+            size={14}
+            style={{
+              position: "absolute",
+              right: "8px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--sd-zinc-400)",
+              pointerEvents: "none"
+            }}
+          />
+        )}
+      </div>
+
+      {isOpen && (
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          right: 0,
+          zIndex: 999,
+          marginTop: "4px",
+          maxHeight: "220px",
+          overflowY: "auto",
+          background: "#FFFFFF",
+          borderRadius: "8px",
+          border: "1px solid var(--sd-zinc-300)",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
+        }}>
+          {filtered.length > 0 ? (
+            filtered.map(rm => (
+              <div
+                key={rm.id}
+                onMouseDown={() => {
+                  onSelect(rm.id);
+                  setQuery(rm.name);
+                  setIsOpen(false);
+                }}
+                style={{
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  borderBottom: "1px solid var(--sd-zinc-100)",
+                  fontSize: "0.8rem",
+                  background: rm.id === value ? "var(--sd-zinc-100)" : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--sd-zinc-100)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = rm.id === value ? "var(--sd-zinc-100)" : "transparent"}
+              >
+                <div>
+                  <span style={{ fontWeight: 700, color: "var(--sd-black)" }}>
+                    {rm.name}
+                  </span>
+                  {rm.tamilName && (
+                    <span className="font-tamil" style={{ marginLeft: "6px", fontSize: "0.75rem", color: "var(--sd-zinc-500)" }}>
+                      ({rm.tamilName})
+                    </span>
+                  )}
+                  <div style={{ fontSize: "0.7rem", color: "var(--sd-zinc-400)", marginTop: "1px" }}>
+                    HSN: {rm.hsnCode || "0910"} {rm.unit ? `• Unit: ${rm.unit}` : ""}
+                  </div>
+                </div>
+                {rm.currentStock !== undefined && (
+                  <span style={{
+                    fontSize: "0.7rem",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    background: Number(rm.currentStock) <= (rm.minStockThreshold || 0) ? "#FEE2E2" : "var(--sd-zinc-100)",
+                    color: Number(rm.currentStock) <= (rm.minStockThreshold || 0) ? "#B91C1C" : "var(--sd-zinc-700)",
+                    fontWeight: 700
+                  }}>
+                    {rm.currentStock} {rm.unit || "Kg"}
+                  </span>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: "10px 12px", fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+              No raw materials matched "{query}".
+            </div>
+          )}
+
+          <div
+            onMouseDown={() => {
+              setIsOpen(false);
+              onAddNew();
+            }}
+            style={{
+              padding: "10px 12px",
+              cursor: "pointer",
+              background: "#FFF7ED",
+              color: "#C2410C",
+              fontWeight: 800,
+              fontSize: "0.78rem",
+              borderTop: "1px solid #FFEDD5",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <Plus size={14} /> + Add New Raw Material to Catalog...
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function FinanceERP() {
   const { 
@@ -1949,43 +2319,25 @@ export default function FinanceERP() {
                   1. Supplier & Invoice Info
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
-                  {/* Supplier Field (Dropdown from dynamic Suppliers) */}
+                  {/* Supplier Field (Searchable Combobox) */}
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
                       Supplier / Mandi *
                     </label>
-                    <select
+                    <SupplierSearchCombobox
+                      suppliers={suppliers}
                       value={rawBillData.supplierName}
-                      onChange={(e) => {
-                        const selName = e.target.value;
-                        const matchedSup = suppliers.find(s => s.name === selName);
-                        setRawBillData({
-                          ...rawBillData,
-                          supplierName: selName,
-                          supplierPhone: matchedSup?.phone || rawBillData.supplierPhone || ""
-                        });
+                      onChangeValue={(val) => {
+                        setRawBillData(prev => ({ ...prev, supplierName: val }));
                       }}
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "8px",
-                        border: "1px solid var(--sd-zinc-300)",
-                        fontSize: "0.82rem",
-                        background: "#FFFFFF",
-                        outline: "none"
+                      onSelect={(sup) => {
+                        setRawBillData(prev => ({
+                          ...prev,
+                          supplierName: sup.name,
+                          supplierPhone: sup.phone || prev.supplierPhone || ""
+                        }));
                       }}
-                      required
-                    >
-                      <option value="">-- Select Supplier --</option>
-                      {suppliers.filter(s => s.isActive !== false).map(sup => (
-                        <option key={sup.id} value={sup.name}>
-                          {sup.name} {sup.city ? `(${sup.city})` : ''}
-                        </option>
-                      ))}
-                      {rawBillData.supplierName && !suppliers.some(s => s.name === rawBillData.supplierName) && (
-                        <option value={rawBillData.supplierName}>{rawBillData.supplierName}</option>
-                      )}
-                    </select>
+                    />
                   </div>
 
                   <div>
@@ -2137,38 +2489,15 @@ export default function FinanceERP() {
                             </button>
                           </div>
 
-                          <select
-                            required
+                          <RawMaterialSearchCombobox
+                            rawMaterials={rawMaterials}
                             value={item.rawMaterialId}
-                            onChange={(e) => {
-                              if (e.target.value === "__NEW__") {
-                                setTargetRowForNewRM(idx);
-                                setShowQuickAddRMModal(true);
-                              } else {
-                                handleRawItemChange(idx, "rawMaterialId", e.target.value);
-                              }
+                            onSelect={(rmId) => handleRawItemChange(idx, "rawMaterialId", rmId)}
+                            onAddNew={() => {
+                              setTargetRowForNewRM(idx);
+                              setShowQuickAddRMModal(true);
                             }}
-                            style={{
-                              width: "100%",
-                              padding: "8px 10px",
-                              borderRadius: "6px",
-                              border: "1.5px solid var(--sd-zinc-300)",
-                              fontSize: "0.82rem",
-                              fontWeight: 700,
-                              outline: "none",
-                              background: "#FFFFFF"
-                            }}
-                          >
-                            <option value="">-- Choose Raw Material Product --</option>
-                            {rawMaterials.map(rm => (
-                              <option key={rm.id} value={rm.id}>
-                                {rm.name} {rm.tamilName ? `(${rm.tamilName})` : ""} - HSN: {rm.hsnCode || "0910"}
-                              </option>
-                            ))}
-                            <option value="__NEW__" style={{ fontWeight: 800, color: "#6B1414", background: "#FFEDD5" }}>
-                              + Add New Raw Material to Catalog...
-                            </option>
-                          </select>
+                          />
                         </div>
 
                         {/* Column 2: HSN Code (Pre-filled from Product Management) */}

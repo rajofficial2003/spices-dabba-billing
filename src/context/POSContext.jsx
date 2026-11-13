@@ -367,8 +367,8 @@ export function POSProvider({ children }) {
     ? Math.round((subtotal * (Number(discount) || 0)) / 100) 
     : Math.min(subtotal, Number(discount) || 0);
 
-  // Grand Total (Total Payable) is Subtotal after discount
-  const grandTotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+  // Grand Total (Total Payable) is Subtotal after discount rounded to nearest whole rupee
+  const grandTotal = Math.max(0, Math.round(subtotal - discountAmount));
 
   // Taxable base (without GST) before discount for invoice breakdowns
   const taxableBase = cartItems.reduce((sum, item) => {

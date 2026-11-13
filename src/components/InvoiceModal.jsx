@@ -211,8 +211,8 @@ export default function InvoiceModal({ order, onClose }) {
   const baseSubtotal = Number(order.subtotal || 0);
   const baseDiscount = Number(order.discount || 0);
   const finalGrandTotal = baseSubtotal > 0
-    ? Math.round((baseSubtotal - baseDiscount + shippingCharges) * 100) / 100
-    : (Number(order.grandTotal) > 0 ? Number(order.grandTotal) : 0);
+    ? Math.round(baseSubtotal - baseDiscount + shippingCharges)
+    : (Number(order.grandTotal) > 0 ? Math.round(Number(order.grandTotal)) : 0);
 
   const taxableSubtotalVal = order.taxableSubtotal !== undefined
     ? Number(order.taxableSubtotal)
@@ -332,7 +332,7 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `Subtotal: ₹${Number(order.subtotal || finalGrandTotal).toFixed(2)}\n`;
     msg += `Discount: ${Number(order.discount) > 0 ? `-₹${Number(order.discount).toFixed(2)}` : "₹0.00"}\n`;
     msg += `Shipping Charges: ₹${shippingCharges.toFixed(2)}\n`;
-    msg += `*TOTAL PAYABLE: ₹${finalGrandTotal.toFixed(2)}*\n`;
+    msg += `*TOTAL PAYABLE: ₹${Math.round(finalGrandTotal)}*\n`;
     msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}*\n`;
     msg += `--------------------------------\n`;
     msg += `*BANK DETAILS FOR PAYMENT:*\n`;
@@ -523,7 +523,7 @@ export default function InvoiceModal({ order, onClose }) {
                 Address: {BUSINESS_INFO?.address || [BUSINESS_INFO?.address1, BUSINESS_INFO?.address2, BUSINESS_INFO?.city, BUSINESS_INFO?.state ? `${BUSINESS_INFO?.state} - ${BUSINESS_INFO?.pincode}` : BUSINESS_INFO?.pincode].filter(Boolean).join(", ")}
               </div>
               <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
-                Phone: {BUSINESS_INFO?.phonePrimary || BUSINESS_INFO?.phone}{BUSINESS_INFO?.phoneSecondary ? `, ${BUSINESS_INFO.phoneSecondary}` : ""}
+                Phone: {BUSINESS_INFO?.phonePrimary || BUSINESS_INFO?.phone || ""}
               </div>
               <div style={{ color: "#52525B", marginTop: "2px" }}>
                 GSTIN: <strong style={{ fontFamily: "monospace", color: "#09090b" }}>{BUSINESS_INFO?.gstin}</strong>
@@ -831,7 +831,7 @@ export default function InvoiceModal({ order, onClose }) {
                 color: "#09090b"
               }}>
                 <span>Total Payable:</span>
-                <span>₹{finalGrandTotal.toFixed(2)}</span>
+                <span>₹{Math.round(finalGrandTotal)}</span>
               </div>
 
               {/* Terms & Conditions right below Total Payable */}

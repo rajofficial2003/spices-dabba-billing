@@ -14,7 +14,10 @@ import {
   XCircle,
   Tag,
   PackagePlus,
-  Layers
+  Layers,
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
 import { compressImage, uploadProductImage, formatBytes } from "../utils/imageCompressor";
@@ -88,6 +91,16 @@ export default function ProductsManager({ initialSubView = "products" }) {
   const [isCompressing, setIsCompressing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRestocking, setIsRestocking] = useState(false);
+
+  // Products Catalog Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, selectedSubcategory, statusFilter, activeSubView, itemsPerPage]);
 
   const formCategoryObj = categories.find(c => c.id === formData.category);
   const formSubcategories = (formCategoryObj?.subcategories || [])
@@ -366,6 +379,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
   const handleConfirmRestock = async (e) => {
     e.preventDefault();
     if (!restockTarget || !incomingQty || incomingQty <= 0) return;
+    setIsRestocking(true);
     try {
       const selectedVariantSize = restockTarget.variants?.[restockVariantIdx]?.size || restockTarget.unit;
       const newStock = await restockProduct(restockTarget.id, incomingQty, batchNote, selectedVariantSize);
@@ -374,6 +388,8 @@ export default function ProductsManager({ initialSubView = "products" }) {
       setTimeout(() => setToastMsg(null), 4000);
     } catch (err) {
       alert("Failed to restock: " + err.message);
+    } finally {
+      setIsRestocking(false);
     }
   };
 
@@ -483,6 +499,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
     const primaryVariant = cleanVariants[0];
 
     try {
+      setIsSubmitting(true);
       let finalImageUrl = formData.image;
 
       if (selectedFile) {
@@ -548,6 +565,8 @@ export default function ProductsManager({ initialSubView = "products" }) {
       setErrorMsg("");
     } catch (err) {
       setErrorMsg(err.message || "Failed to save product");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -569,6 +588,13 @@ export default function ProductsManager({ initialSubView = "products" }) {
 
     return matchesCat && matchesSubcat && matchesSearch;
   });
+
+  // Product Pagination Calculation
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (validCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
   const activeCount = products.filter(p => p.isActive !== false).length;
   const inactiveCount = products.filter(p => p.isActive === false).length;
@@ -868,7 +894,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
         </div>
       ) : (
       <div className="responsive-product-grid">
-        {filteredProducts.map(product => {
+        {paginatedProducts.map(product => {
           const activeVariantIdx = selectedVariantMap[product.id] ?? 0;
           const hasVariants = product.variants && product.variants.length > 0;
           const currentVariant = hasVariants ? (product.variants[activeVariantIdx] || product.variants[0]) : null;
@@ -1164,6 +1190,151 @@ export default function ProductsManager({ initialSubView = "products" }) {
           );
         })}
       </div>
+      )}
+
+      {/* Product Pagination Bar */}
+      {filteredProducts.length > 0 && (
+        <div style={{
+          marginTop: "20px",
+          padding: "14px 18px",
+          background: "var(--sd-white)",
+          borderRadius: "12px",
+          border: "1px solid var(--sd-zinc-200)",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+        }}>
+          {/* Summary and Items Per Page */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <div style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", fontWeight: 600 }}>
+              Showing <strong style={{ color: "var(--sd-black)" }}>{startIndex + 1}</strong> to <strong style={{ color: "var(--sd-black)" }}>{Math.min(endIndex, filteredProducts.length)}</strong> of <strong style={{ color: "var(--sd-black)" }}>{filteredProducts.length}</strong> products
+              {totalPages > 1 && ` • Page ${validCurrentPage} of ${totalPages}`}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+              <span>Per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--sd-zinc-300)",
+                  background: "var(--sd-white)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  color: "var(--sd-black)"
+                }}
+              >
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={48}>48</option>
+                <option value={96}>96</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Page Navigation Controls */}
+          {totalPages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage(prev => Math.max(prev - 1, 1));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                disabled={validCurrentPage === 1}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--sd-zinc-300)",
+                  background: validCurrentPage === 1 ? "var(--sd-zinc-100)" : "var(--sd-white)",
+                  color: validCurrentPage === 1 ? "var(--sd-zinc-400)" : "var(--sd-zinc-800)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: validCurrentPage === 1 ? "not-allowed" : "pointer",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                <ChevronLeft size={14} />
+                <span>Prev</span>
+              </button>
+
+              {/* Numbered Pills */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => page === 1 || page === totalPages || Math.abs(page - validCurrentPage) <= 1)
+                .map((page, index, array) => {
+                  const showEllipsisBefore = index > 0 && page - array[index - 1] > 1;
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsisBefore && (
+                        <span style={{ padding: "0 4px", color: "var(--sd-zinc-400)", fontSize: "0.8rem" }}>...</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentPage(page);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "8px",
+                          border: page === validCurrentPage ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                          background: page === validCurrentPage ? "var(--sd-black)" : "var(--sd-white)",
+                          color: page === validCurrentPage ? "var(--sd-white)" : "var(--sd-zinc-800)",
+                          fontSize: "0.78rem",
+                          fontWeight: page === validCurrentPage ? 800 : 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                disabled={validCurrentPage === totalPages}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--sd-zinc-300)",
+                  background: validCurrentPage === totalPages ? "var(--sd-zinc-100)" : "var(--sd-white)",
+                  color: validCurrentPage === totalPages ? "var(--sd-zinc-400)" : "var(--sd-zinc-800)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: validCurrentPage === totalPages ? "not-allowed" : "pointer",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Modal - only closes on Cancel / Close button click */}
@@ -1694,16 +1865,24 @@ export default function ProductsManager({ initialSubView = "products" }) {
                   type="button"
                   onClick={() => setShowModal(false)}
                   className="btn-secondary"
-                  disabled={isUploading}
+                  disabled={isUploading || isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="btn-accent"
-                  disabled={isUploading || isCompressing}
+                  disabled={isUploading || isCompressing || isSubmitting}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  {isUploading ? "Uploading..." : editingProduct ? "Update Product" : "Save Product"}
+                  {isSubmitting || isUploading ? (
+                    <>
+                      <Loader2 size={16} className="spin" />
+                      <span>{isUploading ? "Uploading Image..." : editingProduct ? "Updating Product..." : "Saving Product..."}</span>
+                    </>
+                  ) : (
+                    <span>{editingProduct ? "Update Product" : "Save Product"}</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1862,6 +2041,7 @@ export default function ProductsManager({ initialSubView = "products" }) {
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "6px" }}>
                     <button
                       type="button"
+                      disabled={isRestocking}
                       onClick={() => setShowRestockModal(false)}
                       className="btn-secondary"
                     >
@@ -1869,9 +2049,18 @@ export default function ProductsManager({ initialSubView = "products" }) {
                     </button>
                     <button
                       type="submit"
+                      disabled={isRestocking}
                       className="btn-accent"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                     >
-                      Confirm & Update Stock
+                      {isRestocking ? (
+                        <>
+                          <Loader2 size={15} className="spin" />
+                          <span>Updating Stock...</span>
+                        </>
+                      ) : (
+                        <span>Confirm & Update Stock</span>
+                      )}
                     </button>
                   </div>
                 </form>

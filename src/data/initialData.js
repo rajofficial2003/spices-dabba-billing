@@ -13,7 +13,7 @@ export const BUSINESS_INFO = {
   pincode: "625513",
   address: "Bodinayakanur, Theni District-625513, Tamilnadu, India",
   phonePrimary: "+91 95666 59298",
-  phoneSecondary: "+91 98408 39699",
+  phoneSecondary: "",
   whatsappNumber: "919566659298",
   email: "hello@spicesdabba.com",
   gstin: "33ATDPV4802H1ZR",

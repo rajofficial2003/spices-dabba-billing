@@ -315,7 +315,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
         >
           <ShoppingBag size={15} />
           <span>
-            Billing ({totalItemsCount} • ₹{grandTotal})
+            Billing ({totalItemsCount} • ₹{Math.round(grandTotal)})
           </span>
         </button>
       </div>
@@ -1519,7 +1519,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                   </div>
                 </div>
                 <div className="font-heading" style={{ fontSize: "1.55rem", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px" }}>
-                  {formatCurrency(grandTotal)}
+                  {formatCurrency(Math.round(grandTotal))}
                 </div>
               </div>
 
@@ -1705,7 +1705,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
               {totalItemsCount}
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>₹{grandTotal}</div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>₹{Math.round(grandTotal)}</div>
               <div style={{ fontSize: "0.72rem", opacity: 0.85 }}>
                 {selectedCustomer?.shopName || "Tap to review bill"}
               </div>

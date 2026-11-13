@@ -368,7 +368,7 @@ export default function InvoiceModal({ order, onClose }) {
           alignItems: "center",
           gap: "8px"
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
             <FileText size={17} color="#FEF2F2" />
             <span className="font-heading" style={{ fontWeight: 800, fontSize: "1rem" }}>
               Invoice Details
@@ -386,7 +386,7 @@ export default function InvoiceModal({ order, onClose }) {
             </span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={handleDownloadPDF}

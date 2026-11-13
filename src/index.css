@@ -125,6 +125,18 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   white-space: nowrap;
 }
 
+@media (min-width: 769px) and (max-width: 1150px) {
+  .nav-tab-btn {
+    padding: 6px 10px !important;
+    font-size: 0.76rem !important;
+    gap: 5px !important;
+    border-radius: 9px !important;
+  }
+  .desktop-nav {
+    gap: 5px !important;
+  }
+}
+
 .nav-tab-btn:hover {
   color: var(--sd-black);
   border-color: var(--sd-zinc-400);
@@ -523,10 +535,39 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     gap: 10px !important;
     margin-bottom: 16px !important;
   }
+  .responsive-metrics-grid .bw-card {
+    padding: 12px 14px !important;
+  }
+  .responsive-metrics-grid .font-heading {
+    font-size: 1.25rem !important;
+  }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 380px) {
   .responsive-metrics-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* Responsive KPI Grid for FinanceERP */
+.responsive-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .responsive-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .responsive-kpi-grid .bw-card {
+    padding: 12px 14px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .responsive-kpi-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
@@ -809,6 +850,12 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
 }
 
+@media (min-width: 769px) and (max-width: 1024px) {
+  .pos-catalog-column {
+    padding-bottom: 76px !important;
+  }
+}
+
 @media (min-width: 1025px) {
   .no-desktop {
     display: none !important;
@@ -835,11 +882,29 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
 }
 
+@media (max-width: 480px) {
+  .brand-logo-img {
+    height: 30px !important;
+  }
+  .brand-title-text {
+    font-size: 1.05rem !important;
+  }
+  .user-role-text {
+    display: none !important;
+  }
+}
+
 /* A4 Invoice Mobile Scroll Wrapper */
 .a4-scroll-wrapper {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 680px) {
+  .a4-invoice-container {
+    min-width: 640px !important;
+  }
 }
 
 /* Spinner utility */

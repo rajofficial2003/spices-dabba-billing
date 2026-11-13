@@ -108,12 +108,13 @@ export default function Header({ activeTab, setActiveTab }) {
             <img 
               src={BUSINESS_INFO?.logoPath || "/images/logo/logo.png"} 
               alt={BUSINESS_INFO?.brandName || "Spices Dabba"} 
+              className="brand-logo-img"
               onError={(e) => { 
                 e.target.style.display = 'none'; 
               }}
               style={{ height: "38px", width: "auto", objectFit: "contain" }}
             />
-            <span className="font-heading" style={{
+            <span className="font-heading brand-title-text" style={{
               fontSize: "1.25rem",
               fontWeight: 900,
               color: "var(--sd-black)",
@@ -230,7 +231,7 @@ export default function Header({ activeTab, setActiveTab }) {
               whiteSpace: "nowrap"
             }}>
               {isSuperAdmin ? <ShieldCheck size={15} /> : <User size={15} />}
-              <span>{isSuperAdmin ? "Super Admin" : (currentUser?.name || "Staff")}</span>
+              <span className="user-role-text">{isSuperAdmin ? "Super Admin" : (currentUser?.name || "Staff")}</span>
               {isStaff && (
                 <span className="no-mobile" style={{ color: "#71717A", fontWeight: 600, fontSize: "0.72rem" }}>
                   ({currentUser?.role || "Staff"})

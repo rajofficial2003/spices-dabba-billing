@@ -196,6 +196,8 @@ export default function DateRangePicker({
             border: "1px solid var(--sd-zinc-200)",
             boxShadow: "0 12px 30px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.06)",
             width: "310px",
+            maxWidth: "calc(100vw - 24px)",
+            boxSizing: "border-box",
             padding: "14px",
             animation: "fadeIn 0.15s ease"
           }}

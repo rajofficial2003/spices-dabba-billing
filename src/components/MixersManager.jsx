@@ -1269,27 +1269,13 @@ export default function MixersManager() {
       {/* MODAL 1: CREATE / EDIT RECIPE FORMULATION BUILDER (Customised Weight)    */}
       {/* ========================================================================= */}
       {showEditModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(3px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "16px",
-          zIndex: 999
-        }}>
-          <div style={{
-            background: "#FFFFFF",
-            borderRadius: "20px",
-            width: "100%",
+        <div className="modal-overlay" style={{ zIndex: 999 }}>
+          <div className="modal-content" style={{
             maxWidth: "740px",
             maxHeight: "92vh",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.3)"
+            overflow: "hidden"
           }}>
             {/* Modal Header */}
             <div style={{
@@ -1489,7 +1475,7 @@ export default function MixersManager() {
                   )}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
+                <div className="form-grid-2col">
                   <div>
                     <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--sd-zinc-600)" }}>
                       Recipe / Product Name *
@@ -1761,7 +1747,7 @@ export default function MixersManager() {
                   <div style={{
                     border: "1px solid var(--sd-zinc-200)",
                     borderRadius: "10px",
-                    overflow: "hidden"
+                    overflowX: "auto"
                   }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                       <thead>
@@ -1936,27 +1922,13 @@ export default function MixersManager() {
       {/* MODAL 2: RECIPE READY / PRODUCTION BATCH SCALER & DOWNLOAD/PRINT SLIP     */}
       {/* ========================================================================= */}
       {showScalerModal && scalerMixer && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.65)",
-          backdropFilter: "blur(3px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "16px",
-          zIndex: 999
-        }}>
-          <div style={{
-            background: "#FFFFFF",
-            borderRadius: "20px",
-            width: "100%",
+        <div className="modal-overlay" style={{ zIndex: 999 }}>
+          <div className="modal-content" style={{
             maxWidth: "760px",
             maxHeight: "94vh",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.3)"
+            overflow: "hidden"
           }}>
             {/* Modal Header */}
             <div style={{
@@ -2205,8 +2177,9 @@ export default function MixersManager() {
                   </div>
                 </div>
 
-                {/* Scaled Ingredients Table (No Checked Column, No Prices) */}
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", marginBottom: "16px" }}>
+                {/* Scaled Ingredients Table (With horizontal scroll for mobile) */}
+                <div style={{ overflowX: "auto", width: "100%", marginBottom: "16px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                   <thead>
                     <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "2px solid var(--sd-zinc-300)", textAlign: "left" }}>
                       <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "35px" }}>#</th>
@@ -2301,6 +2274,7 @@ export default function MixersManager() {
                     </tr>
                   </tfoot>
                 </table>
+                </div>
 
                 {/* Mill Operator Signatures Footer Only */}
                 <div style={{

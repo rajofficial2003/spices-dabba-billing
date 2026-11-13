@@ -1258,11 +1258,7 @@ export default function FinanceERP() {
         </div>
 
         {/* 4 Executive KPI Cards */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
-          gap: "12px"
-        }}>
+        <div className="responsive-kpi-grid">
           {/* Card 1: Billing Inflow */}
           <div className="bw-card" style={{
             background: "#FFFFFF",
@@ -1488,7 +1484,9 @@ export default function FinanceERP() {
           padding: "4px",
           borderRadius: "12px",
           border: "1px solid var(--sd-zinc-200)",
-          gap: "4px"
+          gap: "4px",
+          maxWidth: "100%",
+          overflowX: "auto"
         }}>
           <button
             type="button"
@@ -2189,26 +2187,12 @@ export default function FinanceERP() {
       {/* MODAL 1: RECORD RAW MATERIAL PURCHASE BILL (Multiple Items Single Bill) */}
       {/* ========================================================================= */}
       {showRawMaterialModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0, 0, 0, 0.7)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-          padding: "16px"
-        }}>
-          <div style={{
-            background: "#FFFFFF",
-            borderRadius: "16px",
-            width: "100%",
+        <div className="modal-overlay">
+          <div className="modal-content" style={{
             maxWidth: "800px",
             maxHeight: "92vh",
             display: "flex",
             flexDirection: "column",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
             overflow: "hidden"
           }}>
             {/* Header */}
@@ -2878,23 +2862,9 @@ export default function FinanceERP() {
       {/* QUICK ADD RAW MATERIAL PRODUCT MODAL (From inside bill recorder) */}
       {/* ========================================================================= */}
       {showQuickAddRMModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0, 0, 0, 0.65)",
-          backdropFilter: "blur(3px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 10001,
-          padding: "16px"
-        }}>
-          <div style={{
-            background: "#FFFFFF",
-            borderRadius: "14px",
-            width: "100%",
+        <div className="modal-overlay" style={{ zIndex: 10001 }}>
+          <div className="modal-content" style={{
             maxWidth: "460px",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.35)",
             overflow: "hidden"
           }}>
             <div style={{
@@ -3072,26 +3042,12 @@ export default function FinanceERP() {
       {/* MODAL 2: RECORD OTHER OPERATIONAL EXPENSE (Petrol, Tempo, Salary, etc.) */}
       {/* ========================================================================= */}
       {showOtherExpenseModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0, 0, 0, 0.7)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-          padding: "16px"
-        }}>
-          <div style={{
-            background: "#FFFFFF",
-            borderRadius: "16px",
-            width: "100%",
+        <div className="modal-overlay">
+          <div className="modal-content" style={{
             maxWidth: "520px",
             maxHeight: "92vh",
             display: "flex",
             flexDirection: "column",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
             overflow: "hidden"
           }}>
             {/* Header */}

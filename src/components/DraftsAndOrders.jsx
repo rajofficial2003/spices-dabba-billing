@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Truck,
   BarChart3,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Building2
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import DateRangePicker from "./DateRangePicker";
@@ -41,6 +42,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
   const { 
     orders, 
     customers = [],
+    businesses = [],
     BUSINESS_INFO = {},
     deleteOrder, 
     markOrderPaymentStatus,
@@ -67,6 +69,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
   const [shippingSaving, setShippingSaving] = useState(false);
 
   const [filterTab, setFilterTab] = useState("completed");
+  const [businessFilter, setBusinessFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Date Filtering State
@@ -200,6 +203,12 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
     if (filterTab === "draft" && order.status !== "draft") return false;
     if (filterTab === "completed" && (order.status !== "completed" || order.paymentStatus === "pending" || order.paymentStatus === "credit")) return false;
     if (filterTab === "credit" && (order.status !== "completed" || (order.paymentStatus !== "pending" && order.paymentStatus !== "credit"))) return false;
+
+    // Business Name Filter
+    if (businessFilter !== "all") {
+      const bName = order.businessName || "B1 – Masalas";
+      if (bName !== businessFilter) return false;
+    }
 
     // Date range filtering
     if (startDate || endDate) {
@@ -402,6 +411,34 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
             onClear={handleClearDateFilter}
           />
 
+          {/* Business Entity Filter Dropdown */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <Building2 size={14} color="var(--sd-zinc-600)" />
+            <select
+              value={businessFilter}
+              onChange={(e) => setBusinessFilter(e.target.value)}
+              style={{
+                padding: "6px 10px",
+                borderRadius: "8px",
+                border: "1px solid var(--sd-zinc-300)",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                background: "#FFFFFF",
+                color: "var(--sd-black)",
+                outline: "none",
+                cursor: "pointer"
+              }}
+              title="Filter orders by Business Name"
+            >
+              <option value="all">All Businesses</option>
+              {businesses.map(b => (
+                <option key={b.id} value={b.businessName}>
+                  {b.businessName}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Revenue badge if completed filter */}
           {filterTab !== "draft" && (
             <span style={{
@@ -513,33 +550,49 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                     )}
                   </div>
 
-                  {/* Clean Status Badge */}
-                  <span style={{
-                    flexShrink: 0,
-                    padding: "3px 8px",
-                    borderRadius: "6px",
-                    fontSize: "0.7rem",
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    whiteSpace: "nowrap",
-                    background: isDraft 
-                      ? "var(--sd-zinc-100)" 
-                      : isPendingCredit 
-                      ? "var(--sd-red-subtle)" 
-                      : "var(--sd-black)",
-                    color: isDraft 
-                      ? "var(--sd-zinc-800)" 
-                      : isPendingCredit 
-                      ? "var(--sd-red)" 
-                      : "var(--sd-white)",
-                    border: isPendingCredit ? "1px solid var(--sd-red-border)" : "1px solid var(--sd-zinc-200)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}>
-                    {isDraft ? <Clock size={11} /> : isPendingCredit ? <AlertCircle size={11} /> : <CheckCircle size={11} />}
-                    {isDraft ? "Draft" : isPendingCredit ? "Credit Due" : "Completed"}
-                  </span>
+                  {/* Badges container: Business Name + Status */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                    <span style={{
+                      padding: "3px 7px",
+                      borderRadius: "6px",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      background: "var(--sd-zinc-100)",
+                      color: "var(--sd-black)",
+                      border: "1px solid var(--sd-zinc-200)",
+                      whiteSpace: "nowrap"
+                    }}>
+                      {order.businessName || "B1 – Masalas"}
+                    </span>
+
+                    {/* Clean Status Badge */}
+                    <span style={{
+                      flexShrink: 0,
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      fontSize: "0.7rem",
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap",
+                      background: isDraft 
+                        ? "var(--sd-zinc-100)" 
+                        : isPendingCredit 
+                        ? "var(--sd-red-subtle)" 
+                        : "var(--sd-black)",
+                      color: isDraft 
+                        ? "var(--sd-zinc-800)" 
+                        : isPendingCredit 
+                        ? "var(--sd-red)" 
+                        : "var(--sd-white)",
+                      border: isPendingCredit ? "1px solid var(--sd-red-border)" : "1px solid var(--sd-zinc-200)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}>
+                      {isDraft ? <Clock size={11} /> : isPendingCredit ? <AlertCircle size={11} /> : <CheckCircle size={11} />}
+                      {isDraft ? "Draft" : isPendingCredit ? "Credit Due" : "Completed"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Metadata row */}
@@ -1082,6 +1135,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
         onClose={() => setShowReportModal(false)}
         orders={orders}
         customers={customers}
+        businesses={businesses}
         BUSINESS_INFO={BUSINESS_INFO}
         initialFilterTab={filterTab}
         initialDatePreset={datePreset}

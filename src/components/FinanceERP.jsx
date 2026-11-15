@@ -451,6 +451,8 @@ export default function FinanceERP() {
     categories = [],
     expenseCategories = [],
     suppliers = [],
+    businesses = [],
+    defaultBusiness,
     addRawMaterial,
     addExpense, 
     updateExpense,
@@ -468,6 +470,7 @@ export default function FinanceERP() {
   // Primary Split Switcher: "raw_materials" or "other_expenses"
   const [activeSection, setActiveSection] = useState("raw_materials"); // 'raw_materials' or 'other_expenses'
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [businessFilter, setBusinessFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Date Filtering State
@@ -579,6 +582,7 @@ export default function FinanceERP() {
   // RAW MATERIAL PURCHASE BILL FORM STATE (Single Bill with Multiple Products)
   // ==========================================
   const [rawBillData, setRawBillData] = useState({
+    businessName: defaultBusiness?.businessName || businesses[0]?.businessName || "B1 – Masalas",
     supplierName: "",
     supplierPhone: "",
     invoiceNumber: "",
@@ -603,6 +607,7 @@ export default function FinanceERP() {
   // OTHER EXPENSE FORM STATE
   // ==========================================
   const [otherExpenseData, setOtherExpenseData] = useState({
+    businessName: defaultBusiness?.businessName || businesses[0]?.businessName || "B1 – Masalas",
     category: "",
     title: "",
     amount: "",
@@ -623,13 +628,17 @@ export default function FinanceERP() {
   };
 
   // ==========================================
-  // FINANCIAL CALCULATIONS (WITH DATE FILTERING)
+  // FINANCIAL CALCULATIONS (WITH DATE & BUSINESS FILTERING)
   // ==========================================
   const dateFilteredExpenses = expenses.filter(exp => {
     if (startDate || endDate) {
       const d = getExpenseDateStr(exp);
       if (startDate && d && d < startDate) return false;
       if (endDate && d && d > endDate) return false;
+    }
+    if (businessFilter !== "all") {
+      const bName = exp.businessName || "B1 – Masalas";
+      if (bName !== businessFilter) return false;
     }
     return true;
   });
@@ -640,6 +649,10 @@ export default function FinanceERP() {
       const d = getOrderDateStr(o);
       if (startDate && d && d < startDate) return false;
       if (endDate && d && d > endDate) return false;
+    }
+    if (businessFilter !== "all") {
+      const bName = o.businessName || "B1 – Masalas";
+      if (bName !== businessFilter) return false;
     }
     return true;
   });
@@ -888,6 +901,7 @@ export default function FinanceERP() {
     const activeSup = suppliers.find(s => s.isActive !== false);
 
     setRawBillData({
+      businessName: defaultBusiness?.businessName || businesses[0]?.businessName || "B1 – Masalas",
       supplierName: activeSup ? activeSup.name : "",
       supplierPhone: activeSup ? activeSup.phone : "",
       invoiceNumber: "",
@@ -918,6 +932,7 @@ export default function FinanceERP() {
     setEditingExpenseId(bill.id);
     setExistingProofUrl(bill.proofUrl || null);
     setRawBillData({
+      businessName: bill.businessName || defaultBusiness?.businessName || businesses[0]?.businessName || "B1 – Masalas",
       supplierName: bill.supplierName || bill.paidTo || "",
       supplierPhone: bill.supplierPhone || "",
       invoiceNumber: bill.invoiceNumber || "",
@@ -962,6 +977,7 @@ export default function FinanceERP() {
     setExistingProofUrl(null);
     const defaultCat = expenseCategories[0]?.name || "General Misc";
     setOtherExpenseData({
+      businessName: defaultBusiness?.businessName || businesses[0]?.businessName || "B1 – Masalas",
       category: defaultCat,
       title: "",
       amount: "",
@@ -980,6 +996,7 @@ export default function FinanceERP() {
     setEditingExpenseId(exp.id);
     setExistingProofUrl(exp.proofUrl || null);
     setOtherExpenseData({
+      businessName: exp.businessName || defaultBusiness?.businessName || businesses[0]?.businessName || "B1 – Masalas",
       category: exp.category || exp.categoryName || expenseCategories[0]?.name || "General Misc",
       title: exp.title || "",
       amount: exp.amount || "",
@@ -1050,6 +1067,7 @@ export default function FinanceERP() {
         category: "Raw Materials",
         categoryId: "raw-materials",
         categoryName: "Raw Materials",
+        businessName: rawBillData.businessName || "B1 – Masalas",
         title: `Raw Materials: ${rawBillData.supplierName.trim()} (${formattedItems.length} items)`,
         amount: rawBillGrandTotal,
         supplierName: rawBillData.supplierName.trim(),
@@ -1105,6 +1123,7 @@ export default function FinanceERP() {
         category: catName,
         categoryId: catObj?.id || "cat_general",
         categoryName: catName,
+        businessName: otherExpenseData.businessName || "B1 – Masalas",
         title: otherExpenseData.title.trim(),
         amount: Number(otherExpenseData.amount),
         date: otherExpenseData.date,
@@ -1425,7 +1444,35 @@ export default function FinanceERP() {
             onClear={handleClearDateFilter}
           />
 
-          {(startDate || endDate || datePreset !== "all") && (
+          {/* Business Entity Filter Dropdown */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <Building2 size={14} color="var(--sd-zinc-600)" />
+            <select
+              value={businessFilter}
+              onChange={(e) => setBusinessFilter(e.target.value)}
+              style={{
+                padding: "6px 10px",
+                borderRadius: "8px",
+                border: "1px solid var(--sd-zinc-300)",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                background: "#FFFFFF",
+                color: "var(--sd-black)",
+                outline: "none",
+                cursor: "pointer"
+              }}
+              title="Filter by Business Name"
+            >
+              <option value="all">All Businesses</option>
+              {businesses.map(b => (
+                <option key={b.id} value={b.businessName}>
+                  {b.businessName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(startDate || endDate || datePreset !== "all" || businessFilter !== "all") && (
             <span style={{
               fontSize: "0.75rem",
               fontWeight: 800,
@@ -2303,6 +2350,35 @@ export default function FinanceERP() {
                   1. Supplier & Invoice Info
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
+                  {/* Business Name Field */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
+                      Business Name *
+                    </label>
+                    <select
+                      value={rawBillData.businessName}
+                      onChange={(e) => setRawBillData({ ...rawBillData, businessName: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--sd-zinc-300)",
+                        fontSize: "0.82rem",
+                        background: "#FFFFFF",
+                        outline: "none",
+                        fontWeight: 700,
+                        color: "var(--sd-black)"
+                      }}
+                      required
+                    >
+                      {businesses.map(b => (
+                        <option key={b.id} value={b.businessName}>
+                          {b.businessName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Supplier Field (Searchable Combobox) */}
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
@@ -3103,6 +3179,35 @@ export default function FinanceERP() {
               )}
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {/* Business Name Field */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
+                    Business Name *
+                  </label>
+                  <select
+                    value={otherExpenseData.businessName}
+                    onChange={(e) => setOtherExpenseData({ ...otherExpenseData, businessName: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--sd-zinc-300)",
+                      fontSize: "0.85rem",
+                      background: "#FFFFFF",
+                      outline: "none",
+                      fontWeight: 700,
+                      color: "var(--sd-black)"
+                    }}
+                    required
+                  >
+                    {businesses.map(b => (
+                      <option key={b.id} value={b.businessName}>
+                        {b.businessName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Expense Category Field (Loads from dynamic Expense Categories) */}
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-zinc-700)", marginBottom: "4px" }}>
@@ -3876,6 +3981,7 @@ export default function FinanceERP() {
         rawMaterials={rawMaterials}
         suppliers={suppliers}
         expenseCategories={expenseCategories}
+        businesses={businesses}
         BUSINESS_INFO={BUSINESS_INFO}
         initialSection={activeSection}
         initialDatePreset={datePreset}

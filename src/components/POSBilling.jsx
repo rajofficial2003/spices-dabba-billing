@@ -34,6 +34,10 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     categories,
     customers,
     customerCategories = [],
+    businesses = [],
+    defaultBusiness,
+    selectedBusiness,
+    setSelectedBusiness,
     selectedCustomer,
     setSelectedCustomer,
     pricingTier,
@@ -241,10 +245,14 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
   };
 
   const handleSaveDraft = async () => {
+    if (!selectedBusiness) {
+      showNotification("Please select a Business Entity before saving the draft.", "error");
+      return;
+    }
     setIsProcessing(true);
     setSubmittingAction("draft");
     try {
-      const draft = await saveAsDraft();
+      const draft = await saveAsDraft({ business: selectedBusiness });
       showNotification(`Draft ${draft.invoiceNumber} saved! You can resume it anytime on-field.`, "success");
     } catch (err) {
       showNotification(err.message, "error");
@@ -255,10 +263,14 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
   };
 
   const handleGenerateBill = async () => {
+    if (!selectedBusiness) {
+      showNotification("Please select a Business Entity before generating the bill.", "error");
+      return;
+    }
     setIsProcessing(true);
     setSubmittingAction("order");
     try {
-      const bill = await finalizeBill();
+      const bill = await finalizeBill({ business: selectedBusiness });
       showNotification(`Invoice ${bill.invoiceNumber} generated!`, "success");
       if (onBillGenerated) {
         onBillGenerated(bill);
@@ -770,6 +782,59 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
         {/* RIGHT COLUMN: Spot Billing Cart Pad */}
         <div className={`pos-cart-column ${mobileTab !== "cart" ? "mobile-hidden" : ""}`}>
+          {/* Business Entity Selection (Requirement: Need to select Business Name before placing order) */}
+          <div className="bw-card" style={{ padding: "8px 12px", marginBottom: "8px", background: "#FFFFFF", border: "1px solid var(--sd-zinc-200)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Building2 size={14} color="var(--sd-red)" />
+                <span className="font-heading" style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--sd-black)" }}>
+                  Business Name <span className="input-required" style={{ color: "var(--sd-red)" }}>*</span>
+                </span>
+              </div>
+              {selectedBusiness && (
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{
+                    background: "var(--sd-black)",
+                    color: "#FFFFFF",
+                    fontSize: "0.68rem",
+                    fontWeight: 800,
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    letterSpacing: "0.5px",
+                    fontFamily: "monospace"
+                  }}>
+                    Prefix: {selectedBusiness.invoicePrefix || "SBD"}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <select
+              value={selectedBusiness?.id || ""}
+              onChange={(e) => {
+                const found = businesses.find(b => b.id === e.target.value);
+                if (found) setSelectedBusiness(found);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 10px",
+                borderRadius: "8px",
+                border: "1px solid var(--sd-zinc-300)",
+                fontSize: "0.80rem",
+                fontWeight: 700,
+                background: "#FFFFFF",
+                color: "var(--sd-black)",
+                outline: "none"
+              }}
+            >
+              {businesses.map((biz) => (
+                <option key={biz.id} value={biz.id}>
+                  {biz.businessName || "Unnamed Business"} {biz.invoicePrefix ? `(${biz.invoicePrefix})` : ""} {biz.isDefault ? "• [Default]" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Customer Selection Banner (Above Bill) */}
           <div className="bw-card" style={{ padding: "8px 12px", marginBottom: "8px" }}>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
@@ -1572,7 +1637,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
               <div style={{ display: "flex", gap: "8px" }}>
                 <button
                   type="button"
-                  disabled={cartItems.length === 0 || isProcessing}
+                  disabled={cartItems.length === 0 || !selectedBusiness || isProcessing}
                   onClick={handleSaveDraft}
                   className="btn-secondary"
                   title="Save draft"
@@ -1602,7 +1667,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
 
                 <button
                   type="button"
-                  disabled={cartItems.length === 0 || !selectedCustomer || isProcessing}
+                  disabled={cartItems.length === 0 || !selectedCustomer || !selectedBusiness || isProcessing}
                   onClick={handleGenerateBill}
                   className="btn-accent"
                   title="Submit order & finalize invoice"
@@ -1615,7 +1680,7 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
-                    cursor: (cartItems.length === 0 || !selectedCustomer || isProcessing) ? "not-allowed" : "pointer"
+                    cursor: (cartItems.length === 0 || !selectedCustomer || !selectedBusiness || isProcessing) ? "not-allowed" : "pointer"
                   }}
                 >
                   {submittingAction === "order" ? (

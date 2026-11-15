@@ -22,6 +22,7 @@ export default function OrdersReportModal({
   onClose,
   orders = [],
   customers = [],
+  businesses = [],
   BUSINESS_INFO = {},
   initialFilterTab = "completed",
   initialDatePreset = "all"
@@ -30,6 +31,7 @@ export default function OrdersReportModal({
 
   // Filter States
   const [statusFilter, setStatusFilter] = useState(initialFilterTab || "completed"); // 'all' | 'completed' | 'credit' | 'draft'
+  const [businessFilter, setBusinessFilter] = useState("all");
   const [datePreset, setDatePreset] = useState(initialDatePreset || "month"); // 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -103,9 +105,15 @@ export default function OrdersReportModal({
         if (endDate && dStr && dStr > endDate) return false;
       }
 
+      // 4. Business Name Filter
+      if (businessFilter !== "all") {
+        const bName = order.businessName || "B1 – Masalas";
+        if (bName !== businessFilter) return false;
+      }
+
       return true;
     }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  }, [orders, statusFilter, datePreset, startDate, endDate, customerFilter]);
+  }, [orders, statusFilter, businessFilter, datePreset, startDate, endDate, customerFilter]);
 
   // Aggregated Summary Statistics
   const stats = useMemo(() => {
@@ -603,27 +611,50 @@ export default function OrdersReportModal({
               )}
             </div>
 
-            {/* Row 3: Customer Filter */}
-            {customers.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-zinc-700)", textTransform: "uppercase" }}>
-                  Filter Retailer:
-                </span>
-                <select
-                  value={customerFilter}
-                  onChange={(e) => setCustomerFilter(e.target.value)}
-                  className="custom-select"
-                  style={{ padding: "5px 10px", fontSize: "0.78rem", maxWidth: "260px", fontWeight: 600 }}
-                >
-                  <option value="all">All Retailers ({customers.length})</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.shopName || c.businessName} ({c.phone || "No Phone"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Row 3: Business & Customer Filter */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              {businesses.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-zinc-700)", textTransform: "uppercase" }}>
+                    Business:
+                  </span>
+                  <select
+                    value={businessFilter}
+                    onChange={(e) => setBusinessFilter(e.target.value)}
+                    className="custom-select"
+                    style={{ padding: "5px 10px", fontSize: "0.78rem", fontWeight: 700 }}
+                  >
+                    <option value="all">All Businesses</option>
+                    {businesses.map(b => (
+                      <option key={b.id} value={b.businessName}>
+                        {b.businessName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {customers.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-zinc-700)", textTransform: "uppercase" }}>
+                    Retailer:
+                  </span>
+                  <select
+                    value={customerFilter}
+                    onChange={(e) => setCustomerFilter(e.target.value)}
+                    className="custom-select"
+                    style={{ padding: "5px 10px", fontSize: "0.78rem", maxWidth: "260px", fontWeight: 600 }}
+                  >
+                    <option value="all">All Retailers ({customers.length})</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.shopName || c.businessName} ({c.phone || "No Phone"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Metric Summary Cards */}

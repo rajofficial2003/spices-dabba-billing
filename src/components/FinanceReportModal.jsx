@@ -29,6 +29,7 @@ export default function FinanceReportModal({
   rawMaterials = [],
   suppliers = [],
   expenseCategories = [],
+  businesses = [],
   BUSINESS_INFO = {},
   initialSection = "all", // 'all' | 'raw_materials' | 'other_expenses'
   initialDatePreset = "month",
@@ -41,6 +42,7 @@ export default function FinanceReportModal({
   const [typeFilter, setTypeFilter] = useState(
     initialSection === "raw_materials" ? "raw_materials" : (initialSection === "other_expenses" ? "other_expenses" : "all")
   );
+  const [businessFilter, setBusinessFilter] = useState("all");
   const [datePreset, setDatePreset] = useState(initialDatePreset || "month");
   const [startDate, setStartDate] = useState(initialStartDate || "");
   const [endDate, setEndDate] = useState(initialEndDate || "");
@@ -146,13 +148,19 @@ export default function FinanceReportModal({
         if (endDate && dStr && dStr > endDate) return false;
       }
 
+      // 6. Business Entity Filter
+      if (businessFilter !== "all") {
+        const bName = exp.businessName || "B1 – Masalas";
+        if (bName !== businessFilter) return false;
+      }
+
       return true;
     }).sort((a, b) => {
       const dateA = getExpenseDateStr(a);
       const dateB = getExpenseDateStr(b);
       return dateB.localeCompare(dateA);
     });
-  }, [expenses, typeFilter, datePreset, startDate, endDate, categoryFilter, paymentModeFilter, supplierFilter]);
+  }, [expenses, typeFilter, businessFilter, datePreset, startDate, endDate, categoryFilter, paymentModeFilter, supplierFilter]);
 
   // Aggregate Stats & Analytics
   const stats = useMemo(() => {
@@ -235,6 +243,10 @@ export default function FinanceReportModal({
         const d = getOrderDateStr(o);
         if (startDate && d && d < startDate) return false;
         if (endDate && d && d > endDate) return false;
+      }
+      if (businessFilter !== "all") {
+        const bName = o.businessName || "B1 – Masalas";
+        if (bName !== businessFilter) return false;
       }
       return true;
     });
@@ -781,6 +793,31 @@ export default function FinanceReportModal({
                   onChange={(e) => setEndDate(e.target.value)}
                   style={{ border: "none", fontSize: "0.75rem", outline: "none", fontWeight: 600 }}
                 />
+              </div>
+            )}
+
+            {/* Business Entity Filter */}
+            {businesses && businesses.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "0.73rem", fontWeight: 700, color: "var(--sd-zinc-500)" }}>Business:</span>
+                <select
+                  value={businessFilter}
+                  onChange={(e) => setBusinessFilter(e.target.value)}
+                  style={{
+                    padding: "5px 10px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--sd-zinc-300)",
+                    fontSize: "0.75rem",
+                    background: "#FFFFFF",
+                    fontWeight: 700,
+                    outline: "none"
+                  }}
+                >
+                  <option value="all">All Businesses</option>
+                  {businesses.map(b => (
+                    <option key={b.id} value={b.businessName}>{b.businessName}</option>
+                  ))}
+                </select>
               </div>
             )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import QRCode from "qrcode";
 import { usePOS } from "../context/POSContext";
 import { 
@@ -47,15 +47,24 @@ function formatAddress(addr) {
 }
 
 export default function InvoiceModal({ order, onClose }) {
-  const { BUSINESS_INFO, courierPartners = [] } = usePOS();
+  const { BUSINESS_INFO, businesses = [], defaultBusiness, courierPartners = [] } = usePOS();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
 
+  const activeCompany = useMemo(() => {
+    if (order?.companyInfo && order.companyInfo.companyName) return order.companyInfo;
+    if (order?.businessName && businesses?.length) {
+      const match = businesses.find(b => b.businessName === order.businessName || b.id === order.businessId);
+      if (match) return match;
+    }
+    return defaultBusiness || BUSINESS_INFO;
+  }, [order, businesses, defaultBusiness, BUSINESS_INFO]);
+
   useEffect(() => {
     // Generate UPI QR Code dynamically based on upiId & accountName
-    const rawUpi = (BUSINESS_INFO?.upiId || "9940159298").replace(/\s*\(.*?\)/g, "").trim();
+    const rawUpi = (activeCompany?.upiId || "9940159298").replace(/\s*\(.*?\)/g, "").trim();
     const upiPa = rawUpi.includes("@") ? rawUpi : `${rawUpi}@upi`;
-    const upiPn = encodeURIComponent(BUSINESS_INFO?.accountName || BUSINESS_INFO?.name || "SPICES DABBA");
+    const upiPn = encodeURIComponent(activeCompany?.accountName || activeCompany?.name || "SPICES DABBA");
     const upiPayload = `upi://pay?pa=${upiPa}&pn=${upiPn}&cu=INR`;
     QRCode.toDataURL(upiPayload, {
       width: 160,
@@ -67,7 +76,7 @@ export default function InvoiceModal({ order, onClose }) {
     })
       .then(url => setQrCodeUrl(url))
       .catch(err => console.warn("QR code generation error:", err));
-  }, [BUSINESS_INFO?.upiId, BUSINESS_INFO?.accountName, BUSINESS_INFO?.name]);
+  }, [activeCompany?.upiId, activeCompany?.accountName, activeCompany?.name]);
 
   if (!order) return null;
 
@@ -290,9 +299,9 @@ export default function InvoiceModal({ order, onClose }) {
     const cleanPhone = cleanPhoneNumber(order.customer.phone);
     const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
-    let msg = `*${BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES foods"}*\n`;
-    if (BUSINESS_INFO?.brandName) msg += `_${BUSINESS_INFO.brandName}_\n`;
-    msg += `GSTIN: ${BUSINESS_INFO?.gstin || ""} | ${BUSINESS_INFO?.address || ""}\n`;
+    let msg = `*${activeCompany?.companyName || activeCompany?.manufacturer || "JEES foods"}*\n`;
+    if (activeCompany?.brandName) msg += `_${activeCompany.brandName}_\n`;
+    msg += `GSTIN: ${activeCompany?.gstin || ""} | ${activeCompany?.address || ""}\n`;
     msg += `--------------------------------\n`;
     msg += `🧾 *Invoice Code: ${order.invoiceNumber || "BILL"}*\n`;
     msg += `📅 Invoice Date: ${formatDateOnly(order.timestamp || order.createdAt || Date.now())}\n`;
@@ -336,11 +345,11 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}*\n`;
     msg += `--------------------------------\n`;
     msg += `*BANK DETAILS FOR PAYMENT:*\n`;
-    msg += `Bank: ${BUSINESS_INFO?.bankName || "Tamilnad Mercantile Bank"}\n`;
-    msg += `A/C Name: ${BUSINESS_INFO?.accountName || "SPICES DABBA"}\n`;
-    msg += `A/C: ${BUSINESS_INFO?.accountNumber || "180150050800432"}\n`;
-    msg += `IFSC: ${BUSINESS_INFO?.ifscCode || "TMBL0000180"}\n`;
-    msg += `UPI: ${BUSINESS_INFO?.upiId || "9940159298 (Vaishno Devi)"}\n`;
+    msg += `Bank: ${activeCompany?.bankName || "Tamilnad Mercantile Bank"}\n`;
+    msg += `A/C Name: ${activeCompany?.accountName || "SPICES DABBA"}\n`;
+    msg += `A/C: ${activeCompany?.accountNumber || "180150050800432"}\n`;
+    msg += `IFSC: ${activeCompany?.ifscCode || "TMBL0000180"}\n`;
+    msg += `UPI: ${activeCompany?.upiId || "9940159298 (Vaishno Devi)"}\n`;
     msg += `--------------------------------\n`;
     msg += `🙏 Thank you for your business!`;
 
@@ -452,7 +461,7 @@ export default function InvoiceModal({ order, onClose }) {
                 background: "#FFFFFF"
               }}>
                 <img
-                  src={BUSINESS_INFO?.logoPath || "/images/logo/logo.png"}
+                  src={activeCompany?.logoPath || "/images/logo/logo.png"}
                   alt="Logo"
                   onError={(e) => { e.target.style.display = 'none'; }}
                   style={{ width: "95%", height: "95%", objectFit: "contain" }}
@@ -461,10 +470,10 @@ export default function InvoiceModal({ order, onClose }) {
 
               <div>
                 <h1 className="font-heading" style={{ fontSize: "1.5rem", fontWeight: 900, color: "#09090b", margin: 0, lineHeight: 1.1 }}>
-                  {BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES foods"}
+                  {activeCompany?.companyName || activeCompany?.manufacturer || "JEES foods"}
                 </h1>
                 <div style={{ fontSize: "0.82rem", color: "#52525B", marginTop: "3px", fontWeight: 600 }}>
-                  {BUSINESS_INFO?.brandName || BUSINESS_INFO?.name || "Spices Dabba"} &bull; {BUSINESS_INFO?.tagline || "We Prepare . You Cook"}
+                  {activeCompany?.brandName || activeCompany?.name || "Spices Dabba"} &bull; {activeCompany?.tagline || "We Prepare . You Cook"}
                 </div>
                 <div style={{ fontSize: "0.76rem", color: "#2563EB", marginTop: "2px", fontWeight: 600 }}>
                   <a href="https://spicesdabba.com/" target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "none" }}>
@@ -512,21 +521,21 @@ export default function InvoiceModal({ order, onClose }) {
                 From
               </div>
               <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#09090b", marginTop: "2px" }}>
-                {BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES foods"}
+                {activeCompany?.companyName || activeCompany?.manufacturer || "JEES foods"}
               </div>
-              {BUSINESS_INFO?.brandName && (
+              {activeCompany?.brandName && (
                 <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#71717A" }}>
-                  Brand: {BUSINESS_INFO.brandName}
+                  Brand: {activeCompany.brandName}
                 </div>
               )}
               <div style={{ color: "#52525B", marginTop: "2px", lineHeight: "1.35" }}>
-                Address: {BUSINESS_INFO?.address || [BUSINESS_INFO?.address1, BUSINESS_INFO?.address2, BUSINESS_INFO?.city, BUSINESS_INFO?.state ? `${BUSINESS_INFO?.state} - ${BUSINESS_INFO?.pincode}` : BUSINESS_INFO?.pincode].filter(Boolean).join(", ")}
+                Address: {activeCompany?.address || [activeCompany?.address1, activeCompany?.address2, activeCompany?.city, activeCompany?.state ? `${activeCompany?.state} - ${activeCompany?.pincode}` : activeCompany?.pincode].filter(Boolean).join(", ")}
               </div>
               <div style={{ color: "#09090b", fontWeight: 600, marginTop: "2px" }}>
-                Phone: {BUSINESS_INFO?.phonePrimary || BUSINESS_INFO?.phone || ""}
+                Phone: {activeCompany?.phonePrimary || activeCompany?.phone || ""}
               </div>
               <div style={{ color: "#52525B", marginTop: "2px" }}>
-                GSTIN: <strong style={{ fontFamily: "monospace", color: "#09090b" }}>{BUSINESS_INFO?.gstin}</strong>
+                GSTIN: <strong style={{ fontFamily: "monospace", color: "#09090b" }}>{activeCompany?.gstin}</strong>
               </div>
             </div>
 
@@ -767,11 +776,11 @@ export default function InvoiceModal({ order, onClose }) {
                   <div style={{ fontWeight: 800, color: "#09090b", textTransform: "uppercase", fontSize: "0.72rem", marginBottom: "3px", letterSpacing: "0.4px" }}>
                     Bank & UPI Payment Details
                   </div>
-                  <div><strong>Bank:</strong> {BUSINESS_INFO?.bankName || "Tamilnad Mercantile Bank"}</div>
-                  <div><strong>A/C Name:</strong> {BUSINESS_INFO?.accountName || "SPICES DABBA"}</div>
-                  <div><strong>A/C:</strong> {BUSINESS_INFO?.accountNumber || "180150050800432"}</div>
-                  <div><strong>IFSC:</strong> {BUSINESS_INFO?.ifscCode || "TMBL0000180"}</div>
-                  <div><strong>UPI:</strong> {BUSINESS_INFO?.upiId || "9940159298 (Vaishno Devi)"}</div>
+                  <div><strong>Bank:</strong> {activeCompany?.bankName || "Tamilnad Mercantile Bank"}</div>
+                  <div><strong>A/C Name:</strong> {activeCompany?.accountName || "SPICES DABBA"}</div>
+                  <div><strong>A/C:</strong> {activeCompany?.accountNumber || "180150050800432"}</div>
+                  <div><strong>IFSC:</strong> {activeCompany?.ifscCode || "TMBL0000180"}</div>
+                  <div><strong>UPI:</strong> {activeCompany?.upiId || "9940159298 (Vaishno Devi)"}</div>
                 </div>
 
                 <div style={{
@@ -785,7 +794,7 @@ export default function InvoiceModal({ order, onClose }) {
                   flexShrink: 0
                 }}>
                   <img
-                    src={BUSINESS_INFO.qrCodePath || "/images/upi-qr.jpg"}
+                    src={activeCompany.qrCodePath || "/images/upi-qr.jpg"}
                     alt="UPI QR Code"
                     onError={(e) => {
                       if (qrCodeUrl && e.target.src !== qrCodeUrl) {

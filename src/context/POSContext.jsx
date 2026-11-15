@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { 
   db, 
   collection, 
@@ -21,6 +21,33 @@ import { generateInvoiceNumber } from "../utils/formatters";
 import { uploadProductImage } from "../utils/imageCompressor";
 import { DEFAULT_PRODUCT_IMAGE, STATIC_CUSTOMER_CATEGORIES } from "../utils/constants";
 import ConfirmModal from "../components/ConfirmModal";
+
+export const DEFAULT_BUSINESS = {
+  id: "biz_default",
+  businessName: "B1 – Masalas",
+  invoicePrefix: "SBD",
+  isDefault: true,
+  companyName: "JEES FOODS",
+  brandName: "Spices Dabba",
+  address1: "Door No. 12, Main Bazaar",
+  address2: "Bodinayakanur, Theni District",
+  city: "Theni",
+  state: "Tamil Nadu",
+  pincode: "625513",
+  address: "Bodinayakanur, Theni District-625513, Tamilnadu, India",
+  phonePrimary: "+91 95666 59298",
+  phoneSecondary: "",
+  email: "hello@spicesdabba.com",
+  gstin: "33ATDPV4802H1ZR",
+  logoPath: "/images/logo/logo.png",
+  bankName: "Tamilnad Mercantile Bank",
+  accountName: "SPICES DABBA",
+  accountNumber: "180150050800432",
+  ifscCode: "TMBL0000180",
+  upiId: "9940159298",
+  upiHolder: "Vaishno Devi",
+  qrCodePath: "/images/upi-qr.jpg"
+};
 
 const POSContext = createContext(null);
 
@@ -112,6 +139,18 @@ export function POSProvider({ children }) {
     }
   });
 
+  // Dynamic Businesses / Multiple Company Directory State
+  const [businesses, setBusinesses] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sdb_businesses");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [DEFAULT_BUSINESS];
+  });
+
   // Dynamic Staff Members & Permissions State
   const [staffMembers, setStaffMembers] = useState([]);
 
@@ -194,6 +233,7 @@ export function POSProvider({ children }) {
     let unsubscribeMixers = () => {};
     let unsubscribeSettings = () => {};
     let unsubscribeStaff = () => {};
+    let unsubscribeBusinesses = () => {};
 
     try {
       // 1. Products listener
@@ -331,6 +371,33 @@ export function POSProvider({ children }) {
         console.warn("Firestore staff listener note:", err.message);
       });
 
+      // 14. Dynamic Businesses / Multiple Companies listener
+      const businessesCol = collection(db, "billing_businesses");
+      unsubscribeBusinesses = onSnapshot(businessesCol, async (snapshot) => {
+        if (snapshot.empty) {
+          // If empty, seed initial default business
+          try {
+            await setDoc(doc(db, "billing_businesses", DEFAULT_BUSINESS.id), {
+              ...DEFAULT_BUSINESS,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            });
+          } catch (e) {
+            console.warn("Seed initial business note:", e.message);
+          }
+          setBusinesses([DEFAULT_BUSINESS]);
+        } else {
+          const bizList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          bizList.sort((a, b) => (a.businessName || "").localeCompare(b.businessName || ""));
+          setBusinesses(bizList);
+          try {
+            localStorage.setItem("sdb_businesses", JSON.stringify(bizList));
+          } catch (err) {}
+        }
+      }, (err) => {
+        console.warn("Firestore businesses listener note:", err.message);
+      });
+
     } catch (error) {
       console.warn("Firebase listener initialization error:", error);
       setLoading(false);
@@ -350,8 +417,31 @@ export function POSProvider({ children }) {
       unsubscribeMixers();
       unsubscribeSettings();
       unsubscribeStaff();
+      unsubscribeBusinesses();
     };
   }, []);
+
+  // Default business / company entity
+  const defaultBusiness = useMemo(() => {
+    return businesses.find(b => b.isDefault) || businesses[0] || DEFAULT_BUSINESS;
+  }, [businesses]);
+
+  const [selectedBusiness, setSelectedBusiness] = useState(() => defaultBusiness || DEFAULT_BUSINESS);
+
+  useEffect(() => {
+    if (defaultBusiness) {
+      setBusinessInfo(prev => ({
+        ...prev,
+        ...defaultBusiness
+      }));
+    }
+  }, [defaultBusiness]);
+
+  useEffect(() => {
+    if (defaultBusiness && (!selectedBusiness || !businesses.some(b => b.id === selectedBusiness?.id))) {
+      setSelectedBusiness(defaultBusiness);
+    }
+  }, [businesses, defaultBusiness]);
 
   // CART CALCULATIONS (Subtotal = Total Product Price + Total GST; Grand Total = Subtotal - Discount)
   const subtotal = Math.round(cartItems.reduce((sum, item) => {
@@ -570,6 +660,10 @@ export function POSProvider({ children }) {
   const loadDraftIntoCart = (draftOrder) => {
     setActiveDraftId(draftOrder.id);
     setSelectedCustomer(draftOrder.customer || null);
+    if (draftOrder.businessId || draftOrder.businessName) {
+      const biz = businesses.find(b => b.id === draftOrder.businessId || b.businessName === draftOrder.businessName);
+      if (biz) setSelectedBusiness(biz);
+    }
     setCartItems(draftOrder.items || []);
     setDiscount(draftOrder.discount || 0);
     setDiscountType(draftOrder.discountType || "fixed");
@@ -580,7 +674,7 @@ export function POSProvider({ children }) {
   };
 
   // SAVE AS DRAFT
-  const saveAsDraft = async () => {
+  const saveAsDraft = async (customOptions = {}) => {
     if (!selectedCustomer) {
       throw new Error("Please select a Retailer Customer before saving a draft.");
     }
@@ -588,10 +682,17 @@ export function POSProvider({ children }) {
       throw new Error("Cannot save an empty draft. Please add at least 1 product.");
     }
 
+    const biz = customOptions?.business || selectedBusiness || defaultBusiness || DEFAULT_BUSINESS;
+    const prefix = (biz?.invoicePrefix || "SBD").trim().toUpperCase();
+
     const draftData = {
       type: "draft",
       status: "draft",
       invoiceNumber: activeDraftId ? (orders.find(o => o.id === activeDraftId)?.invoiceNumber || generateInvoiceNumber("DRF", orders)) : generateInvoiceNumber("DRF", orders),
+      businessId: biz?.id || "biz_default",
+      businessName: biz?.businessName || "B1 – Masalas",
+      invoicePrefix: prefix,
+      companyInfo: { ...biz },
       customer: selectedCustomer,
       items: cartItems,
       subtotal,
@@ -645,7 +746,7 @@ export function POSProvider({ children }) {
   };
 
   // GENERATE FINAL BILL / SPOT INVOICE
-  const finalizeBill = async () => {
+  const finalizeBill = async (customOptions = {}) => {
     if (!selectedCustomer) {
       throw new Error("Shop Name and Phone number are mandatory. Please select or add a Customer.");
     }
@@ -653,11 +754,17 @@ export function POSProvider({ children }) {
       throw new Error("Cart is empty. Please select products to generate bill.");
     }
 
-    const invoiceNumber = generateInvoiceNumber("SBD", orders);
+    const biz = customOptions?.business || selectedBusiness || defaultBusiness || DEFAULT_BUSINESS;
+    const prefix = (biz?.invoicePrefix || "SBD").trim().toUpperCase();
+    const invoiceNumber = generateInvoiceNumber(prefix, orders);
     const billData = {
       type: "invoice",
       status: "completed",
       invoiceNumber,
+      businessId: biz?.id || "biz_default",
+      businessName: biz?.businessName || "B1 – Masalas",
+      invoicePrefix: prefix,
+      companyInfo: { ...biz },
       customer: selectedCustomer,
       items: cartItems,
       subtotal,
@@ -1703,11 +1810,143 @@ export function POSProvider({ children }) {
     setStaffMembers(prev => prev.map(s => s.id === staffId ? { ...s, isActive: nextStatus } : s));
   };
 
+  // Dynamic Multiple Businesses / Companies CRUD
+  const addBusiness = async (bizData) => {
+    const businessName = String(bizData.businessName || "").trim();
+    if (!businessName) throw new Error("Business Name is required (e.g., 'B1 – Masalas').");
+    const invoicePrefix = String(bizData.invoicePrefix || "SBD").trim().toUpperCase();
+
+    const isFirst = businesses.length === 0;
+    const isDefault = bizData.isDefault ?? isFirst;
+
+    const docData = {
+      businessName,
+      invoicePrefix,
+      isDefault: Boolean(isDefault),
+      companyName: String(bizData.companyName || "").trim(),
+      brandName: String(bizData.brandName || "").trim(),
+      address1: String(bizData.address1 || "").trim(),
+      address2: String(bizData.address2 || "").trim(),
+      city: String(bizData.city || "").trim(),
+      state: String(bizData.state || "Tamil Nadu").trim(),
+      pincode: String(bizData.pincode || "").trim(),
+      address: String(bizData.address || "").trim(),
+      phonePrimary: String(bizData.phonePrimary || "").trim(),
+      phoneSecondary: String(bizData.phoneSecondary || "").trim(),
+      email: String(bizData.email || "").trim(),
+      gstin: String(bizData.gstin || "").trim().toUpperCase(),
+      logoPath: bizData.logoPath || "/images/logo/logo.png",
+      bankName: String(bizData.bankName || "").trim(),
+      accountName: String(bizData.accountName || "").trim(),
+      accountNumber: String(bizData.accountNumber || "").trim(),
+      ifscCode: String(bizData.ifscCode || "").trim().toUpperCase(),
+      upiId: String(bizData.upiId || "").trim(),
+      upiHolder: String(bizData.upiHolder || "").trim(),
+      qrCodePath: bizData.qrCodePath || "/images/upi-qr.jpg",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    if (isDefault) {
+      for (const b of businesses) {
+        if (b.isDefault && b.id) {
+          try {
+            await updateDoc(doc(db, "billing_businesses", b.id), { isDefault: false });
+          } catch (e) {}
+        }
+      }
+    }
+
+    const docRef = await addDoc(collection(db, "billing_businesses"), docData);
+    const newBiz = { id: docRef.id, ...docData };
+    setBusinesses(prev => {
+      const updated = isDefault ? prev.map(b => ({ ...b, isDefault: false })) : [...prev];
+      return [...updated.filter(b => b.id !== docRef.id), newBiz].sort((a, b) => (a.businessName || "").localeCompare(b.businessName || ""));
+    });
+    return newBiz;
+  };
+
+  const updateBusiness = async (bizId, bizData) => {
+    if (!bizId) throw new Error("Business ID is required for update.");
+    const updates = {
+      ...bizData,
+      updatedAt: serverTimestamp()
+    };
+    if (updates.invoicePrefix) {
+      updates.invoicePrefix = String(updates.invoicePrefix).trim().toUpperCase();
+    }
+    if (updates.gstin) {
+      updates.gstin = String(updates.gstin).trim().toUpperCase();
+    }
+    if (updates.ifscCode) {
+      updates.ifscCode = String(updates.ifscCode).trim().toUpperCase();
+    }
+
+    if (updates.isDefault) {
+      for (const b of businesses) {
+        if (b.id !== bizId && b.isDefault) {
+          try {
+            await updateDoc(doc(db, "billing_businesses", b.id), { isDefault: false });
+          } catch (e) {}
+        }
+      }
+    }
+
+    await updateDoc(doc(db, "billing_businesses", bizId), updates);
+    setBusinesses(prev => {
+      return prev.map(b => {
+        if (b.id === bizId) {
+          return { ...b, ...updates };
+        }
+        if (updates.isDefault && b.isDefault) {
+          return { ...b, isDefault: false };
+        }
+        return b;
+      }).sort((a, b) => (a.businessName || "").localeCompare(b.businessName || ""));
+    });
+
+    setSelectedBusiness(prev => prev?.id === bizId ? { ...prev, ...updates } : prev);
+  };
+
+  const deleteBusiness = async (bizId) => {
+    if (businesses.length <= 1) {
+      throw new Error("Cannot delete the only remaining company/business. At least one business must exist.");
+    }
+    const bizToDelete = businesses.find(b => b.id === bizId);
+    await deleteDoc(doc(db, "billing_businesses", bizId));
+    setBusinesses(prev => {
+      const remaining = prev.filter(b => b.id !== bizId);
+      if (bizToDelete?.isDefault && remaining.length > 0) {
+        remaining[0].isDefault = true;
+        updateDoc(doc(db, "billing_businesses", remaining[0].id), { isDefault: true }).catch(() => {});
+      }
+      return remaining;
+    });
+  };
+
+  const setDefaultBusiness = async (bizId) => {
+    for (const b of businesses) {
+      const isDef = b.id === bizId;
+      try {
+        await updateDoc(doc(db, "billing_businesses", b.id), { isDefault: isDef });
+      } catch (e) {}
+    }
+    setBusinesses(prev => prev.map(b => ({ ...b, isDefault: b.id === bizId })));
+  };
+
   return (
     <POSContext.Provider
       value={{
         BUSINESS_INFO: businessInfo,
         businessInfo,
+        businesses,
+        defaultBusiness,
+        selectedBusiness,
+        setSelectedBusiness,
+        addBusiness,
+        updateBusiness,
+        deleteBusiness,
+        setDefaultBusiness,
         updatePaymentSettings,
         updateCompanySettings,
         products,

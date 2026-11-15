@@ -50,7 +50,8 @@ export default function MixersManager() {
   const [scalerMixer, setScalerMixer] = useState(null);
   
   // Batch Scaler State (Pack-based scaling with customized pack size)
-  const [numPacks, setNumPacks] = useState(50); // Default 50 packs
+  const [numPacks, setNumPacks] = useState(50); // Default 50 packs for formula batch weights
+  const [targetPacks, setTargetPacks] = useState(50); // Target production packs to achieve (shown in PDF/Slip without changing formula calculation)
   const [scalerPackWeight, setScalerPackWeight] = useState(40); // User-editable Pack Size in grams (e.g. 15g, 33g, 100g)
   const [customBatchWeights, setCustomBatchWeights] = useState({}); // Custom manual overrides for batch weights
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -342,6 +343,7 @@ export default function MixersManager() {
   const handleOpenScaler = (mixer) => {
     setScalerMixer(mixer);
     setNumPacks(50); // default 50 packs
+    setTargetPacks(50); // default target matches formula batch packs
     const baseWeight = Number(mixer.customisedWeight) || Number(mixer.baseWeightGrams) || (mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0) || 40;
     setScalerPackWeight(baseWeight);
     setCustomBatchWeights({}); // reset manual overrides
@@ -351,6 +353,7 @@ export default function MixersManager() {
   // Change batch pack count
   const handleNumPacksChange = (cnt) => {
     setNumPacks(cnt);
+    setTargetPacks(cnt);
     setCustomBatchWeights({}); // reset manual overrides when packs change
   };
 
@@ -411,6 +414,9 @@ export default function MixersManager() {
 
   // Effective Pack Weight (User-edited or base saved weight)
   const effectivePackWeight = Number(scalerPackWeight) > 0 ? Number(scalerPackWeight) : baseRecipePackWeight;
+
+  // Effective Target Production Packs to achieve in PDF / Slip (without altering formula batch weights)
+  const effectiveTargetPacks = Number(targetPacks) > 0 ? Number(targetPacks) : numPacks;
 
   // Scale factor between edited pack weight and base saved recipe pack weight
   const scaleFactor = (baseRecipePackWeight > 0 && effectivePackWeight > 0) 
@@ -493,8 +499,10 @@ export default function MixersManager() {
             <strong style={{ color: "#0F172A" }}>{effectivePackWeight} Grams</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-            <span style={{ color: "#64748B", fontWeight: 600 }}>Required Quantity:</span>
-            <strong style={{ color: "#0F172A" }}>{numPacks} Packs</strong>
+            <span style={{ color: "#64748B", fontWeight: 600 }}>Production Target:</span>
+            <strong style={{ color: "#0F172A" }}>
+              {effectiveTargetPacks} Packs {Number(effectiveTargetPacks) !== Number(numPacks) ? `(Formula: ${numPacks} packs)` : ""}
+            </strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", borderTop: "1px dashed #CBD5E1", paddingTop: "6px" }}>
             <span style={{ color: "#64748B", fontWeight: 600 }}>Expected Formula Weight:</span>
@@ -657,7 +665,7 @@ export default function MixersManager() {
     slipEl.classList.add("exporting-pdf");
 
     const cleanName = (scalerMixer.name || "Recipe").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `${cleanName}_${effectivePackWeight}g_${numPacks}_Packs_Batch_Slip.pdf`;
+    const filename = `${cleanName}_${effectivePackWeight}g_${effectiveTargetPacks}_Packs_Batch_Slip.pdf`;
 
     try {
       if (!window.html2pdf) {
@@ -2364,16 +2372,68 @@ export default function MixersManager() {
                     )}
                   </div>
 
-                  {/* Box 2: Total Quantity */}
+                  {/* Box 2: Total Production Target (Editable packs quantity to achieve in PDF / Slip) */}
                   <div>
-                    <span style={{ fontSize: "0.70rem", fontWeight: 800, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>
-                      Total Production Target
-                    </span>
-                    <div style={{ fontSize: "1.05rem", fontWeight: 900, color: "var(--sd-black)", marginTop: "4px" }}>
-                      {numPacks} Packs
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <label 
+                        htmlFor="scaler-target-packs-input"
+                        style={{ fontSize: "0.70rem", fontWeight: 800, color: "var(--sd-black)", textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                      >
+                        <span>Total Production Target</span>
+                        <span style={{ fontSize: "0.64rem", color: "#1D4ED8", fontWeight: 700, background: "#DBEAFE", padding: "1px 5px", borderRadius: "4px" }}>
+                          Editable
+                        </span>
+                      </label>
+                      {Number(targetPacks) !== Number(numPacks) && (
+                        <button
+                          type="button"
+                          onClick={() => setTargetPacks(numPacks)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--sd-zinc-500)",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            padding: 0
+                          }}
+                          title={`Reset back to match batch formula packs (${numPacks} packs)`}
+                        >
+                          Sync ({numPacks})
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <input
+                        id="scaler-target-packs-input"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={targetPacks}
+                        onChange={(e) => setTargetPacks(e.target.value)}
+                        onBlur={() => {
+                          if (!targetPacks || Number(targetPacks) <= 0) {
+                            setTargetPacks(numPacks);
+                          }
+                        }}
+                        style={{
+                          width: "95px",
+                          padding: "5px 10px",
+                          borderRadius: "8px",
+                          border: Number(targetPacks) !== Number(numPacks) ? "2px solid #3B82F6" : "1.5px solid var(--sd-zinc-300)",
+                          background: Number(targetPacks) !== Number(numPacks) ? "#EFF6FF" : "#FFFFFF",
+                          fontSize: "1rem",
+                          fontWeight: 900,
+                          color: Number(targetPacks) !== Number(numPacks) ? "#1E40AF" : "var(--sd-black)",
+                          outline: "none"
+                        }}
+                        title="Type the target packs quantity to achieve (does not modify batch ingredient weights)"
+                      />
+                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Packs</span>
                     </div>
                     <div style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", marginTop: "3px" }}>
-                      {effectivePackWeight} g &times; {numPacks} packs
+                      {Number(targetPacks) !== Number(numPacks) ? `Target yield in slip (Formula: ${numPacks} packs)` : `Yield target in slip & PDF`}
                     </div>
                   </div>
 
@@ -2411,7 +2471,7 @@ export default function MixersManager() {
                       Product: <strong>{scalerMixer.name}</strong> {scalerMixer.tamilName ? `(${scalerMixer.tamilName})` : ""}
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", marginTop: "2px" }}>
-                      Customised Recipe Pack: <strong>{effectivePackWeight} g</strong> &bull; Production Target: <strong>{numPacks} Packs</strong>
+                      Customised Recipe Pack: <strong>{effectivePackWeight} g</strong> &bull; Production Target: <strong>{effectiveTargetPacks} Packs</strong>
                     </div>
                   </div>
 
@@ -2439,12 +2499,9 @@ export default function MixersManager() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                   <thead>
                     <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "2px solid var(--sd-zinc-300)", textAlign: "left" }}>
-                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "35px" }}>#</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "40px", textAlign: "center" }}>#</th>
                       <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material Spice</th>
-                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "140px" }}>
-                        Recipe Ratio ({effectivePackWeight} g)
-                      </th>
-                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "210px" }}>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "230px" }}>
                         Batch Weight Required ({numPacks} Packs)
                         <span style={{ display: "block", fontSize: "0.68rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>
                           (Editable numbers in grams)
@@ -2462,11 +2519,10 @@ export default function MixersManager() {
                       const isEdited = customBatchWeights[idx] !== undefined;
                       const spiceScaledGrams = isEdited ? customBatchWeights[idx] : calculatedGrams;
                       const spiceScaledKg = spiceScaledGrams / 1000;
-                      const percentage = effectivePackWeight > 0 ? ((spicePerPackGrams / effectivePackWeight) * 100).toFixed(1) : "0.0";
 
                       return (
                         <tr key={idx} style={{ borderBottom: "1px solid var(--sd-zinc-200)" }}>
-                          <td style={{ padding: "8px 10px", color: "var(--sd-zinc-500)", fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: "8px 10px", color: "var(--sd-zinc-500)", fontWeight: 600, textAlign: "center" }}>{idx + 1}</td>
                           <td style={{ padding: "8px 10px", fontWeight: 700, color: "var(--sd-black)" }}>
                             {ing.rawMaterialName}
                             {rm?.tamilName && (
@@ -2474,9 +2530,6 @@ export default function MixersManager() {
                                 {rm.tamilName}
                               </span>
                             )}
-                          </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-zinc-600)" }}>
-                            {spicePerPackGrams} g ({percentage}%)
                           </td>
                           <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 900, color: "var(--sd-black)", fontSize: "0.9rem" }}>
                             {/* Interactive Editable Number Input on Screen */}
@@ -2522,10 +2575,7 @@ export default function MixersManager() {
                   <tfoot>
                     <tr style={{ background: "var(--sd-zinc-100)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-400)" }}>
                       <td colSpan={2} style={{ padding: "10px", color: "var(--sd-black)" }}>
-                        TOTAL BATCH OUTPUT ({numPacks} PACKS &bull; {effectivePackWeight} g EACH)
-                      </td>
-                      <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-zinc-700)" }}>
-                        {effectivePackWeight} g (100%)
+                        TOTAL BATCH OUTPUT ({effectiveTargetPacks} PACKS &bull; {effectivePackWeight} g EACH)
                       </td>
                       <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-black)", fontSize: "1rem" }}>
                         {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(2)} KG` : `${totalBatchGrams} g`} ({totalBatchGrams.toLocaleString("en-IN")} g)

@@ -38,7 +38,8 @@ import {
   Edit2,
   Loader2,
   FileSpreadsheet,
-  BarChart3
+  BarChart3,
+  Building2
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import { compressImage, formatBytes } from "../utils/imageCompressor";

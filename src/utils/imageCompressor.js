@@ -11,12 +11,22 @@ import { storage, ref, uploadBytesResumable, getDownloadURL } from "../firebase/
  * @returns {Promise<{ blob: Blob, file: File, originalSize: number, compressedSize: number, compressionRatio: string }>}
  */
 export async function compressImage(file, options = {}) {
-  const {
-    maxWidth = 900,
-    maxHeight = 900,
-    quality = 0.8,
-    outputFormat = "image/webp"
-  } = options;
+  let maxWidth = 900;
+  let maxHeight = 900;
+  let quality = 0.8;
+  let outputFormat = "image/webp";
+
+  if (typeof options === "object" && options !== null) {
+    if (options.maxWidth !== undefined) maxWidth = options.maxWidth;
+    if (options.maxHeight !== undefined) maxHeight = options.maxHeight;
+    if (options.quality !== undefined) quality = options.quality;
+    if (options.outputFormat !== undefined) outputFormat = options.outputFormat;
+  } else if (typeof options === "number") {
+    maxWidth = options;
+    if (arguments[2] && typeof arguments[2] === "number") maxHeight = arguments[2];
+    if (arguments[3] && typeof arguments[3] === "number") quality = arguments[3];
+    if (arguments[4] && typeof arguments[4] === "string") outputFormat = arguments[4];
+  }
 
   return new Promise((resolve, reject) => {
     // If not an image, reject
@@ -117,7 +127,13 @@ export async function compressImage(file, options = {}) {
  * @param {function} onProgress - Progress callback (percentage: number)
  * @returns {Promise<{ url: string, path: string }>}
  */
-export async function uploadProductImage(file, folder = "products", onProgress = null) {
+export async function uploadProductImage(fileInput, folder = "products", onProgress = null) {
+  // Support both direct File/Blob or return object from compressImage ({ file, blob })
+  const file = fileInput?.file || fileInput?.blob || fileInput;
+  if (!file) {
+    throw new Error("No file or blob provided to uploadProductImage");
+  }
+
   const timestamp = Date.now();
   const safeName = (file.name || "image.webp").replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `${folder}/${timestamp}_${safeName}`;

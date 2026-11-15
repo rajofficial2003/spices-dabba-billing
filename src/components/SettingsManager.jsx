@@ -60,6 +60,16 @@ const BLANK_COMPANY = {
   qrCodePath: "/images/upi-qr.jpg"
 };
 
+// Helper: Convert File or Blob to persistent Base64 Data URL (never expires, no CORS issues)
+const fileToDataUrl = (fileOrBlob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(fileOrBlob);
+  });
+};
+
 export default function SettingsManager() {
   const { 
     businesses = [], 
@@ -184,8 +194,8 @@ export default function SettingsManager() {
     }
 
     try {
-      const localUrl = URL.createObjectURL(file);
-      setLogoPreviewUrl(localUrl);
+      const dataUrl = await fileToDataUrl(file);
+      setLogoPreviewUrl(dataUrl);
       setLogoFile(file);
       setFormError("");
     } catch (err) {
@@ -204,8 +214,8 @@ export default function SettingsManager() {
     }
 
     try {
-      const localUrl = URL.createObjectURL(file);
-      setQrPreviewUrl(localUrl);
+      const dataUrl = await fileToDataUrl(file);
+      setQrPreviewUrl(dataUrl);
       setQrFile(file);
       setFormError("");
     } catch (err) {
@@ -245,14 +255,29 @@ export default function SettingsManager() {
       if (logoFile) {
         setIsUploadingLogo(true);
         try {
-          const compressed = await compressImage(logoFile, 800, 800, 0.85);
-          finalLogoPath = await uploadProductImage(
-            compressed,
-            `company_logos/logo_${Date.now()}_${logoFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`
-          );
-        } catch (uploadErr) {
-          console.warn("Logo upload note:", uploadErr.message);
-          finalLogoPath = logoPreviewUrl;
+          const compressed = await compressImage(logoFile, {
+            maxWidth: 600,
+            maxHeight: 600,
+            quality: 0.85,
+            outputFormat: "image/webp"
+          });
+          const base64DataUrl = await fileToDataUrl(compressed.blob || logoFile);
+
+          // Try uploading compressed file to Firebase Storage
+          try {
+            const uploadRes = await uploadProductImage(compressed.file, "brand_logo");
+            if (uploadRes && uploadRes.url) {
+              finalLogoPath = uploadRes.url;
+            } else {
+              finalLogoPath = base64DataUrl;
+            }
+          } catch (storageErr) {
+            console.warn("Storage upload note, saving permanent base64 image:", storageErr.message);
+            finalLogoPath = base64DataUrl;
+          }
+        } catch (compErr) {
+          console.warn("Image compression error, saving original base64:", compErr);
+          finalLogoPath = await fileToDataUrl(logoFile);
         } finally {
           setIsUploadingLogo(false);
         }
@@ -262,17 +287,40 @@ export default function SettingsManager() {
       if (qrFile) {
         setIsUploadingQr(true);
         try {
-          const compressed = await compressImage(qrFile, 800, 800, 0.85);
-          finalQrPath = await uploadProductImage(
-            compressed,
-            `payment_qrs/qr_${Date.now()}_${qrFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`
-          );
-        } catch (uploadErr) {
-          console.warn("QR code upload note:", uploadErr.message);
-          finalQrPath = qrPreviewUrl;
+          const compressed = await compressImage(qrFile, {
+            maxWidth: 600,
+            maxHeight: 600,
+            quality: 0.85,
+            outputFormat: "image/webp"
+          });
+          const base64DataUrl = await fileToDataUrl(compressed.blob || qrFile);
+
+          // Try uploading compressed file to Firebase Storage
+          try {
+            const uploadRes = await uploadProductImage(compressed.file, "settings");
+            if (uploadRes && uploadRes.url) {
+              finalQrPath = uploadRes.url;
+            } else {
+              finalQrPath = base64DataUrl;
+            }
+          } catch (storageErr) {
+            console.warn("QR storage upload note, saving permanent base64 image:", storageErr.message);
+            finalQrPath = base64DataUrl;
+          }
+        } catch (compErr) {
+          console.warn("QR compression error, saving original base64:", compErr);
+          finalQrPath = await fileToDataUrl(qrFile);
         } finally {
           setIsUploadingQr(false);
         }
+      }
+
+      // Defensive check: NEVER allow temporary blob URLs in Firestore
+      if (finalLogoPath && finalLogoPath.startsWith("blob:")) {
+        finalLogoPath = "/images/logo/logo.png";
+      }
+      if (finalQrPath && finalQrPath.startsWith("blob:")) {
+        finalQrPath = "/images/upi-qr.jpg";
       }
 
       // Format full address

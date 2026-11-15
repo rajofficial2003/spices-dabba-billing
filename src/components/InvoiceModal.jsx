@@ -52,12 +52,29 @@ export default function InvoiceModal({ order, onClose }) {
   const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   const activeCompany = useMemo(() => {
-    if (order?.companyInfo && order.companyInfo.companyName) return order.companyInfo;
-    if (order?.businessName && businesses?.length) {
-      const match = businesses.find(b => b.businessName === order.businessName || b.id === order.businessId);
-      if (match) return match;
-    }
-    return defaultBusiness || BUSINESS_INFO;
+    // 1. Find live business configuration
+    const matchedBiz = (order?.businessName && businesses?.length)
+      ? businesses.find(b => b.businessName === order.businessName || b.id === order.businessId)
+      : (defaultBusiness || BUSINESS_INFO);
+
+    const base = matchedBiz || defaultBusiness || BUSINESS_INFO || {};
+    const snap = order?.companyInfo || {};
+
+    // Prefer non-blob logo and QR from snapshot, or fallback to current business configuration
+    const snapLogo = snap.logoPath && !snap.logoPath.startsWith("blob:") ? snap.logoPath : null;
+    const baseLogo = base.logoPath && !base.logoPath.startsWith("blob:") ? base.logoPath : "/images/logo/logo.png";
+
+    const snapQr = snap.qrCodePath && !snap.qrCodePath.startsWith("blob:") ? snap.qrCodePath : null;
+    const baseQr = base.qrCodePath && !base.qrCodePath.startsWith("blob:") ? base.qrCodePath : "/images/upi-qr.jpg";
+
+    return {
+      ...base,
+      ...snap,
+      companyName: snap.companyName || base.companyName || "JEES FOODS",
+      brandName: snap.brandName || base.brandName || "Spices Dabba",
+      logoPath: snapLogo || baseLogo,
+      qrCodePath: snapQr || baseQr
+    };
   }, [order, businesses, defaultBusiness, BUSINESS_INFO]);
 
   useEffect(() => {
@@ -463,7 +480,11 @@ export default function InvoiceModal({ order, onClose }) {
                 <img
                   src={activeCompany?.logoPath || "/images/logo/logo.png"}
                   alt="Logo"
-                  onError={(e) => { e.target.style.display = 'none'; }}
+                  onError={(e) => {
+                    if (!e.target.src.endsWith("/images/logo/logo.png")) {
+                      e.target.src = "/images/logo/logo.png";
+                    }
+                  }}
                   style={{ width: "95%", height: "95%", objectFit: "contain" }}
                 />
               </div>
@@ -794,11 +815,13 @@ export default function InvoiceModal({ order, onClose }) {
                   flexShrink: 0
                 }}>
                   <img
-                    src={activeCompany.qrCodePath || "/images/upi-qr.jpg"}
+                    src={(activeCompany?.qrCodePath && !activeCompany.qrCodePath.startsWith("blob:") && activeCompany.qrCodePath !== "/images/upi-qr.jpg") ? activeCompany.qrCodePath : (qrCodeUrl || "/images/upi-qr.jpg")}
                     alt="UPI QR Code"
                     onError={(e) => {
                       if (qrCodeUrl && e.target.src !== qrCodeUrl) {
                         e.target.src = qrCodeUrl;
+                      } else if (!e.target.src.endsWith("/images/upi-qr.jpg")) {
+                        e.target.src = "/images/upi-qr.jpg";
                       }
                     }}
                     style={{ width: "74px", height: "74px", objectFit: "contain", display: "block" }}

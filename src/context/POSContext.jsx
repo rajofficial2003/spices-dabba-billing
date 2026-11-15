@@ -145,7 +145,13 @@ export function POSProvider({ children }) {
       const saved = localStorage.getItem("sdb_businesses");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(b => ({
+            ...b,
+            logoPath: b.logoPath && !b.logoPath.startsWith("blob:") ? b.logoPath : "/images/logo/logo.png",
+            qrCodePath: b.qrCodePath && !b.qrCodePath.startsWith("blob:") ? b.qrCodePath : "/images/upi-qr.jpg"
+          }));
+        }
       }
     } catch {}
     return [DEFAULT_BUSINESS];
@@ -387,7 +393,15 @@ export function POSProvider({ children }) {
           }
           setBusinesses([DEFAULT_BUSINESS]);
         } else {
-          const bizList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const bizList = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              logoPath: data.logoPath && !data.logoPath.startsWith("blob:") ? data.logoPath : "/images/logo/logo.png",
+              qrCodePath: data.qrCodePath && !data.qrCodePath.startsWith("blob:") ? data.qrCodePath : "/images/upi-qr.jpg"
+            };
+          });
           bizList.sort((a, b) => (a.businessName || "").localeCompare(b.businessName || ""));
           setBusinesses(bizList);
           try {
@@ -1835,14 +1849,14 @@ export function POSProvider({ children }) {
       phoneSecondary: String(bizData.phoneSecondary || "").trim(),
       email: String(bizData.email || "").trim(),
       gstin: String(bizData.gstin || "").trim().toUpperCase(),
-      logoPath: bizData.logoPath || "/images/logo/logo.png",
+      logoPath: (bizData.logoPath && !bizData.logoPath.startsWith("blob:")) ? bizData.logoPath : "/images/logo/logo.png",
       bankName: String(bizData.bankName || "").trim(),
       accountName: String(bizData.accountName || "").trim(),
       accountNumber: String(bizData.accountNumber || "").trim(),
       ifscCode: String(bizData.ifscCode || "").trim().toUpperCase(),
       upiId: String(bizData.upiId || "").trim(),
       upiHolder: String(bizData.upiHolder || "").trim(),
-      qrCodePath: bizData.qrCodePath || "/images/upi-qr.jpg",
+      qrCodePath: (bizData.qrCodePath && !bizData.qrCodePath.startsWith("blob:")) ? bizData.qrCodePath : "/images/upi-qr.jpg",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
@@ -1880,6 +1894,12 @@ export function POSProvider({ children }) {
     }
     if (updates.ifscCode) {
       updates.ifscCode = String(updates.ifscCode).trim().toUpperCase();
+    }
+    if (updates.logoPath && updates.logoPath.startsWith("blob:")) {
+      updates.logoPath = "/images/logo/logo.png";
+    }
+    if (updates.qrCodePath && updates.qrCodePath.startsWith("blob:")) {
+      updates.qrCodePath = "/images/upi-qr.jpg";
     }
 
     if (updates.isDefault) {

@@ -381,23 +381,49 @@ export function POSProvider({ children }) {
       const businessesCol = collection(db, "billing_businesses");
       unsubscribeBusinesses = onSnapshot(businessesCol, async (snapshot) => {
         if (snapshot.empty) {
-          // If empty, seed initial default business
+          // Check if we have local businesses saved first to prevent overwriting
+          let existingLocal = [];
           try {
-            await setDoc(doc(db, "billing_businesses", DEFAULT_BUSINESS.id), {
-              ...DEFAULT_BUSINESS,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp()
-            });
-          } catch (e) {
-            console.warn("Seed initial business note:", e.message);
+            const saved = localStorage.getItem("sdb_businesses");
+            if (saved) existingLocal = JSON.parse(saved);
+          } catch (e) {}
+
+          if (Array.isArray(existingLocal) && existingLocal.length > 0) {
+            setBusinesses(existingLocal);
+            // Sync local businesses to Firestore
+            for (const b of existingLocal) {
+              try {
+                await setDoc(doc(db, "billing_businesses", b.id || DEFAULT_BUSINESS.id), {
+                  ...b,
+                  updatedAt: serverTimestamp()
+                }, { merge: true });
+              } catch (e) {}
+            }
+          } else {
+            // Seed initial default business
+            try {
+              await setDoc(doc(db, "billing_businesses", DEFAULT_BUSINESS.id), {
+                ...DEFAULT_BUSINESS,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+              });
+            } catch (e) {
+              console.warn("Seed initial business note:", e.message);
+            }
+            setBusinesses([DEFAULT_BUSINESS]);
+            try {
+              localStorage.setItem("sdb_businesses", JSON.stringify([DEFAULT_BUSINESS]));
+            } catch (err) {}
           }
-          setBusinesses([DEFAULT_BUSINESS]);
         } else {
           const bizList = snapshot.docs.map(doc => {
             const data = doc.data();
+            const prefix = String(data.invoiceStartingName || data.invoicePrefix || "SBD").trim().toUpperCase();
             return {
               id: doc.id,
               ...data,
+              invoicePrefix: prefix,
+              invoiceStartingName: prefix,
               logoPath: data.logoPath && !data.logoPath.startsWith("blob:") ? data.logoPath : "/images/logo/logo.png",
               qrCodePath: data.qrCodePath && !data.qrCodePath.startsWith("blob:") ? data.qrCodePath : "/images/upi-qr.jpg"
             };
@@ -1828,7 +1854,7 @@ export function POSProvider({ children }) {
   const addBusiness = async (bizData) => {
     const businessName = String(bizData.businessName || "").trim();
     if (!businessName) throw new Error("Business Name is required (e.g., 'B1 – Masalas').");
-    const invoicePrefix = String(bizData.invoicePrefix || "SBD").trim().toUpperCase();
+    const invoicePrefix = String(bizData.invoicePrefix || bizData.invoiceStartingName || "SBD").trim().toUpperCase();
 
     const isFirst = businesses.length === 0;
     const isDefault = bizData.isDefault ?? isFirst;
@@ -1836,9 +1862,10 @@ export function POSProvider({ children }) {
     const docData = {
       businessName,
       invoicePrefix,
+      invoiceStartingName: invoicePrefix,
       isDefault: Boolean(isDefault),
-      companyName: String(bizData.companyName || "").trim(),
-      brandName: String(bizData.brandName || "").trim(),
+      companyName: String(bizData.companyName || bizData.businessName || "").trim(),
+      brandName: String(bizData.brandName || bizData.companyName || bizData.businessName || "").trim(),
       address1: String(bizData.address1 || "").trim(),
       address2: String(bizData.address2 || "").trim(),
       city: String(bizData.city || "").trim(),
@@ -1866,17 +1893,47 @@ export function POSProvider({ children }) {
         if (b.isDefault && b.id) {
           try {
             await updateDoc(doc(db, "billing_businesses", b.id), { isDefault: false });
-          } catch (e) {}
+          } catch (e) {
+            try {
+              await setDoc(doc(db, "billing_businesses", b.id), { isDefault: false }, { merge: true });
+            } catch (e2) {}
+          }
         }
       }
     }
 
-    const docRef = await addDoc(collection(db, "billing_businesses"), docData);
-    const newBiz = { id: docRef.id, ...docData };
+    let docId = `biz_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    try {
+      const docRef = await addDoc(collection(db, "billing_businesses"), docData);
+      docId = docRef.id;
+    } catch (fsErr) {
+      console.warn("Firestore addDoc note, attempting fallback setDoc:", fsErr);
+      try {
+        await setDoc(doc(db, "billing_businesses", docId), docData);
+      } catch (e2) {}
+    }
+
+    const newBiz = {
+      ...docData,
+      id: docId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
     setBusinesses(prev => {
       const updated = isDefault ? prev.map(b => ({ ...b, isDefault: false })) : [...prev];
-      return [...updated.filter(b => b.id !== docRef.id), newBiz].sort((a, b) => (a.businessName || "").localeCompare(b.businessName || ""));
+      const merged = [...updated.filter(b => b.id !== docId), newBiz].sort((a, b) => (a.businessName || "").localeCompare(b.businessName || ""));
+      try {
+        localStorage.setItem("sdb_businesses", JSON.stringify(merged));
+      } catch (err) {}
+      return merged;
     });
+
+    if (isDefault || businesses.length === 0) {
+      setSelectedBusiness(newBiz);
+      setBusinessInfo(prev => ({ ...prev, ...newBiz }));
+    }
+
     return newBiz;
   };
 
@@ -1886,8 +1943,10 @@ export function POSProvider({ children }) {
       ...bizData,
       updatedAt: serverTimestamp()
     };
-    if (updates.invoicePrefix) {
-      updates.invoicePrefix = String(updates.invoicePrefix).trim().toUpperCase();
+    if (updates.invoicePrefix || updates.invoiceStartingName) {
+      const prefix = String(updates.invoiceStartingName || updates.invoicePrefix).trim().toUpperCase();
+      updates.invoicePrefix = prefix;
+      updates.invoiceStartingName = prefix;
     }
     if (updates.gstin) {
       updates.gstin = String(updates.gstin).trim().toUpperCase();
@@ -1907,14 +1966,26 @@ export function POSProvider({ children }) {
         if (b.id !== bizId && b.isDefault) {
           try {
             await updateDoc(doc(db, "billing_businesses", b.id), { isDefault: false });
-          } catch (e) {}
+          } catch (e) {
+            try {
+              await setDoc(doc(db, "billing_businesses", b.id), { isDefault: false }, { merge: true });
+            } catch (e2) {}
+          }
         }
       }
     }
 
-    await updateDoc(doc(db, "billing_businesses", bizId), updates);
+    try {
+      await updateDoc(doc(db, "billing_businesses", bizId), updates);
+    } catch (firestoreErr) {
+      console.warn("Firestore updateDoc note, using setDoc merge:", firestoreErr);
+      try {
+        await setDoc(doc(db, "billing_businesses", bizId), updates, { merge: true });
+      } catch (e2) {}
+    }
+
     setBusinesses(prev => {
-      return prev.map(b => {
+      const merged = prev.map(b => {
         if (b.id === bizId) {
           return { ...b, ...updates };
         }
@@ -1923,6 +1994,10 @@ export function POSProvider({ children }) {
         }
         return b;
       }).sort((a, b) => (a.businessName || "").localeCompare(b.businessName || ""));
+      try {
+        localStorage.setItem("sdb_businesses", JSON.stringify(merged));
+      } catch (err) {}
+      return merged;
     });
 
     setSelectedBusiness(prev => prev?.id === bizId ? { ...prev, ...updates } : prev);
@@ -1933,13 +2008,22 @@ export function POSProvider({ children }) {
       throw new Error("Cannot delete the only remaining company/business. At least one business must exist.");
     }
     const bizToDelete = businesses.find(b => b.id === bizId);
-    await deleteDoc(doc(db, "billing_businesses", bizId));
+    try {
+      await deleteDoc(doc(db, "billing_businesses", bizId));
+    } catch (e) {
+      console.warn("Delete business doc note:", e);
+    }
     setBusinesses(prev => {
       const remaining = prev.filter(b => b.id !== bizId);
       if (bizToDelete?.isDefault && remaining.length > 0) {
         remaining[0].isDefault = true;
-        updateDoc(doc(db, "billing_businesses", remaining[0].id), { isDefault: true }).catch(() => {});
+        try {
+          updateDoc(doc(db, "billing_businesses", remaining[0].id), { isDefault: true }).catch(() => {});
+        } catch (e2) {}
       }
+      try {
+        localStorage.setItem("sdb_businesses", JSON.stringify(remaining));
+      } catch (err) {}
       return remaining;
     });
   };
@@ -1948,10 +2032,25 @@ export function POSProvider({ children }) {
     for (const b of businesses) {
       const isDef = b.id === bizId;
       try {
-        await updateDoc(doc(db, "billing_businesses", b.id), { isDefault: isDef });
-      } catch (e) {}
+        await updateDoc(doc(db, "billing_businesses", b.id), { isDefault: isDef, updatedAt: serverTimestamp() });
+      } catch (e) {
+        try {
+          await setDoc(doc(db, "billing_businesses", b.id), { isDefault: isDef, updatedAt: serverTimestamp() }, { merge: true });
+        } catch (e2) {}
+      }
     }
-    setBusinesses(prev => prev.map(b => ({ ...b, isDefault: b.id === bizId })));
+    setBusinesses(prev => {
+      const updated = prev.map(b => ({ ...b, isDefault: b.id === bizId }));
+      try {
+        localStorage.setItem("sdb_businesses", JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
+    const target = businesses.find(b => b.id === bizId);
+    if (target) {
+      setSelectedBusiness({ ...target, isDefault: true });
+      setBusinessInfo(prev => ({ ...prev, ...target, isDefault: true }));
+    }
   };
 
   return (

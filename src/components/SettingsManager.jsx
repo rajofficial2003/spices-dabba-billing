@@ -225,11 +225,12 @@ export default function SettingsManager() {
 
   // Save Company Form (Add or Edit)
   const handleSaveCompany = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setFormError("");
 
-    const bName = formData.businessName.trim();
+    const bName = (formData.businessName || "").trim();
     const invPrefix = (formData.invoiceStartingName || formData.invoicePrefix || "").trim().toUpperCase();
+    const compName = (formData.companyName || "").trim() || bName;
 
     if (!bName) {
       setFormError("Please enter a Business Name (e.g. B1 – Masalas / B2 – Juices / B3 - Others).");
@@ -238,11 +239,6 @@ export default function SettingsManager() {
 
     if (!invPrefix) {
       setFormError("Please enter an Invoice Starting Name (e.g. SBD / JUC / OTH).");
-      return;
-    }
-
-    if (!formData.companyName.trim()) {
-      setFormError("Company Name (Legal entity name) is required.");
       return;
     }
 
@@ -325,37 +321,37 @@ export default function SettingsManager() {
 
       // Format full address
       const addrComponents = [
-        formData.address1.trim(),
-        formData.address2.trim(),
-        formData.city.trim(),
-        formData.state ? (formData.pincode ? `${formData.state.trim()} - ${formData.pincode.trim()}` : formData.state.trim()) : formData.pincode.trim()
+        (formData.address1 || "").trim(),
+        (formData.address2 || "").trim(),
+        (formData.city || "").trim(),
+        formData.state ? (formData.pincode ? `${(formData.state || "").trim()} - ${(formData.pincode || "").trim()}` : (formData.state || "").trim()) : (formData.pincode || "").trim()
       ].filter(Boolean);
-      const combinedAddress = addrComponents.length > 0 ? addrComponents.join(", ") : formData.address;
+      const combinedAddress = addrComponents.length > 0 ? addrComponents.join(", ") : (formData.address || "");
 
       const payload = {
         businessName: bName,
         invoicePrefix: invPrefix,
         invoiceStartingName: invPrefix,
         isDefault: Boolean(formData.isDefault),
-        companyName: formData.companyName.trim(),
-        brandName: formData.brandName.trim() || formData.companyName.trim(),
-        address1: formData.address1.trim(),
-        address2: formData.address2.trim(),
-        city: formData.city.trim(),
-        state: formData.state.trim(),
-        pincode: formData.pincode.trim(),
+        companyName: compName,
+        brandName: (formData.brandName || "").trim() || compName,
+        address1: (formData.address1 || "").trim(),
+        address2: (formData.address2 || "").trim(),
+        city: (formData.city || "").trim(),
+        state: (formData.state || "Tamil Nadu").trim(),
+        pincode: (formData.pincode || "").trim(),
         address: combinedAddress,
-        phonePrimary: formData.phonePrimary.trim(),
-        phoneSecondary: formData.phoneSecondary.trim(),
-        email: formData.email.trim(),
-        gstin: formData.gstin.trim().toUpperCase(),
+        phonePrimary: (formData.phonePrimary || "").trim(),
+        phoneSecondary: (formData.phoneSecondary || "").trim(),
+        email: (formData.email || "").trim(),
+        gstin: (formData.gstin || "").trim().toUpperCase(),
         logoPath: finalLogoPath,
-        bankName: formData.bankName.trim(),
-        accountName: formData.accountName.trim(),
-        accountNumber: formData.accountNumber.trim(),
-        ifscCode: formData.ifscCode.trim().toUpperCase(),
-        upiId: formData.upiId.trim(),
-        upiHolder: formData.upiHolder.trim(),
+        bankName: (formData.bankName || "").trim(),
+        accountName: (formData.accountName || "").trim(),
+        accountNumber: (formData.accountNumber || "").trim(),
+        ifscCode: (formData.ifscCode || "").trim().toUpperCase(),
+        upiId: (formData.upiId || "").trim(),
+        upiHolder: (formData.upiHolder || "").trim(),
         qrCodePath: finalQrPath
       };
 
@@ -984,7 +980,7 @@ export default function SettingsManager() {
             </div>
 
             {/* Modal Scrollable Body */}
-            <form onSubmit={handleSaveCompany} style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
+            <form onSubmit={handleSaveCompany} noValidate style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
               {formError && (
                 <div style={{
                   background: "#FEF2F2",
@@ -1024,9 +1020,8 @@ export default function SettingsManager() {
                     </label>
                     <input
                       type="text"
-                      required
                       placeholder="e.g. B1 – Masalas / B2 – Juices / B3 - Others"
-                      value={formData.businessName}
+                      value={formData.businessName || ""}
                       onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
                       style={{
                         width: "100%",
@@ -1050,10 +1045,9 @@ export default function SettingsManager() {
                     </label>
                     <input
                       type="text"
-                      required
                       maxLength={8}
                       placeholder="e.g. SBD / JUC / OTH"
-                      value={formData.invoiceStartingName || formData.invoicePrefix}
+                      value={formData.invoiceStartingName || formData.invoicePrefix || ""}
                       onChange={(e) => {
                         const val = e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
                         setFormData({ ...formData, invoiceStartingName: val, invoicePrefix: val });
@@ -1071,7 +1065,7 @@ export default function SettingsManager() {
                       }}
                     />
                     <span style={{ fontSize: "0.70rem", color: "var(--sd-zinc-500)", marginTop: "2px", display: "block" }}>
-                      Prefix for invoice numbers: {formData.invoiceStartingName || "SBD"}/26-27/0001
+                      Prefix for invoice numbers: {formData.invoiceStartingName || formData.invoicePrefix || "SBD"}/26-27/0001
                     </span>
                   </div>
                 </div>
@@ -1107,13 +1101,12 @@ export default function SettingsManager() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
-                      Company / Legal Name *
+                      Company / Legal Name
                     </label>
                     <input
                       type="text"
-                      required
-                      placeholder="e.g. JEES FOODS"
-                      value={formData.companyName}
+                      placeholder="e.g. JEES FOODS (Defaults to Business Name if blank)"
+                      value={formData.companyName || ""}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                       style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--sd-zinc-300)", fontSize: "0.82rem", outline: "none" }}
                     />
@@ -1126,7 +1119,7 @@ export default function SettingsManager() {
                     <input
                       type="text"
                       placeholder="e.g. Spices Dabba"
-                      value={formData.brandName}
+                      value={formData.brandName || ""}
                       onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
                       style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--sd-zinc-300)", fontSize: "0.82rem", outline: "none" }}
                     />
@@ -1134,13 +1127,12 @@ export default function SettingsManager() {
 
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--sd-zinc-700)", marginBottom: "3px" }}>
-                      Phone (Primary) *
+                      Phone (Primary)
                     </label>
                     <input
                       type="text"
-                      required
                       placeholder="e.g. +91 95666 59298"
-                      value={formData.phonePrimary}
+                      value={formData.phonePrimary || ""}
                       onChange={(e) => setFormData({ ...formData, phonePrimary: e.target.value })}
                       style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--sd-zinc-300)", fontSize: "0.82rem", outline: "none" }}
                     />
@@ -1153,7 +1145,7 @@ export default function SettingsManager() {
                     <input
                       type="text"
                       placeholder="e.g. +91 98408 39699"
-                      value={formData.phoneSecondary}
+                      value={formData.phoneSecondary || ""}
                       onChange={(e) => setFormData({ ...formData, phoneSecondary: e.target.value })}
                       style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--sd-zinc-300)", fontSize: "0.82rem", outline: "none" }}
                     />
@@ -1164,9 +1156,9 @@ export default function SettingsManager() {
                       Email Address
                     </label>
                     <input
-                      type="email"
+                      type="text"
                       placeholder="e.g. hello@spicesdabba.com"
-                      value={formData.email}
+                      value={formData.email || ""}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--sd-zinc-300)", fontSize: "0.82rem", outline: "none" }}
                     />
@@ -1179,7 +1171,7 @@ export default function SettingsManager() {
                     <input
                       type="text"
                       placeholder="e.g. 33ATDPV4802H1ZR"
-                      value={formData.gstin}
+                      value={formData.gstin || ""}
                       onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
                       style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--sd-zinc-300)", fontSize: "0.82rem", outline: "none", fontFamily: "monospace" }}
                     />

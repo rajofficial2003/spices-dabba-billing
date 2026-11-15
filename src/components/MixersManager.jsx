@@ -18,6 +18,8 @@ import {
   Boxes, 
   Check, 
   ChevronDown, 
+  ChevronLeft,
+  ChevronRight,
   Loader2 
 } from "lucide-react";
 
@@ -37,6 +39,10 @@ export default function MixersManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState("all"); // 'all', 'balanced', 'imbalanced'
   
+  // Recipes Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+
   // Modals state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMixer, setEditingMixer] = useState(null);
@@ -692,6 +698,18 @@ export default function MixersManager() {
     });
   }, [mixers, searchQuery, filterMode]);
 
+  // Reset pagination when search query or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterMode, itemsPerPage]);
+
+  // Pagination Calculations
+  const totalPages = Math.ceil(filteredMixers.length / itemsPerPage) || 1;
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (validCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMixers = filteredMixers.slice(startIndex, endIndex);
+
   // Overall Statistics (Operational formulation metrics)
   const stats = useMemo(() => {
     const totalCount = mixers.length;
@@ -1021,8 +1039,9 @@ export default function MixersManager() {
           </button>
         </div>
       ) : (
-        <div className="responsive-cards-grid">
-          {filteredMixers.map(mixer => {
+        <>
+          <div className="responsive-cards-grid">
+            {paginatedMixers.map(mixer => {
             const totalGrams = Number((mixer.ingredients || []).reduce((s, i) => s + (Number(i.grams) || 0), 0).toFixed(2));
             const customWeight = Number(mixer.customisedWeight) || Number(mixer.baseWeightGrams) || totalGrams;
             const isBalanced = Math.abs(totalGrams - customWeight) < 0.1;
@@ -1263,6 +1282,150 @@ export default function MixersManager() {
             );
           })}
         </div>
+
+        {/* Recipes Pagination Bar */}
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "12px",
+          marginTop: "20px",
+          padding: "14px 18px",
+          background: "#FFFFFF",
+          borderRadius: "14px",
+          border: "1px solid var(--sd-zinc-200)",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+        }}>
+          <div style={{ fontSize: "0.82rem", color: "var(--sd-zinc-600)", fontWeight: 600 }}>
+            Showing <strong style={{ color: "var(--sd-black)" }}>{startIndex + 1}</strong> to <strong style={{ color: "var(--sd-black)" }}>{Math.min(endIndex, filteredMixers.length)}</strong> of <strong style={{ color: "var(--sd-black)" }}>{filteredMixers.length}</strong> recipes
+            {totalPages > 1 && ` • Page ${validCurrentPage} of ${totalPages}`}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--sd-zinc-500)" }}>
+            <span>Per page:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "6px",
+                border: "1px solid var(--sd-zinc-300)",
+                fontSize: "0.78rem",
+                background: "#FFFFFF",
+                fontWeight: 700,
+                color: "var(--sd-black)",
+                outline: "none",
+                cursor: "pointer"
+              }}
+            >
+              <option value={6}>6</option>
+              <option value={12}>12</option>
+              <option value={24}>24</option>
+              <option value={48}>48</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentPage(prev => Math.max(prev - 1, 1));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              disabled={validCurrentPage === 1}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--sd-zinc-300)",
+                background: validCurrentPage === 1 ? "var(--sd-zinc-100)" : "var(--sd-white)",
+                color: validCurrentPage === 1 ? "var(--sd-zinc-400)" : "var(--sd-zinc-800)",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: validCurrentPage === 1 ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <ChevronLeft size={14} />
+              <span>Prev</span>
+            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - validCurrentPage) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((page, pIdx) => {
+                  if (page === "...") {
+                    return <span key={`ellipsis-${pIdx}`} style={{ padding: "0 4px", color: "var(--sd-zinc-400)", fontSize: "0.8rem" }}>...</span>;
+                  }
+                  return (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "8px",
+                        border: page === validCurrentPage ? "1px solid var(--sd-black)" : "1px solid var(--sd-zinc-300)",
+                        background: page === validCurrentPage ? "var(--sd-black)" : "var(--sd-white)",
+                        color: page === validCurrentPage ? "var(--sd-white)" : "var(--sd-zinc-800)",
+                        fontSize: "0.78rem",
+                        fontWeight: page === validCurrentPage ? 800 : 600,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              disabled={validCurrentPage === totalPages}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--sd-zinc-300)",
+                background: validCurrentPage === totalPages ? "var(--sd-zinc-100)" : "var(--sd-white)",
+                color: validCurrentPage === totalPages ? "var(--sd-zinc-400)" : "var(--sd-zinc-800)",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: validCurrentPage === totalPages ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <span>Next</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+        </>
       )}
 
       {/* ========================================================================= */}

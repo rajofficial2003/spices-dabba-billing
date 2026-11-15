@@ -321,43 +321,64 @@ export default function RawMaterialsManager({ subViewToggle = null }) {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {subViewToggle}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          flexWrap: "wrap",
+          width: "100%",
+          justifyContent: "space-between"
+        }}>
+          {subViewToggle && (
+            <div style={{ maxWidth: "100%", overflowX: "auto", paddingBottom: "2px" }}>
+              {subViewToggle}
+            </div>
+          )}
 
-          {rawMaterials.length === 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto", flexWrap: "wrap" }}>
+            {rawMaterials.length === 0 && (
+              <button
+                type="button"
+                onClick={handleQuickSeedAll}
+                disabled={isSubmitting}
+                style={{
+                  background: "#FEF3C7",
+                  color: "#92400E",
+                  border: "1px solid #FCD34D",
+                  borderRadius: "10px",
+                  padding: "8px 14px",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                <Sparkles size={15} />
+                <span>Load Common Spices</span>
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={handleQuickSeedAll}
-              disabled={isSubmitting}
+              onClick={() => handleOpenAdd()}
+              className="btn-primary"
               style={{
-                background: "#FEF3C7",
-                color: "#92400E",
-                border: "1px solid #FCD34D",
-                borderRadius: "10px",
-                padding: "8px 14px",
+                padding: "8px 16px",
                 fontSize: "0.82rem",
-                fontWeight: 700,
+                whiteSpace: "nowrap",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
-                cursor: "pointer",
-                whiteSpace: "nowrap"
+                flexShrink: 0
               }}
             >
-              <Sparkles size={15} />
-              <span>Load Common Spices</span>
+              <Plus size={15} />
+              <span>Add Raw Material</span>
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => handleOpenAdd()}
-            className="btn-primary"
-            style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap" }}
-          >
-            <Plus size={15} />
-            <span>Add Raw Material</span>
-          </button>
+          </div>
         </div>
       </div>
 

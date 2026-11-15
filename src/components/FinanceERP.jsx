@@ -3985,6 +3985,7 @@ export default function FinanceERP() {
         businesses={businesses}
         BUSINESS_INFO={BUSINESS_INFO}
         initialSection={activeSection}
+        initialBusinessFilter={businessFilter}
         initialDatePreset={datePreset}
         initialStartDate={startDate}
         initialEndDate={endDate}

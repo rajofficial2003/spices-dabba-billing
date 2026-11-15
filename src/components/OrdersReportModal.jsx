@@ -11,11 +11,13 @@ import {
   Clock, 
   CheckCircle2, 
   Building, 
+  Building2,
   Layers,
   ShoppingBag,
   Filter
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatters";
+import { DEFAULT_BUSINESS } from "../context/POSContext";
 
 export default function OrdersReportModal({
   isOpen,
@@ -25,16 +27,25 @@ export default function OrdersReportModal({
   businesses = [],
   BUSINESS_INFO = {},
   initialFilterTab = "completed",
-  initialDatePreset = "all"
+  initialBusinessFilter = "all",
+  initialDatePreset = "all",
+  initialStartDate = "",
+  initialEndDate = ""
 }) {
   if (!isOpen) return null;
 
+  // Available Businesses fallback
+  const availableBusinesses = useMemo(() => {
+    if (Array.isArray(businesses) && businesses.length > 0) return businesses;
+    return [DEFAULT_BUSINESS];
+  }, [businesses]);
+
   // Filter States
   const [statusFilter, setStatusFilter] = useState(initialFilterTab || "completed"); // 'all' | 'completed' | 'credit' | 'draft'
-  const [businessFilter, setBusinessFilter] = useState("all");
+  const [businessFilter, setBusinessFilter] = useState(initialBusinessFilter || "all");
   const [datePreset, setDatePreset] = useState(initialDatePreset || "month"); // 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(initialStartDate || "");
+  const [endDate, setEndDate] = useState(initialEndDate || "");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [activeViewTab, setActiveViewTab] = useState("orders"); // 'orders' | 'products'
 
@@ -190,6 +201,7 @@ export default function OrdersReportModal({
 
     const headers = [
       "S.No",
+      "Business Name",
       "Invoice Number",
       "Invoice Date",
       "Retailer / Customer Shop",
@@ -217,6 +229,7 @@ export default function OrdersReportModal({
 
       return [
         idx + 1,
+        `"${(o.businessName || "B1 – Masalas").replace(/"/g, '""')}"`,
         `"${o.invoiceNumber || ""}"`,
         `"${dateStr}"`,
         `"${(cust.shopName || cust.businessName || "").replace(/"/g, '""')}"`,
@@ -322,6 +335,11 @@ export default function OrdersReportModal({
       `;
     }).join("");
 
+    const matchedBiz = (businessFilter !== "all") 
+      ? availableBusinesses.find(b => b.businessName === businessFilter) 
+      : null;
+    const reportBizInfo = matchedBiz || BUSINESS_INFO || {};
+
     doc.write(`
       <!DOCTYPE html>
       <html>
@@ -349,18 +367,19 @@ export default function OrdersReportModal({
           <div class="header">
             <div>
               <h1 style="font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">
-                ${BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES FOODS"} &bull; ${BUSINESS_INFO?.brandName || "SPICES DABBA"}
+                ${reportBizInfo?.companyName || reportBizInfo?.manufacturer || "JEES FOODS"} &bull; ${reportBizInfo?.brandName || "SPICES DABBA"}
               </h1>
               <div style="font-size: 11px; color: #52525B; margin-top: 3px;">
-                ${BUSINESS_INFO?.address || "Bodinayakanur, Theni District-625513, Tamilnadu, India"}
+                ${reportBizInfo?.address || "Bodinayakanur, Theni District-625513, Tamilnadu, India"}
               </div>
               <div style="font-size: 11px; font-weight: 600; margin-top: 2px;">
-                GSTIN: <strong>${BUSINESS_INFO?.gstin || "33ATDPV4802H1ZR"}</strong> | Phone: ${BUSINESS_INFO?.phonePrimary || "+91 95666 59298"}
+                GSTIN: <strong>${reportBizInfo?.gstin || "33ATDPV4802H1ZR"}</strong> | Phone: ${reportBizInfo?.phonePrimary || "+91 95666 59298"}
               </div>
             </div>
             <div style="text-align: right;">
               <span class="badge" style="background: #09090B; color: #FFFFFF;">SALES & ORDERS REGISTER</span>
               <div style="font-size: 12px; font-weight: 800; margin-top: 5px;">Period: ${rangeLabel}</div>
+              <div style="font-size: 11px; color: #52525B; margin-top: 2px;">Business: <strong>${businessFilter === "all" ? "All Businesses" : businessFilter}</strong></div>
               <div style="font-size: 11px; color: #52525B; margin-top: 2px;">Filter: ${statusLabel}</div>
             </div>
           </div>
@@ -613,26 +632,35 @@ export default function OrdersReportModal({
 
             {/* Row 3: Business & Customer Filter */}
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-              {businesses.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-zinc-700)", textTransform: "uppercase" }}>
-                    Business:
-                  </span>
-                  <select
-                    value={businessFilter}
-                    onChange={(e) => setBusinessFilter(e.target.value)}
-                    className="custom-select"
-                    style={{ padding: "5px 10px", fontSize: "0.78rem", fontWeight: 700 }}
-                  >
-                    <option value="all">All Businesses</option>
-                    {businesses.map(b => (
-                      <option key={b.id} value={b.businessName}>
-                        {b.businessName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--sd-red)", textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <Building2 size={13} />
+                  <span>Business:</span>
+                </span>
+                <select
+                  value={businessFilter}
+                  onChange={(e) => setBusinessFilter(e.target.value)}
+                  className="custom-select"
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: "0.80rem",
+                    fontWeight: 800,
+                    borderRadius: "8px",
+                    border: "1px solid var(--sd-zinc-300)",
+                    background: "#FFFFFF",
+                    color: "var(--sd-black)",
+                    cursor: "pointer"
+                  }}
+                  title="Filter report by Business Entity"
+                >
+                  <option value="all">All Businesses ({availableBusinesses.length})</option>
+                  {availableBusinesses.map(b => (
+                    <option key={b.id} value={b.businessName}>
+                      {b.businessName} {b.invoicePrefix ? `(${b.invoicePrefix})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {customers.length > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>

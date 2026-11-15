@@ -11,7 +11,8 @@ import {
   Receipt, 
   Layers, 
   Filter, 
-  Building, 
+  Building,
+  Building2, 
   IndianRupee,
   ShoppingBag,
   TrendingUp,
@@ -20,6 +21,7 @@ import {
   Users
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/formatters";
+import { DEFAULT_BUSINESS } from "../context/POSContext";
 
 export default function FinanceReportModal({
   isOpen,
@@ -32,17 +34,24 @@ export default function FinanceReportModal({
   businesses = [],
   BUSINESS_INFO = {},
   initialSection = "all", // 'all' | 'raw_materials' | 'other_expenses'
+  initialBusinessFilter = "all",
   initialDatePreset = "month",
   initialStartDate = "",
   initialEndDate = ""
 }) {
   if (!isOpen) return null;
 
+  // Available Businesses fallback
+  const availableBusinesses = useMemo(() => {
+    if (Array.isArray(businesses) && businesses.length > 0) return businesses;
+    return [DEFAULT_BUSINESS];
+  }, [businesses]);
+
   // Filter States
   const [typeFilter, setTypeFilter] = useState(
     initialSection === "raw_materials" ? "raw_materials" : (initialSection === "other_expenses" ? "other_expenses" : "all")
   );
-  const [businessFilter, setBusinessFilter] = useState("all");
+  const [businessFilter, setBusinessFilter] = useState(initialBusinessFilter || "all");
   const [datePreset, setDatePreset] = useState(initialDatePreset || "month");
   const [startDate, setStartDate] = useState(initialStartDate || "");
   const [endDate, setEndDate] = useState(initialEndDate || "");
@@ -272,7 +281,7 @@ export default function FinanceReportModal({
       rawMaterialsList,
       categoryList
     };
-  }, [filteredExpenses, orders, startDate, endDate]);
+  }, [filteredExpenses, orders, startDate, endDate, businessFilter]);
 
   // Unique list of suppliers and categories for dropdowns
   const uniqueSuppliers = useMemo(() => {
@@ -310,6 +319,7 @@ export default function FinanceReportModal({
       "S.No",
       "Date",
       "Bill / Voucher No",
+      "Business Entity",
       "Type",
       "Category",
       "Supplier / Paid To",
@@ -324,6 +334,7 @@ export default function FinanceReportModal({
       const isRawMaterial = exp.expenseType === "raw_material" || exp.category === "Raw Materials";
       const dateStr = getExpenseDateStr(exp);
       const billNo = exp.invoiceNumber || exp.billNumber || exp.id || "";
+      const bizName = exp.businessName || "B1 – Masalas";
       const typeLabel = isRawMaterial ? "Raw Material Purchase" : "Operational Expense";
       const cat = exp.category || (isRawMaterial ? "Raw Materials" : "General");
       const party = exp.supplierName || exp.paidTo || "";
@@ -340,6 +351,7 @@ export default function FinanceReportModal({
         idx + 1,
         `"${dateStr}"`,
         `"${billNo}"`,
+        `"${bizName.replace(/"/g, '""')}"`,
         `"${typeLabel}"`,
         `"${cat.replace(/"/g, '""')}"`,
         `"${party.replace(/"/g, '""')}"`,
@@ -356,6 +368,10 @@ export default function FinanceReportModal({
     rows.push([
       "TOTAL",
       `"${filteredExpenses.length} Records"`,
+      '""',
+      '""',
+      '""',
+      '""',
       '""',
       '""',
       '""',
@@ -406,6 +422,18 @@ export default function FinanceReportModal({
       ? "Raw Material Mandi Purchases" 
       : (typeFilter === "other_expenses" ? "Operational & Daily Expenses" : "All Purchases & Operating Outflows");
 
+    const matchedBiz = businessFilter !== "all" 
+      ? availableBusinesses.find(b => b.businessName === businessFilter) 
+      : null;
+    const reportBizInfo = matchedBiz ? {
+      companyName: matchedBiz.companyName || matchedBiz.businessName,
+      brandName: matchedBiz.businessName,
+      address: matchedBiz.address || BUSINESS_INFO?.address,
+      gstin: matchedBiz.gstin || BUSINESS_INFO?.gstin,
+      phonePrimary: matchedBiz.phone || BUSINESS_INFO?.phonePrimary,
+      logoUrl: matchedBiz.logoUrl || BUSINESS_INFO?.logoUrl
+    } : BUSINESS_INFO;
+
     const tableRows = filteredExpenses.map((exp, idx) => {
       const isRawMaterial = exp.expenseType === "raw_material" || exp.category === "Raw Materials";
       const dateStr = getExpenseDateStr(exp);
@@ -429,6 +457,7 @@ export default function FinanceReportModal({
             <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; background: ${isRawMaterial ? '#FFEDD5' : '#F4F4F5'}; color: ${isRawMaterial ? '#6B1414' : '#18181B'};">
               ${isRawMaterial ? "RAW MATERIAL" : (exp.category || "EXPENSE")}
             </span>
+            ${exp.businessName ? `<div style="font-size: 9.5px; font-weight: 700; color: #52525B; margin-top: 2px;">${exp.businessName}</div>` : ""}
           </td>
           <td style="padding: 6px 6px;">
             <strong>${party}</strong>
@@ -470,19 +499,20 @@ export default function FinanceReportModal({
           <div class="header">
             <div>
               <h1 style="font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">
-                ${BUSINESS_INFO?.companyName || BUSINESS_INFO?.manufacturer || "JEES FOODS"} &bull; ${BUSINESS_INFO?.brandName || "SPICES DABBA"}
+                ${reportBizInfo?.companyName || reportBizInfo?.manufacturer || "JEES FOODS"} &bull; ${reportBizInfo?.brandName || "SPICES DABBA"}
               </h1>
               <div style="font-size: 11px; color: #52525B; margin-top: 3px;">
-                ${BUSINESS_INFO?.address || "Bodinayakanur, Theni District-625513, Tamilnadu, India"}
+                ${reportBizInfo?.address || "Bodinayakanur, Theni District-625513, Tamilnadu, India"}
               </div>
               <div style="font-size: 11px; font-weight: 600; margin-top: 2px;">
-                GSTIN: <strong>${BUSINESS_INFO?.gstin || "33ATDPV4802H1ZR"}</strong> | Phone: ${BUSINESS_INFO?.phonePrimary || "+91 95666 59298"}
+                GSTIN: <strong>${reportBizInfo?.gstin || "33ATDPV4802H1ZR"}</strong> | Phone: ${reportBizInfo?.phonePrimary || "+91 95666 59298"}
               </div>
             </div>
             <div style="text-align: right;">
               <span class="badge" style="background: #09090B; color: #FFFFFF;">PURCHASE & EXPENSE AUDIT REGISTER</span>
               <div style="font-size: 12px; font-weight: 800; margin-top: 5px;">Period: ${rangeLabel}</div>
               <div style="font-size: 11px; color: #52525B; margin-top: 2px;">Filter: ${typeLabel}</div>
+              <div style="font-size: 11px; font-weight: 700; color: #18181B; margin-top: 2px;">Business Entity: <span class="badge" style="background: #E4E4E7; color: #18181B;">${businessFilter === "all" ? "All Businesses" : businessFilter}</span></div>
             </div>
           </div>
 
@@ -797,29 +827,34 @@ export default function FinanceReportModal({
             )}
 
             {/* Business Entity Filter */}
-            {businesses && businesses.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontSize: "0.73rem", fontWeight: 700, color: "var(--sd-zinc-500)" }}>Business:</span>
-                <select
-                  value={businessFilter}
-                  onChange={(e) => setBusinessFilter(e.target.value)}
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--sd-zinc-300)",
-                    fontSize: "0.75rem",
-                    background: "#FFFFFF",
-                    fontWeight: 700,
-                    outline: "none"
-                  }}
-                >
-                  <option value="all">All Businesses</option>
-                  {businesses.map(b => (
-                    <option key={b.id} value={b.businessName}>{b.businessName}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "0.73rem", fontWeight: 800, color: "var(--sd-red)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <Building2 size={13} />
+                <span>Business:</span>
+              </span>
+              <select
+                value={businessFilter}
+                onChange={(e) => setBusinessFilter(e.target.value)}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--sd-zinc-300)",
+                  fontSize: "0.75rem",
+                  background: "#FFFFFF",
+                  fontWeight: 700,
+                  outline: "none",
+                  cursor: "pointer"
+                }}
+                title="Filter report by Business Entity"
+              >
+                <option value="all">All Businesses ({availableBusinesses.length})</option>
+                {availableBusinesses.map(b => (
+                  <option key={b.id} value={b.businessName}>
+                    {b.businessName} {b.invoicePrefix ? `(${b.invoicePrefix})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Category Filter */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

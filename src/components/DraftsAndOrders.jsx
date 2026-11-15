@@ -518,6 +518,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                 {/* Header row: Shop Name & Status Badge */}
                 <div style={{
                   display: "flex",
+                  flexWrap: "wrap",
                   justifyContent: "space-between",
                   alignItems: "flex-start",
                   gap: "8px",
@@ -525,33 +526,39 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                   width: "100%",
                   minWidth: 0
                 }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ minWidth: 0, flex: "1 1 180px", maxWidth: "100%" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
                       <Store size={16} color="var(--sd-red)" style={{ flexShrink: 0 }} />
                       <h3 className="font-heading" style={{
                         fontSize: "0.98rem",
                         fontWeight: 800,
                         margin: 0,
                         color: "var(--sd-black)",
-                        wordBreak: "break-word"
-                      }}>
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis"
+                      }} title={order.customer?.shopName || "Retailer Shop"}>
                         {order.customer?.shopName || "Retailer Shop"}
                       </h3>
                     </div>
                     {order.customer?.customerName && (
                       <div style={{
                         fontSize: "0.78rem",
-                        color: "var(--sd-zinc-500)",
+                        color: "var(--sd-zinc-600)",
                         marginLeft: "22px",
-                        wordBreak: "break-word"
-                      }}>
-                        Contact: {order.customer.customerName}
+                        marginTop: "2px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "block"
+                      }} title={`Contact: ${order.customer.customerName}`}>
+                        Contact: <span style={{ fontWeight: 700, color: "var(--sd-zinc-800)" }}>{order.customer.customerName}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Badges container: Business Name + Status */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginLeft: "auto" }}>
                     <span style={{
                       padding: "3px 7px",
                       borderRadius: "6px",
@@ -1138,7 +1145,10 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
         businesses={businesses}
         BUSINESS_INFO={BUSINESS_INFO}
         initialFilterTab={filterTab}
+        initialBusinessFilter={businessFilter}
         initialDatePreset={datePreset}
+        initialStartDate={startDate}
+        initialEndDate={endDate}
       />
     </div>
   );

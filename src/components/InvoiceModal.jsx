@@ -346,11 +346,12 @@ export default function InvoiceModal({ order, onClose }) {
       const rowTotal = Math.round(unitInclusive * (item.quantity || 1) * 100) / 100;
       const baseTotal = Math.round(rate * (item.quantity || 1) * 100) / 100;
       const itemGstAmount = item.isSample ? 0 : Math.round((rowTotal - baseTotal) * 100) / 100;
+      const unitGstAmount = item.isSample ? 0 : Math.round((unitInclusive - rate) * 100) / 100;
       const hsn = item.hsnCode || "0910 91 00";
       const packText = item.unit || item.variantSize || "Pack";
 
       msg += `${idx + 1}. *${item.name}* [Pack: ${packText}]\n`;
-      msg += `   HSN: ${hsn} | Qty: ${item.quantity} | GST: ${gstPercent}% | IGST: ₹${itemGstAmount.toFixed(2)}\n`;
+      msg += `   HSN: ${hsn} | Qty: ${item.quantity} | GST: ${gstPercent}% | Unit GST: ₹${unitGstAmount.toFixed(2)}\n`;
       msg += `   Unit: ₹${rate.toFixed(2)} | Prod Price: ₹${unitInclusive.toFixed(2)} | Total: *₹${rowTotal.toFixed(2)}*\n`;
     });
 
@@ -688,6 +689,7 @@ export default function InvoiceModal({ order, onClose }) {
                 const rowTotal = Math.round(unitInclusive * (item.quantity || 1) * 100) / 100;
                 const baseTotal = Math.round(rate * (item.quantity || 1) * 100) / 100;
                 const itemGstAmount = item.isSample ? 0 : Math.round((rowTotal - baseTotal) * 100) / 100;
+                const unitGstAmount = item.isSample ? 0 : Math.round((unitInclusive - rate) * 100) / 100;
                 const mrp = Number(item.mrp) || 0;
                 const hsn = item.hsnCode || "0910 91 00";
                 const packText = item.unit || item.variantSize || "Standard Pack";
@@ -733,9 +735,9 @@ export default function InvoiceModal({ order, onClose }) {
                     <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: item.isSample ? 800 : 500, color: item.isSample ? "#DC2626" : "inherit" }}>
                       {item.isSample ? "₹0.00" : `₹${rate.toFixed(2)}`}
                     </td>
-                    {/* GST (Amount) */}
+                    {/* GST (Amount - Single Unit GST) */}
                     <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: 600, color: item.isSample ? "#DC2626" : "#52525B" }}>
-                      {item.isSample ? "₹0.00" : `₹${itemGstAmount.toFixed(2)}`}
+                      {item.isSample ? "₹0.00" : `₹${unitGstAmount.toFixed(2)}`}
                     </td>
                     {/* Product price (Base rate + GST) */}
                     <td style={{ padding: "7px 6px", textAlign: "right", fontWeight: 700, color: item.isSample ? "#DC2626" : "#09090b" }}>

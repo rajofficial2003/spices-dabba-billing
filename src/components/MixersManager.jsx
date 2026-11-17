@@ -503,7 +503,7 @@ export default function MixersManager() {
             <strong style={{ color: "#0F172A" }}>{effectiveNumPacks} Packs</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-            <span style={{ color: "#64748B", fontWeight: 600 }}>Production Target:</span>
+            <span style={{ color: "#64748B", fontWeight: 600 }}>Total Number of Packs:</span>
             <strong style={{ color: "#0F172A" }}>{productionTargetPacks} Packs</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", borderTop: "1px dashed #CBD5E1", paddingTop: "6px" }}>
@@ -2327,14 +2327,14 @@ export default function MixersManager() {
                     </div>
                   </div>
 
-                  {/* Box 3: Total Production Target (Slip Label Only) */}
+                  {/* Box 3: Total Number of Packs (Slip Label Only) */}
                   <div style={{ background: "#FFFFFF", padding: "12px", borderRadius: "10px", border: "1px solid var(--sd-zinc-200)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                       <label 
                         htmlFor="scaler-production-target-input"
                         style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--sd-black)", textTransform: "uppercase" }}
                       >
-                        Production Target
+                        Total Number of Packs
                       </label>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -2357,7 +2357,7 @@ export default function MixersManager() {
                           outline: "none"
                         }}
                         placeholder="0"
-                        title="Enter target packs count (shows in print / PDF slip label only)"
+                        title="Enter total number of packs (shows in print / PDF slip label only)"
                       />
                       <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Packs</span>
                     </div>
@@ -2421,7 +2421,7 @@ export default function MixersManager() {
                       Product: <strong>{scalerMixer.name}</strong> {scalerMixer.tamilName ? `(${scalerMixer.tamilName})` : ""}
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "var(--sd-zinc-500)", marginTop: "2px" }}>
-                      Customised Recipe Pack: <strong>{effectivePackWeight} g</strong> &bull; Batch Packs: <strong>{effectiveNumPacks} Packs</strong> &bull; Production Target: <strong>{productionTargetPacks} Packs</strong>
+                      Net Weight to Pack: <strong>{effectivePackWeight} g</strong> &bull; Total Number of Packs: <strong>{productionTargetPacks} Packs</strong>
                     </div>
                   </div>
 

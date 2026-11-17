@@ -2379,9 +2379,12 @@ export default function MixersManager() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                   <thead>
                     <tr style={{ background: "var(--sd-zinc-100)", borderBottom: "2px solid var(--sd-zinc-300)", textAlign: "left" }}>
-                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "40px" }}>#</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", width: "35px" }}>#</th>
                       <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Raw Material Spice</th>
-                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "220px" }}>
+                      <th className="no-print-in-slip" style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "140px" }}>
+                        Recipe Ratio ({effectivePackWeight > 0 ? `${effectivePackWeight} g` : `${baseRecipePackWeight} g`})
+                      </th>
+                      <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "210px" }}>
                         Batch Weight Required
                         <span className="no-print-in-slip" style={{ display: "block", fontSize: "0.68rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>
                           (Editable numbers in grams)
@@ -2394,6 +2397,10 @@ export default function MixersManager() {
                       const rm = rawMaterialsMap.get(ing.rawMaterialId) || rawMaterialsMap.get(ing.rawMaterialName?.toLowerCase());
                       
                       const originalSpiceGrams = Number(ing.grams) || 0;
+                      const percentage = baseRecipePackWeight > 0 ? ((originalSpiceGrams / baseRecipePackWeight) * 100).toFixed(1) : "0.0";
+                      const spicePerPackGrams = effectivePackWeight > 0 
+                        ? Number((originalSpiceGrams * scaleFactor).toFixed(2)) 
+                        : originalSpiceGrams;
                       const calculatedGrams = Number((originalSpiceGrams * scaleFactor).toFixed(2));
                       const isEdited = customBatchWeights[idx] !== undefined;
                       const spiceScaledGrams = isEdited ? customBatchWeights[idx] : calculatedGrams;
@@ -2409,6 +2416,9 @@ export default function MixersManager() {
                                 {rm.tamilName}
                               </span>
                             )}
+                          </td>
+                          <td className="no-print-in-slip" style={{ padding: "8px 10px", textAlign: "right", color: "var(--sd-zinc-600)" }}>
+                            {spicePerPackGrams} g ({percentage}%)
                           </td>
                           <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 900, color: "var(--sd-black)", fontSize: "0.9rem" }}>
                             {/* Interactive Editable Number Input on Screen */}
@@ -2455,6 +2465,9 @@ export default function MixersManager() {
                     <tr style={{ background: "var(--sd-zinc-100)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-400)" }}>
                       <td colSpan={2} style={{ padding: "10px", color: "var(--sd-black)" }}>
                         TOTAL BATCH OUTPUT ({productionTargetPacks || 0} PACKS &bull; {effectivePackWeight} g EACH)
+                      </td>
+                      <td className="no-print-in-slip" style={{ padding: "10px", textAlign: "right", color: "var(--sd-zinc-700)" }}>
+                        {effectivePackWeight > 0 ? `${effectivePackWeight} g (100%)` : `${baseRecipePackWeight} g (100%)`}
                       </td>
                       <td style={{ padding: "10px", textAlign: "right", color: "var(--sd-black)", fontSize: "1rem" }}>
                         {totalBatchKg >= 1 ? `${totalBatchKg.toFixed(2)} KG` : `${totalBatchGrams} g`} ({totalBatchGrams.toLocaleString("en-IN")} g)

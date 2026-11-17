@@ -499,10 +499,8 @@ export default function MixersManager() {
             <strong style={{ color: "#0F172A" }}>{effectivePackWeight} Grams</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-            <span style={{ color: "#64748B", fontWeight: 600 }}>Production Target:</span>
-            <strong style={{ color: "#0F172A" }}>
-              {effectiveTargetPacks} Packs {Number(effectiveTargetPacks) !== Number(numPacks) ? `(Formula: ${numPacks} packs)` : ""}
-            </strong>
+            <span style={{ color: "#64748B", fontWeight: 600 }}>Required Quantity:</span>
+            <strong style={{ color: "#0F172A" }}>{numPacks} Packs</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", borderTop: "1px dashed #CBD5E1", paddingTop: "6px" }}>
             <span style={{ color: "#64748B", fontWeight: 600 }}>Expected Formula Weight:</span>
@@ -665,7 +663,7 @@ export default function MixersManager() {
     slipEl.classList.add("exporting-pdf");
 
     const cleanName = (scalerMixer.name || "Recipe").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `${cleanName}_${effectivePackWeight}g_${effectiveTargetPacks}_Packs_Batch_Slip.pdf`;
+    const filename = `${cleanName}_${effectivePackWeight}g_${numPacks}_Packs_Batch_Slip.pdf`;
 
     try {
       if (!window.html2pdf) {
@@ -2549,7 +2547,7 @@ export default function MixersManager() {
                   <tfoot>
                     <tr style={{ background: "var(--sd-zinc-100)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-400)" }}>
                       <td colSpan={2} style={{ padding: "10px", color: "var(--sd-black)" }}>
-                        TOTAL BATCH OUTPUT ({effectiveTargetPacks} PACKS &bull; {effectivePackWeight} g EACH)
+                        TOTAL BATCH OUTPUT ({numPacks} PACKS &bull; {effectivePackWeight} g EACH)
                       </td>
                       <td className="no-print-in-slip" style={{ padding: "10px", textAlign: "right", color: "var(--sd-zinc-700)" }}>
                         {effectivePackWeight} g (100%)

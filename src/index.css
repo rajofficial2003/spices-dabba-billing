@@ -1024,4 +1024,12 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 .exporting-pdf .print-only-text {
   display: inline-block !important;
 }
+.exporting-pdf .pdf-hide-ratio {
+  display: none !important;
+}
+@media print {
+  .pdf-hide-ratio {
+    display: none !important;
+  }
+}
 

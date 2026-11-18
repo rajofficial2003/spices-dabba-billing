@@ -499,10 +499,6 @@ export default function MixersManager() {
             <strong style={{ color: "#0F172A" }}>{effectivePackWeight} Grams</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-            <span style={{ color: "#64748B", fontWeight: 600 }}>Number of Packs:</span>
-            <strong style={{ color: "#0F172A" }}>{effectiveNumPacks} Packs</strong>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
             <span style={{ color: "#64748B", fontWeight: 600 }}>Total Number of Packs:</span>
             <strong style={{ color: "#0F172A" }}>{productionTargetPacks} Packs</strong>
           </div>
@@ -542,22 +538,6 @@ export default function MixersManager() {
                 </div>
               )}
             </div>
-          </div>
-        )}
-
-        {!hasCustomOverrides && !isDifferent && (
-          <div style={{
-            background: "#ECFDF5",
-            border: "1px solid #A7F3D0",
-            borderRadius: "8px",
-            padding: "7px 10px",
-            marginBottom: "8px",
-            color: "#065F46",
-            fontSize: "0.76rem",
-            fontWeight: 700,
-            textAlign: "center"
-          }}>
-            ✓ Formula balance verified ({effectiveNumPacks} packs &times; {effectivePackWeight} g = {expectedTotalGrams.toLocaleString("en-IN")} g).
           </div>
         )}
       </div>
@@ -2286,48 +2266,7 @@ export default function MixersManager() {
                     )}
                   </div>
 
-                  {/* Box 2: Number of Packs (Batch Multiplier) */}
-                  <div style={{ background: "#FFFFFF", padding: "12px", borderRadius: "10px", border: "1px solid var(--sd-zinc-200)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <label 
-                        htmlFor="scaler-num-packs-input"
-                        style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--sd-black)", textTransform: "uppercase" }}
-                      >
-                        Number of Packs
-                      </label>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <input
-                        id="scaler-num-packs-input"
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={numPacks}
-                        onChange={(e) => handlePacksChange(e.target.value)}
-                        style={{
-                          width: "95px",
-                          padding: "5px 10px",
-                          borderRadius: "8px",
-                          border: Number(numPacks) > 0 ? "2px solid #3B82F6" : "1.5px solid var(--sd-zinc-300)",
-                          background: Number(numPacks) > 0 ? "#EFF6FF" : "#FFFFFF",
-                          fontSize: "1rem",
-                          fontWeight: 900,
-                          color: Number(numPacks) > 0 ? "#1E40AF" : "var(--sd-black)",
-                          outline: "none"
-                        }}
-                        placeholder="0"
-                        title="Enter number of packs to scale batch"
-                      />
-                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Packs</span>
-                    </div>
-                    <div style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", marginTop: "4px" }}>
-                      {effectiveNumPacks > 0 && effectivePackWeight > 0 
-                        ? `Target: ${(effectivePackWeight * effectiveNumPacks).toLocaleString("en-IN")} g (${((effectivePackWeight * effectiveNumPacks)/1000).toFixed(2)} KG)` 
-                        : "Batch scaling multiplier"}
-                    </div>
-                  </div>
-
-                  {/* Box 3: Total Number of Packs (Slip Label Only) */}
+                  {/* Box 2: Total Number of Packs */}
                   <div style={{ background: "#FFFFFF", padding: "12px", borderRadius: "10px", border: "1px solid var(--sd-zinc-200)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                       <label 
@@ -2361,8 +2300,46 @@ export default function MixersManager() {
                       />
                       <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Packs</span>
                     </div>
+                  </div>
+
+                  {/* Box 3: Batch Weight Calculator */}
+                  <div style={{ background: "#FFFFFF", padding: "12px", borderRadius: "10px", border: "1px solid var(--sd-zinc-200)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <label 
+                        htmlFor="scaler-num-packs-input"
+                        style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--sd-black)", textTransform: "uppercase" }}
+                      >
+                        Batch Weight Calculator
+                      </label>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <input
+                        id="scaler-num-packs-input"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={numPacks}
+                        onChange={(e) => handlePacksChange(e.target.value)}
+                        style={{
+                          width: "95px",
+                          padding: "5px 10px",
+                          borderRadius: "8px",
+                          border: Number(numPacks) > 0 ? "2px solid #3B82F6" : "1.5px solid var(--sd-zinc-300)",
+                          background: Number(numPacks) > 0 ? "#EFF6FF" : "#FFFFFF",
+                          fontSize: "1rem",
+                          fontWeight: 900,
+                          color: Number(numPacks) > 0 ? "#1E40AF" : "var(--sd-black)",
+                          outline: "none"
+                        }}
+                        placeholder="0"
+                        title="Enter number of packs to calculate batch weight"
+                      />
+                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--sd-zinc-700)" }}>Packs</span>
+                    </div>
                     <div style={{ fontSize: "0.68rem", color: "var(--sd-zinc-500)", marginTop: "4px" }}>
-                      Slip label only (No calculation)
+                      {effectiveNumPacks > 0 && effectivePackWeight > 0 
+                        ? `Target: ${(effectivePackWeight * effectiveNumPacks).toLocaleString("en-IN")} g (${((effectivePackWeight * effectiveNumPacks)/1000).toFixed(2)} KG)` 
+                        : "Batch scaling multiplier"}
                     </div>
                   </div>
 
@@ -2455,10 +2432,7 @@ export default function MixersManager() {
                         Recipe Ratio ({effectivePackWeight} g)
                       </th>
                       <th style={{ padding: "8px 10px", fontWeight: 800, color: "var(--sd-zinc-700)", textAlign: "right", width: "210px" }}>
-                        Batch Weight Required {effectiveNumPacks > 0 ? `(${effectiveNumPacks} Packs)` : ""}
-                        <span style={{ display: "block", fontSize: "0.68rem", color: "var(--sd-zinc-400)", fontWeight: 500 }}>
-                          (Editable numbers in grams)
-                        </span>
+                        Batch Weight Required
                       </th>
                     </tr>
                   </thead>
@@ -2532,7 +2506,7 @@ export default function MixersManager() {
                   <tfoot>
                     <tr style={{ background: "var(--sd-zinc-100)", fontWeight: 900, borderTop: "2px solid var(--sd-zinc-400)" }}>
                       <td colSpan={2} style={{ padding: "10px", color: "var(--sd-black)" }}>
-                        TOTAL BATCH OUTPUT ({effectiveNumPacks > 0 ? `${effectiveNumPacks} PACKS &bull; ` : ""}{effectivePackWeight} g EACH)
+                        TOTAL BATCH OUTPUT
                       </td>
                       <td className="pdf-hide-ratio" style={{ padding: "10px", textAlign: "right", color: "var(--sd-zinc-700)" }}>
                         {effectivePackWeight} g (100%)

@@ -95,12 +95,11 @@ export default function OrdersReportModal({
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       // 1. Status Filter
+      const orderBal = order.balanceAmount !== undefined ? Number(order.balanceAmount) : (order.creditAmount !== undefined ? Number(order.creditAmount) : (order.paymentStatus === "pending" || order.paymentStatus === "credit" ? Number(order.grandTotal) : 0));
       if (statusFilter === "completed") {
-        const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? Number(o.grandTotal) : 0));
-        if (order.status !== "completed" || oBal > 0) return false;
+        if (order.status !== "completed" || orderBal > 0) return false;
       } else if (statusFilter === "credit") {
-        const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? Number(o.grandTotal) : 0));
-        if (order.status !== "completed" || (order.paymentStatus !== "pending" && order.paymentStatus !== "credit" && order.paymentStatus !== "partial" && oBal <= 0)) return false;
+        if (order.status !== "completed" || (order.paymentStatus !== "pending" && order.paymentStatus !== "credit" && order.paymentStatus !== "partial" && orderBal <= 0)) return false;
       } else if (statusFilter === "draft") {
         if (order.status !== "draft") return false;
       }

@@ -199,10 +199,14 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
     setEndDate("");
   };
 
+  const getOrderCreditBalance = (order) => {
+    return Number(order.balanceAmount ?? order.creditAmount ?? ((order.paymentStatus === "pending" || order.paymentStatus === "credit") ? order.grandTotal : 0)) || 0;
+  };
+
   const filteredOrders = orders.filter(order => {
     if (filterTab === "draft" && order.status !== "draft") return false;
-    if (filterTab === "completed" && (order.status !== "completed" || order.paymentStatus === "pending" || order.paymentStatus === "credit")) return false;
-    if (filterTab === "credit" && (order.status !== "completed" || (order.paymentStatus !== "pending" && order.paymentStatus !== "credit"))) return false;
+    if (filterTab === "completed" && (order.status !== "completed" || getOrderCreditBalance(order) > 0)) return false;
+    if (filterTab === "credit" && (order.status !== "completed" || getOrderCreditBalance(order) <= 0)) return false;
 
     // Business Name Filter
     if (businessFilter !== "all") {
@@ -232,8 +236,8 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
   });
 
   const draftCount = orders.filter(o => o.status === "draft").length;
-  const completedCount = orders.filter(o => o.status === "completed" && o.paymentStatus !== "pending" && o.paymentStatus !== "credit").length;
-  const creditCount = orders.filter(o => o.status === "completed" && (o.paymentStatus === "pending" || o.paymentStatus === "credit")).length;
+  const completedCount = orders.filter(o => o.status === "completed" && getOrderCreditBalance(o) <= 0).length;
+  const creditCount = orders.filter(o => o.status === "completed" && getOrderCreditBalance(o) > 0).length;
 
   const filteredTotalAmount = filteredOrders
     .filter(o => o.status === "completed")
@@ -264,7 +268,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
             Orders
           </h2>
           <p style={{ fontSize: "0.8rem", color: "var(--sd-zinc-600)", marginTop: "2px" }}>
-            Finalized wholesale tax invoices, retailer khata records, and on-field drafts.
+            Finalized wholesale tax invoices, retailer credit records, and on-field drafts.
           </p>
         </div>
 
@@ -497,7 +501,9 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
         <div className="responsive-cards-grid">
           {paginatedOrders.map(order => {
             const isDraft = order.status === "draft";
-            const isPendingCredit = order.status === "completed" && order.paymentStatus === "pending";
+            const orderBal = getOrderCreditBalance(order);
+            const isPendingCredit = order.status === "completed" && (orderBal > 0 || order.paymentStatus === "pending" || order.paymentStatus === "credit" || order.paymentStatus === "partial");
+            const isPartialCredit = isPendingCredit && (Number(order.paidAmount) > 0 || (Number(order.grandTotal) > orderBal && orderBal > 0));
 
             return (
               <div
@@ -583,21 +589,25 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                       whiteSpace: "nowrap",
                       background: isDraft 
                         ? "var(--sd-zinc-100)" 
+                        : isPartialCredit
+                        ? "#FEF3C7"
                         : isPendingCredit 
                         ? "var(--sd-red-subtle)" 
                         : "var(--sd-black)",
                       color: isDraft 
                         ? "var(--sd-zinc-800)" 
+                        : isPartialCredit
+                        ? "#92400E"
                         : isPendingCredit 
                         ? "var(--sd-red)" 
                         : "var(--sd-white)",
-                      border: isPendingCredit ? "1px solid var(--sd-red-border)" : "1px solid var(--sd-zinc-200)",
+                      border: isPartialCredit ? "1px solid #FDE68A" : isPendingCredit ? "1px solid var(--sd-red-border)" : "1px solid var(--sd-zinc-200)",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "4px"
                     }}>
                       {isDraft ? <Clock size={11} /> : isPendingCredit ? <AlertCircle size={11} /> : <CheckCircle size={11} />}
-                      {isDraft ? "Draft" : isPendingCredit ? "Credit Due" : "Completed"}
+                      {isDraft ? "Draft" : isPartialCredit ? `Partial (Credit: ₹${orderBal.toFixed(0)})` : isPendingCredit ? "Credit Due" : "Completed"}
                     </span>
                   </div>
                 </div>
@@ -669,13 +679,25 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                   minWidth: 0,
                   boxSizing: "border-box"
                 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, marginBottom: "3px", gap: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontWeight: 700, marginBottom: "3px", gap: "8px" }}>
                     <span style={{ fontSize: "0.78rem", color: "var(--sd-zinc-700)" }}>
                       {order.totalItemsCount || order.items?.length || 0} packs ({order.items?.length || 0} items)
                     </span>
-                    <span className="font-heading" style={{ color: "var(--sd-black)", fontSize: "0.95rem", fontWeight: 900, flexShrink: 0 }}>
-                      {formatCurrency(order.grandTotal)}
-                    </span>
+                    <div style={{ textAlign: "right" }}>
+                      <span className="font-heading" style={{ color: "var(--sd-black)", fontSize: "0.95rem", fontWeight: 900, flexShrink: 0 }}>
+                        {formatCurrency(order.grandTotal)}
+                      </span>
+                      {orderBal > 0 && (
+                        <div style={{ fontSize: "0.70rem", color: "#DC2626", fontWeight: 800, marginTop: "1px" }}>
+                          Credit: ₹{orderBal.toLocaleString("en-IN")}
+                          {Number(order.paidAmount) > 0 && (
+                            <span style={{ color: "#166534", marginLeft: "4px", fontWeight: 600 }}>
+                              (Paid ₹{Number(order.paidAmount).toLocaleString("en-IN")})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div style={{
                     color: "var(--sd-zinc-500)",
@@ -773,8 +795,8 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                             onClick={async () => {
                               const ok = await showConfirmModal({
                                 title: "Confirm Payment Received",
-                                message: `Are you sure you want to mark Bill #${order.invoiceNumber || ""} (${order.customer?.shopName || "Retailer"}) for ${formatCurrency(order.grandTotal)} as PAID? This will clear the pending credit balance.`,
-                                confirmText: "Yes, Mark Paid",
+                                message: `Are you sure you want to mark Bill #${order.invoiceNumber || ""} (${order.customer?.shopName || "Retailer"}) as FULLY PAID? This will clear the remaining credit balance of ₹${orderBal.toFixed(2)}.`,
+                                confirmText: "Yes, Clear & Mark Paid",
                                 cancelText: "Cancel",
                                 isDanger: false
                               });

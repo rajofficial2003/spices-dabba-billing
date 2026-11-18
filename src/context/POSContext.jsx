@@ -170,8 +170,9 @@ export function POSProvider({ children }) {
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState("fixed"); // "fixed" (₹) or "percent" (%)
   const [taxPercentOverride, setTaxPercent] = useState(null); // Optional override / draft buffer
-  const [paymentMode, setPaymentMode] = useState("Cash"); // Cash, UPI, Credit / Khata, Bank Transfer
-  const [paymentStatus, setPaymentStatus] = useState("paid"); // "paid" or "pending" (credit)
+  const [paymentMode, setPaymentMode] = useState("Cash"); // Cash, UPI, Credit, Bank Transfer
+  const [paymentStatus, setPaymentStatus] = useState("paid"); // "paid", "partial", or "pending" (credit)
+  const [paidAmount, setPaidAmount] = useState(null); // Customer actual amount paid (for partial / credit splitting)
   const [notes, setNotes] = useState("");
   const [activeDraftId, setActiveDraftId] = useState(null); // When editing a draft order
   const [lastGeneratedInvoice, setLastGeneratedInvoice] = useState(null);
@@ -692,6 +693,7 @@ export function POSProvider({ children }) {
     setTaxPercent(null);
     setPaymentMode("Cash");
     setPaymentStatus("paid");
+    setPaidAmount(null);
     setNotes("");
     setActiveDraftId(null);
   };
@@ -710,6 +712,7 @@ export function POSProvider({ children }) {
     setTaxPercent(draftOrder.taxPercent !== undefined ? draftOrder.taxPercent : null);
     setPaymentMode(draftOrder.paymentMode || "Cash");
     setPaymentStatus(draftOrder.paymentStatus || "pending");
+    setPaidAmount(draftOrder.paidAmount !== undefined ? draftOrder.paidAmount : null);
     setNotes(draftOrder.notes || "");
   };
 
@@ -724,6 +727,11 @@ export function POSProvider({ children }) {
 
     const biz = customOptions?.business || selectedBusiness || defaultBusiness || DEFAULT_BUSINESS;
     const prefix = (biz?.invoicePrefix || "SBD").trim().toUpperCase();
+    const roundedGrandTotal = Math.round(grandTotal);
+    const draftPaid = paidAmount !== null && paidAmount !== undefined && paidAmount !== "" 
+      ? Math.min(roundedGrandTotal, Math.max(0, Number(paidAmount))) 
+      : (paymentMode === "Credit" || paymentStatus === "pending" ? 0 : roundedGrandTotal);
+    const draftBalance = Math.max(0, roundedGrandTotal - draftPaid);
 
     const draftData = {
       type: "draft",
@@ -746,9 +754,12 @@ export function POSProvider({ children }) {
       cgst: Math.round((taxAmount / 2) * 100) / 100,
       sgst: Math.round((taxAmount / 2) * 100) / 100,
       grandTotal,
+      paidAmount: draftPaid,
+      balanceAmount: draftBalance,
+      creditAmount: draftBalance,
       totalItemsCount,
       paymentMode,
-      paymentStatus: "pending",
+      paymentStatus: draftBalance === 0 ? "paid" : (draftPaid > 0 ? "partial" : "pending"),
       notes,
       timestamp: Date.now()
     };
@@ -797,6 +808,25 @@ export function POSProvider({ children }) {
     const biz = customOptions?.business || selectedBusiness || defaultBusiness || DEFAULT_BUSINESS;
     const prefix = (biz?.invoicePrefix || "SBD").trim().toUpperCase();
     const invoiceNumber = generateInvoiceNumber(prefix, orders);
+    const roundedGrandTotal = Math.round(grandTotal);
+
+    let effectivePaidAmount = paidAmount !== null && paidAmount !== undefined && paidAmount !== "" 
+      ? Math.max(0, Number(paidAmount)) 
+      : (paymentMode === "Credit" || paymentStatus === "pending" ? 0 : roundedGrandTotal);
+    
+    // Cap effectivePaidAmount at roundedGrandTotal
+    effectivePaidAmount = Math.min(roundedGrandTotal, effectivePaidAmount);
+    const balanceCreditAmount = Math.max(0, roundedGrandTotal - effectivePaidAmount);
+
+    let effectivePaymentStatus = paymentStatus;
+    if (balanceCreditAmount === 0) {
+      effectivePaymentStatus = "paid";
+    } else if (effectivePaidAmount > 0 && balanceCreditAmount > 0) {
+      effectivePaymentStatus = "partial";
+    } else {
+      effectivePaymentStatus = "pending";
+    }
+
     const billData = {
       type: "invoice",
       status: "completed",
@@ -818,11 +848,14 @@ export function POSProvider({ children }) {
       cgst: Math.round((taxAmount / 2) * 100) / 100,
       sgst: Math.round((taxAmount / 2) * 100) / 100,
       grandTotal,
+      paidAmount: effectivePaidAmount,
+      balanceAmount: balanceCreditAmount,
+      creditAmount: balanceCreditAmount,
       shippingCharges: 0,
       shippingCharge: 0,
       totalItemsCount,
       paymentMode,
-      paymentStatus,
+      paymentStatus: effectivePaymentStatus,
       notes,
       timestamp: Date.now(),
       finalizedAt: new Date().toISOString()
@@ -895,13 +928,12 @@ export function POSProvider({ children }) {
       }
     }
 
-    // Update customer history & outstanding if pending
+    // Update customer history & outstanding credit balance
     try {
       const customerRef = doc(db, "billing_customers", selectedCustomer.id);
-      const updatedTotalSpent = (selectedCustomer.totalSpent || 0) + grandTotal;
+      const updatedTotalSpent = (selectedCustomer.totalSpent || 0) + roundedGrandTotal;
       const updatedOrderCount = (selectedCustomer.totalOrdersCount || 0) + 1;
-      const additionalOutstanding = paymentStatus === "pending" ? grandTotal : 0;
-      const updatedOutstanding = (selectedCustomer.outstandingBalance || 0) + additionalOutstanding;
+      const updatedOutstanding = (selectedCustomer.outstandingBalance || 0) + balanceCreditAmount;
 
       await updateDoc(customerRef, {
         totalSpent: updatedTotalSpent,
@@ -909,6 +941,23 @@ export function POSProvider({ children }) {
         outstandingBalance: updatedOutstanding,
         lastOrderDate: new Date().toISOString()
       });
+
+      // Synchronize in-memory customer state immediately
+      setCustomers(prev => prev.map(c => c.id === selectedCustomer.id ? {
+        ...c,
+        totalSpent: updatedTotalSpent,
+        totalOrdersCount: updatedOrderCount,
+        outstandingBalance: updatedOutstanding,
+        lastOrderDate: new Date().toISOString()
+      } : c));
+
+      setSelectedCustomer(prev => prev && prev.id === selectedCustomer.id ? {
+        ...prev,
+        totalSpent: updatedTotalSpent,
+        totalOrdersCount: updatedOrderCount,
+        outstandingBalance: updatedOutstanding,
+        lastOrderDate: new Date().toISOString()
+      } : prev);
     } catch (e) {
       console.warn("Customer stats update warning:", e.message);
     }
@@ -943,15 +992,40 @@ export function POSProvider({ children }) {
   };
 
   const markOrderPaymentStatus = async (orderId, newStatus) => {
+    const orderToUpdate = orders.find(o => o.id === orderId);
+    const orderBalance = Number(orderToUpdate?.balanceAmount ?? orderToUpdate?.creditAmount ?? ((orderToUpdate?.paymentStatus === "pending" || orderToUpdate?.paymentStatus === "credit") ? orderToUpdate?.grandTotal : 0)) || 0;
+    const gTotal = Math.round(Number(orderToUpdate?.grandTotal) || 0);
+
+    const updatePayload = {
+      paymentStatus: newStatus,
+      updatedAt: serverTimestamp()
+    };
+    if (newStatus === "paid") {
+      updatePayload.paidAmount = gTotal;
+      updatePayload.balanceAmount = 0;
+      updatePayload.creditAmount = 0;
+    }
+
     try {
-      await updateDoc(doc(db, "billing_orders", orderId), {
-        paymentStatus: newStatus,
-        updatedAt: serverTimestamp()
-      });
+      await updateDoc(doc(db, "billing_orders", orderId), updatePayload);
+
+      // If marking as paid and the order had a customer with outstanding credit, deduct the cleared balance!
+      if (newStatus === "paid" && orderToUpdate?.customer?.id && orderBalance > 0) {
+        const custId = orderToUpdate.customer.id;
+        const currentCust = customers.find(c => c.id === custId);
+        if (currentCust) {
+          const nextBalance = Math.max(0, (Number(currentCust.outstandingBalance) || 0) - orderBalance);
+          await updateDoc(doc(db, "billing_customers", custId), {
+            outstandingBalance: nextBalance
+          });
+          setCustomers(prev => prev.map(c => c.id === custId ? { ...c, outstandingBalance: nextBalance } : c));
+          setSelectedCustomer(prev => prev && prev.id === custId ? { ...prev, outstandingBalance: nextBalance } : prev);
+        }
+      }
     } catch (e) {
       console.warn("Payment status note:", e.message);
     }
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentStatus: newStatus } : o));
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatePayload } : o));
   };
 
   // PRODUCT CRUD
@@ -2105,6 +2179,8 @@ export function POSProvider({ children }) {
         setPaymentMode,
         paymentStatus,
         setPaymentStatus,
+        paidAmount,
+        setPaidAmount,
         notes,
         setNotes,
         activeDraftId,

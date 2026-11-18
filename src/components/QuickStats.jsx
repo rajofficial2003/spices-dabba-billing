@@ -253,7 +253,7 @@ export default function QuickStats({ onNavigate }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <span style={{ fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 800, color: "var(--sd-zinc-500)", letterSpacing: "0.5px" }}>
-                Retailer Khata Due
+                Retailer Credit Due
               </span>
               <div className="font-heading" style={{ fontSize: "1.7rem", fontWeight: 900, color: totalOutstanding > 0 ? "var(--sd-red)" : "var(--sd-black)", marginTop: "2px" }}>
                 {formatCurrency(totalOutstanding)}

@@ -360,6 +360,12 @@ export default function InvoiceModal({ order, onClose }) {
     msg += `Discount: ${Number(order.discount) > 0 ? `-₹${Number(order.discount).toFixed(2)}` : "₹0.00"}\n`;
     msg += `Shipping Charges: ₹${shippingCharges.toFixed(2)}\n`;
     msg += `*TOTAL PAYABLE: ₹${Math.round(finalGrandTotal)}*\n`;
+    const invCredit = Number(order.balanceAmount ?? order.creditAmount ?? ((order.paymentStatus === "pending" || order.paymentStatus === "credit") ? finalGrandTotal : 0)) || 0;
+    const invPaid = Number(order.paidAmount ?? ((order.paymentStatus === "pending" || order.paymentStatus === "credit") ? 0 : finalGrandTotal)) || 0;
+    if (invCredit > 0) {
+      msg += `Amount Paid: ₹${invPaid.toFixed(2)}\n`;
+      msg += `*Credit Balance Due: ₹${invCredit.toFixed(2)}*\n`;
+    }
     msg += `Payment Status: *${(order.paymentStatus || "PAID").toUpperCase()}*\n`;
     msg += `--------------------------------\n`;
     msg += `*BANK DETAILS FOR PAYMENT:*\n`;
@@ -644,8 +650,8 @@ export default function InvoiceModal({ order, onClose }) {
                     borderRadius: "4px",
                     fontSize: "0.70rem",
                     fontWeight: 800,
-                    background: (order.paymentStatus === "pending" || order.paymentStatus === "credit") ? "#FEE2E2" : "#DCFCE7",
-                    color: (order.paymentStatus === "pending" || order.paymentStatus === "credit") ? "#DC2626" : "#15803D"
+                    background: (order.paymentStatus === "pending" || order.paymentStatus === "credit") ? "#FEE2E2" : (order.paymentStatus === "partial" ? "#FEF3C7" : "#DCFCE7"),
+                    color: (order.paymentStatus === "pending" || order.paymentStatus === "credit") ? "#DC2626" : (order.paymentStatus === "partial" ? "#92400E" : "#15803D")
                   }}>
                     {(order.paymentStatus || "PAID").toUpperCase()}
                   </span>
@@ -867,6 +873,20 @@ export default function InvoiceModal({ order, onClose }) {
                 <span>Total Payable:</span>
                 <span>₹{Math.round(finalGrandTotal)}</span>
               </div>
+
+              {/* Show Paid Amount & Balance / Credit Due if partial or credit */}
+              {((order.balanceAmount !== undefined && order.balanceAmount > 0) || (order.creditAmount !== undefined && order.creditAmount > 0) || order.paymentStatus === "pending" || order.paymentStatus === "credit" || order.paymentStatus === "partial") && (
+                <div style={{ marginTop: "4px", padding: "4px 0", borderBottom: "1px dashed #E4E4E7", fontSize: "0.85rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", color: "#166534", fontWeight: 700 }}>
+                    <span>Amount Paid:</span>
+                    <span>₹{Number(order.paidAmount !== undefined ? order.paidAmount : (order.paymentStatus === "pending" || order.paymentStatus === "credit" ? 0 : Math.round(finalGrandTotal))).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", color: "#DC2626", fontWeight: 900, fontSize: "0.92rem" }}>
+                    <span>Credit Balance Due:</span>
+                    <span>₹{Number(order.balanceAmount !== undefined ? order.balanceAmount : (order.creditAmount !== undefined ? order.creditAmount : Math.round(finalGrandTotal))).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Terms & Conditions right below Total Payable */}
               <div style={{

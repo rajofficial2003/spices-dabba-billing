@@ -96,9 +96,11 @@ export default function OrdersReportModal({
     return orders.filter(order => {
       // 1. Status Filter
       if (statusFilter === "completed") {
-        if (order.status !== "completed" || order.paymentStatus === "pending" || order.paymentStatus === "credit") return false;
+        const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? Number(o.grandTotal) : 0));
+        if (order.status !== "completed" || oBal > 0) return false;
       } else if (statusFilter === "credit") {
-        if (order.status !== "completed" || (order.paymentStatus !== "pending" && order.paymentStatus !== "credit")) return false;
+        const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? Number(o.grandTotal) : 0));
+        if (order.status !== "completed" || (order.paymentStatus !== "pending" && order.paymentStatus !== "credit" && order.paymentStatus !== "partial" && oBal <= 0)) return false;
       } else if (statusFilter === "draft") {
         if (order.status !== "draft") return false;
       }
@@ -151,11 +153,11 @@ export default function OrdersReportModal({
       totalDiscount += disc;
       totalShipping += ship;
 
-      if (o.paymentStatus === "pending" || o.paymentStatus === "credit") {
-        creditAmount += gTotal;
-      } else {
-        paidAmount += gTotal;
-      }
+      const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? gTotal : 0));
+      const oPaid = o.paidAmount !== undefined ? Number(o.paidAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? 0 : gTotal);
+
+      creditAmount += oBal;
+      paidAmount += oPaid;
 
       // Aggregate Products
       if (Array.isArray(o.items)) {
@@ -216,6 +218,8 @@ export default function OrdersReportModal({
       "Shipping Charges (Rs)",
       "Total GST (Rs)",
       "Grand Total (Rs)",
+      "Paid Amount (Rs)",
+      "Credit Due (Rs)",
       "Courier Partner",
       "Tracking Docket"
     ];
@@ -226,6 +230,8 @@ export default function OrdersReportModal({
       const dateStr = getOrderDateStr(o);
       const courier = o.courierCompany || o.shippingDetails?.courierCompany || "";
       const tracking = o.trackingId || o.shippingDetails?.trackingId || "";
+      const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? Number(o.grandTotal || 0) : 0));
+      const oPaid = o.paidAmount !== undefined ? Number(o.paidAmount) : (o.paymentStatus === "pending" || o.paymentStatus === "credit" ? 0 : Number(o.grandTotal || 0));
 
       return [
         idx + 1,
@@ -244,6 +250,8 @@ export default function OrdersReportModal({
         ship.toFixed(2),
         (Number(o.tax) || 0).toFixed(2),
         (Number(o.grandTotal) || 0).toFixed(2),
+        oPaid.toFixed(2),
+        oBal.toFixed(2),
         `"${courier.replace(/"/g, '""')}"`,
         `"${tracking.replace(/"/g, '""')}"`
       ].join(",");
@@ -262,11 +270,14 @@ export default function OrdersReportModal({
       '""',
       '""',
       '""',
-      "",
+      '""',
+      stats.totalTaxable.toFixed(2),
       stats.totalDiscount.toFixed(2),
       stats.totalShipping.toFixed(2),
       stats.totalTax.toFixed(2),
       stats.totalSales.toFixed(2),
+      stats.paidAmount.toFixed(2),
+      stats.creditAmount.toFixed(2),
       '""',
       '""'
     ].join(","));
@@ -315,6 +326,8 @@ export default function OrdersReportModal({
       const dateStr = getOrderDateStr(o);
       const gTotal = Number(o.grandTotal) || 0;
       const isCredit = o.paymentStatus === "pending" || o.paymentStatus === "credit";
+      const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (isCredit ? gTotal : 0));
+      const oPaid = o.paidAmount !== undefined ? Number(o.paidAmount) : (isCredit ? 0 : gTotal);
 
       return `
         <tr style="border-bottom: 1px solid #E4E4E7; font-size: 11px;">
@@ -327,10 +340,14 @@ export default function OrdersReportModal({
           </td>
           <td style="padding: 6px 6px;">${cust.phone || "-"}</td>
           <td style="padding: 6px 6px; text-align: center;">${o.paymentMode || "Cash"}</td>
-          <td style="padding: 6px 6px; text-align: center; font-weight: 700; color: ${isCredit ? '#DC2626' : '#15803D'};">
+          <td style="padding: 6px 6px; text-align: center; font-weight: 700; color: ${isCredit ? '#DC2626' : (o.paymentStatus === 'partial' ? '#D97706' : '#15803D')};">
             ${(o.paymentStatus || "PAID").toUpperCase()}
           </td>
           <td style="padding: 6px 6px; text-align: right; font-weight: 700;">₹${gTotal.toFixed(2)}</td>
+          <td style="padding: 6px 6px; text-align: right; color: #15803D; font-weight: 600;">₹${oPaid.toFixed(2)}</td>
+          <td style="padding: 6px 6px; text-align: right; font-weight: 800; color: ${oBal > 0 ? '#DC2626' : '#52525B'};">
+            ${oBal > 0 ? `₹${oBal.toFixed(2)}` : "-"}
+          </td>
         </tr>
       `;
     }).join("");
@@ -412,10 +429,12 @@ export default function OrdersReportModal({
                 <th style="width: 90px; text-align: left;">Invoice Code</th>
                 <th style="width: 75px; text-align: left;">Date</th>
                 <th style="text-align: left;">Retailer / Shop</th>
-                <th style="width: 85px; text-align: left;">Phone</th>
-                <th style="width: 55px; text-align: center;">Mode</th>
-                <th style="width: 65px; text-align: center;">Status</th>
-                <th style="width: 85px; text-align: right;">Total Amount</th>
+                <th style="width: 80px; text-align: left;">Phone</th>
+                <th style="width: 50px; text-align: center;">Mode</th>
+                <th style="width: 60px; text-align: center;">Status</th>
+                <th style="width: 75px; text-align: right;">Total Amount</th>
+                <th style="width: 65px; text-align: right;">Paid</th>
+                <th style="width: 70px; text-align: right;">Credit Due</th>
               </tr>
             </thead>
             <tbody>
@@ -423,8 +442,10 @@ export default function OrdersReportModal({
             </tbody>
             <tfoot>
               <tr style="background: #F4F4F5; font-weight: 900; border-top: 2px solid #09090B;">
-                <td colspan="7" style="padding: 8px 6px; text-align: right; font-size: 12px;">TOTAL REVENUE (${stats.count} Bills):</td>
-                <td style="padding: 8px 6px; text-align: right; font-size: 13px; color: #09090B;">₹${stats.totalSales.toFixed(2)}</td>
+                <td colspan="7" style="padding: 8px 6px; text-align: right; font-size: 11px;">TOTAL REVENUE (${stats.count} Bills):</td>
+                <td style="padding: 8px 6px; text-align: right; font-size: 12px; color: #09090B;">₹${stats.totalSales.toFixed(2)}</td>
+                <td style="padding: 8px 6px; text-align: right; font-size: 12px; color: #15803D;">₹${stats.paidAmount.toFixed(2)}</td>
+                <td style="padding: 8px 6px; text-align: right; font-size: 12px; color: #DC2626;">₹${stats.creditAmount.toFixed(2)}</td>
               </tr>
             </tfoot>
           </table>
@@ -538,7 +559,7 @@ export default function OrdersReportModal({
               </span>
               {[
                 { id: "completed", label: "Paid Bills" },
-                { id: "credit", label: "Credit / Khata" },
+                { id: "credit", label: "Credit" },
                 { id: "draft", label: "Saved Drafts" },
                 { id: "all", label: "All Bills" }
               ].map(s => {
@@ -840,8 +861,9 @@ export default function OrdersReportModal({
                         <th style={{ padding: "8px 8px" }}>Phone</th>
                         <th style={{ padding: "8px 8px", textAlign: "center" }}>Mode</th>
                         <th style={{ padding: "8px 8px", textAlign: "center" }}>Status</th>
-                        <th style={{ padding: "8px 8px", textAlign: "right" }}>Shipping</th>
                         <th style={{ padding: "8px 10px", textAlign: "right" }}>Total Amount</th>
+                        <th style={{ padding: "8px 10px", textAlign: "right" }}>Paid Amount</th>
+                        <th style={{ padding: "8px 10px", textAlign: "right" }}>Credit Due</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -849,7 +871,8 @@ export default function OrdersReportModal({
                         const cust = o.customer || {};
                         const dateStr = getOrderDateStr(o);
                         const isCredit = o.paymentStatus === "pending" || o.paymentStatus === "credit";
-                        const ship = Number(o.shippingCharges ?? o.shippingCharge ?? o.shippingDetails?.shippingCharges ?? 0);
+                        const oBal = o.balanceAmount !== undefined ? Number(o.balanceAmount) : (o.creditAmount !== undefined ? Number(o.creditAmount) : (isCredit ? Number(o.grandTotal || 0) : 0));
+                        const oPaid = o.paidAmount !== undefined ? Number(o.paidAmount) : (isCredit ? 0 : Number(o.grandTotal || 0));
 
                         return (
                           <tr key={o.id || idx} style={{ borderBottom: "1px solid var(--sd-zinc-200)", background: idx % 2 === 0 ? "#FFFFFF" : "#FAFAFA" }}>
@@ -868,17 +891,20 @@ export default function OrdersReportModal({
                                 fontWeight: 800,
                                 padding: "2px 6px",
                                 borderRadius: "4px",
-                                background: isCredit ? "#FEE2E2" : "#DCFCE7",
-                                color: isCredit ? "#991B1B" : "#166534"
+                                background: isCredit ? "#FEE2E2" : (o.paymentStatus === "partial" ? "#FEF3C7" : "#DCFCE7"),
+                                color: isCredit ? "#991B1B" : (o.paymentStatus === "partial" ? "#92400E" : "#166534")
                               }}>
                                 {(o.paymentStatus || "PAID").toUpperCase()}
                               </span>
                             </td>
-                            <td style={{ padding: "7px 8px", textAlign: "right", color: "var(--sd-zinc-600)" }}>
-                              {ship > 0 ? `₹${ship.toFixed(2)}` : "-"}
-                            </td>
                             <td style={{ padding: "7px 10px", textAlign: "right", fontWeight: 800, color: "var(--sd-black)" }}>
                               ₹{(Number(o.grandTotal) || 0).toFixed(2)}
+                            </td>
+                            <td style={{ padding: "7px 10px", textAlign: "right", fontWeight: 700, color: "#15803D" }}>
+                              ₹{oPaid.toFixed(2)}
+                            </td>
+                            <td style={{ padding: "7px 10px", textAlign: "right", fontWeight: 900, color: oBal > 0 ? "#DC2626" : "var(--sd-zinc-400)" }}>
+                              {oBal > 0 ? `₹${oBal.toFixed(2)}` : "-"}
                             </td>
                           </tr>
                         );

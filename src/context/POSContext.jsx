@@ -1028,6 +1028,53 @@ export function POSProvider({ children }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatePayload } : o));
   };
 
+  const recordOrderPayment = async (orderId, paymentAmount) => {
+    const payNum = Math.max(0, Number(paymentAmount) || 0);
+    if (payNum <= 0) return false;
+
+    const orderToUpdate = orders.find(o => o.id === orderId);
+    if (!orderToUpdate) return false;
+
+    const gTotal = Math.round(Number(orderToUpdate.grandTotal) || 0);
+    const prevPaid = Number(orderToUpdate.paidAmount) || 0;
+    const prevBal = Number(orderToUpdate.balanceAmount ?? orderToUpdate.creditAmount ?? ((orderToUpdate.paymentStatus === "pending" || orderToUpdate.paymentStatus === "credit") ? gTotal : 0)) || 0;
+
+    const actualDeduction = Math.min(prevBal, payNum);
+    const nextBal = Math.max(0, prevBal - actualDeduction);
+    const nextPaid = Math.min(gTotal, prevPaid + actualDeduction);
+    const nextStatus = nextBal <= 0 ? "paid" : "partial";
+
+    const updatePayload = {
+      paidAmount: nextPaid,
+      balanceAmount: nextBal,
+      creditAmount: nextBal,
+      paymentStatus: nextStatus,
+      updatedAt: serverTimestamp()
+    };
+
+    try {
+      await updateDoc(doc(db, "billing_orders", orderId), updatePayload);
+
+      if (orderToUpdate.customer?.id && actualDeduction > 0) {
+        const custId = orderToUpdate.customer.id;
+        const currentCust = customers.find(c => c.id === custId);
+        if (currentCust) {
+          const nextBalance = Math.max(0, (Number(currentCust.outstandingBalance) || 0) - actualDeduction);
+          await updateDoc(doc(db, "billing_customers", custId), {
+            outstandingBalance: nextBalance
+          });
+          setCustomers(prev => prev.map(c => c.id === custId ? { ...c, outstandingBalance: nextBalance } : c));
+          setSelectedCustomer(prev => prev && prev.id === custId ? { ...prev, outstandingBalance: nextBalance } : prev);
+        }
+      }
+    } catch (e) {
+      console.warn("recordOrderPayment note:", e.message);
+    }
+
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatePayload } : o));
+    return true;
+  };
+
   // PRODUCT CRUD
   const addProduct = async (productData) => {
     const id = productData.id || `prod_${Date.now()}`;
@@ -2195,6 +2242,7 @@ export function POSProvider({ children }) {
         // Orders
         deleteOrder,
         markOrderPaymentStatus,
+        recordOrderPayment,
 
         // Products CRUD & Restock
         addProduct,

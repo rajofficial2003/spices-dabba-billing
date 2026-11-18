@@ -46,6 +46,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
     BUSINESS_INFO = {},
     deleteOrder, 
     markOrderPaymentStatus,
+    recordOrderPayment,
     courierPartners = [],
     updateOrderShippingDetails,
     showConfirmModal
@@ -67,6 +68,12 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
   });
   const [shippingError, setShippingError] = useState("");
   const [shippingSaving, setShippingSaving] = useState(false);
+
+  // Partial & Full Credit Payment Collection Modal State
+  const [paymentModalOrder, setPaymentModalOrder] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentSaving, setPaymentSaving] = useState(false);
 
   const [filterTab, setFilterTab] = useState("completed");
   const [businessFilter, setBusinessFilter] = useState("all");
@@ -201,6 +208,40 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
 
   const getOrderCreditBalance = (order) => {
     return Number(order.balanceAmount ?? order.creditAmount ?? ((order.paymentStatus === "pending" || order.paymentStatus === "credit") ? order.grandTotal : 0)) || 0;
+  };
+
+  const handleOpenPaymentModal = (order) => {
+    const bal = getOrderCreditBalance(order);
+    setPaymentModalOrder(order);
+    setPaymentAmount(bal > 0 ? bal.toString() : "");
+    setPaymentError("");
+  };
+
+  const handleConfirmPayment = async (e) => {
+    e.preventDefault();
+    if (!paymentModalOrder) return;
+    const orderBal = getOrderCreditBalance(paymentModalOrder);
+    const payNum = Number(paymentAmount);
+    if (!payNum || isNaN(payNum) || payNum <= 0) {
+      setPaymentError("Please enter a valid payment amount greater than ₹0.");
+      return;
+    }
+    if (payNum > orderBal) {
+      setPaymentError(`Payment amount cannot exceed the remaining credit balance of ₹${orderBal.toFixed(2)}.`);
+      return;
+    }
+
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      await recordOrderPayment(paymentModalOrder.id, payNum);
+      setPaymentModalOrder(null);
+    } catch (err) {
+      console.error("Error recording payment:", err);
+      setPaymentError(err.message || "Failed to record payment. Please try again.");
+    } finally {
+      setPaymentSaving(false);
+    }
   };
 
   const filteredOrders = orders.filter(order => {
@@ -792,18 +833,7 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                         {isPendingCredit && (
                           <button
                             type="button"
-                            onClick={async () => {
-                              const ok = await showConfirmModal({
-                                title: "Confirm Payment Received",
-                                message: `Are you sure you want to mark Bill #${order.invoiceNumber || ""} (${order.customer?.shopName || "Retailer"}) as FULLY PAID? This will clear the remaining credit balance of ₹${orderBal.toFixed(2)}.`,
-                                confirmText: "Yes, Clear & Mark Paid",
-                                cancelText: "Cancel",
-                                isDanger: false
-                              });
-                              if (ok) {
-                                markOrderPaymentStatus(order.id, "paid");
-                              }
-                            }}
+                            onClick={() => handleOpenPaymentModal(order)}
                             style={{
                               background: "#059669",
                               color: "var(--sd-white)",
@@ -817,10 +847,10 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                               alignItems: "center",
                               gap: "4px"
                             }}
-                            title="Mark as paid"
+                            title="Receive payment / settle credit (partial or full)"
                           >
-                            <CheckCircle size={12} />
-                            <span>Mark Paid</span>
+                            <CreditCard size={12} />
+                            <span>Receive Payment</span>
                           </button>
                         )}
                       </div>
@@ -1154,6 +1184,248 @@ export default function DraftsAndOrders({ onResumeDraft, onViewInvoice }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Receive Credit Payment Modal (Partial & Full Support) */}
+      {paymentModalOrder && (
+        <div 
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !paymentSaving) {
+              setPaymentModalOrder(null);
+            }
+          }}
+        >
+          <div 
+            className="bw-card animate-scale-up"
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              background: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 20px 40px -15px rgba(0,0,0,0.3)",
+              border: "1px solid var(--sd-zinc-200)"
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div>
+                <h3 className="font-heading" style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0, color: "var(--sd-black)" }}>
+                  Receive Credit Payment
+                </h3>
+                <div style={{ fontSize: "0.78rem", color: "var(--sd-zinc-500)", marginTop: "2px" }}>
+                  Bill #{paymentModalOrder.invoiceNumber || "—"} • {paymentModalOrder.customer?.shopName || "Customer"}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentModalOrder(null)}
+                disabled={paymentSaving}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: "4px",
+                  cursor: "pointer",
+                  color: "var(--sd-zinc-400)",
+                  borderRadius: "6px"
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Bill & Credit Details Card */}
+            {(() => {
+              const orderBal = getOrderCreditBalance(paymentModalOrder);
+              const gTotal = Math.round(Number(paymentModalOrder.grandTotal) || 0);
+              const paidSoFar = Number(paymentModalOrder.paidAmount) || 0;
+              const inputNum = Math.max(0, Number(paymentAmount) || 0);
+              const remainingAfter = Math.max(0, orderBal - inputNum);
+              const isFullPay = remainingAfter === 0 && inputNum > 0;
+
+              return (
+                <form onSubmit={handleConfirmPayment} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{
+                    background: "var(--sd-zinc-50)",
+                    border: "1px solid var(--sd-zinc-200)",
+                    borderRadius: "10px",
+                    padding: "12px 14px",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: "8px",
+                    textAlign: "center"
+                  }}>
+                    <div>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>
+                        Bill Total
+                      </div>
+                      <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--sd-black)", marginTop: "2px" }}>
+                        ₹{gTotal.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--sd-zinc-500)", textTransform: "uppercase" }}>
+                        Paid So Far
+                      </div>
+                      <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "#166534", marginTop: "2px" }}>
+                        ₹{paidSoFar.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#DC2626", textTransform: "uppercase" }}>
+                        Credit Due
+                      </div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 900, color: "#DC2626", marginTop: "2px" }}>
+                        ₹{orderBal.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                  </div>
+
+                  {paymentError && (
+                    <div style={{
+                      padding: "8px 12px",
+                      background: "var(--sd-red-subtle)",
+                      color: "var(--sd-red)",
+                      borderRadius: "8px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      border: "1px solid var(--sd-red-border)"
+                    }}>
+                      {paymentError}
+                    </div>
+                  )}
+
+                  {/* Payment Amount Input */}
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <label style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--sd-black)" }}>
+                        Amount Received Now (₹)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentAmount(orderBal.toString())}
+                        style={{
+                          background: "#E0F2FE",
+                          color: "#0369A1",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Full Due (₹{orderBal.toLocaleString("en-IN")})
+                      </button>
+                    </div>
+
+                    <div style={{ position: "relative" }}>
+                      <span style={{
+                        position: "absolute",
+                        left: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontWeight: 900,
+                        color: "var(--sd-zinc-400)",
+                        fontSize: "1.1rem"
+                      }}>
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={orderBal}
+                        step="any"
+                        placeholder="Enter payment amount"
+                        value={paymentAmount}
+                        onChange={(e) => {
+                          setPaymentAmount(e.target.value);
+                          setPaymentError("");
+                        }}
+                        autoFocus
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px 10px 32px",
+                          borderRadius: "8px",
+                          border: "1.5px solid var(--sd-zinc-300)",
+                          fontSize: "1.15rem",
+                          fontWeight: 900,
+                          color: "var(--sd-black)",
+                          outline: "none",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Summary / Impact Preview */}
+                  <div style={{
+                    padding: "10px 12px",
+                    background: isFullPay ? "#F0FDF4" : "#FEF3C7",
+                    border: isFullPay ? "1px solid #BBF7D0" : "1px solid #FDE68A",
+                    borderRadius: "8px",
+                    fontSize: "0.78rem"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700 }}>
+                      <span style={{ color: isFullPay ? "#166534" : "#92400E" }}>
+                        Remaining Credit After Payment:
+                      </span>
+                      <span style={{ fontWeight: 900, fontSize: "0.92rem", color: isFullPay ? "#166534" : "#92400E" }}>
+                        ₹{remainingAfter.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: isFullPay ? "#15803D" : "#78350F", marginTop: "4px" }}>
+                      {isFullPay 
+                        ? "✓ This bill will be marked as FULLY PAID. Customer ledger credit will be cleared."
+                        : `ℹ️ This bill will remain with Partial Credit of ₹${remainingAfter.toLocaleString("en-IN")}.`}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "4px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentModalOrder(null)}
+                      disabled={paymentSaving}
+                      className="btn-secondary"
+                      style={{ padding: "8px 16px" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={paymentSaving || inputNum <= 0}
+                      className="btn-primary"
+                      style={{
+                        padding: "8px 18px",
+                        background: isFullPay ? "#059669" : "var(--sd-black)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      <CheckCircle size={14} />
+                      <span>{paymentSaving ? "Saving..." : `Confirm Payment (₹${inputNum.toLocaleString("en-IN")})`}</span>
+                    </button>
+                  </div>
+                </form>
+              );
+            })()}
           </div>
         </div>
       )}

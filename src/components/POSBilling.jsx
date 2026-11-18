@@ -288,9 +288,12 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
   };
 
   const roundedGrandTotal = Math.round(grandTotal);
-  const currentPaid = (paidAmount !== null && paidAmount !== undefined && paidAmount !== "") 
-    ? Number(paidAmount) 
-    : (paymentMode === "Credit" || paymentStatus === "pending" ? 0 : roundedGrandTotal);
+  const isCreditSelected = paymentStatus === "pending" || paymentStatus === "credit" || paymentStatus === "partial" || paymentMode === "Credit";
+  const currentPaid = !isCreditSelected 
+    ? roundedGrandTotal 
+    : (paidAmount !== null && paidAmount !== undefined && paidAmount !== "") 
+      ? Number(paidAmount) 
+      : 0;
   const currentBalance = Math.max(0, roundedGrandTotal - currentPaid);
 
   const handlePaymentModeChange = (mode) => {
@@ -298,20 +301,16 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
     if (mode === "Credit") {
       setPaidAmount(0);
       setPaymentStatus("pending");
-    } else {
-      if (paidAmount === 0 || paymentStatus === "pending") {
-        setPaidAmount(roundedGrandTotal);
-        setPaymentStatus("paid");
-      }
     }
   };
 
   const handlePaymentStatusChange = (status) => {
-    setPaymentStatus(status);
-    if (status === "pending") {
+    if (status === "credit" || status === "pending") {
+      setPaymentStatus("pending");
       setPaidAmount(0);
       setPaymentMode("Credit");
-    } else if (status === "paid") {
+    } else {
+      setPaymentStatus("paid");
       setPaidAmount(roundedGrandTotal);
       if (paymentMode === "Credit") setPaymentMode("Cash");
     }
@@ -329,7 +328,6 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
       if (paymentMode === "Credit") setPaymentMode("Cash");
     } else if (num > 0) {
       setPaymentStatus("partial");
-      if (paymentMode === "Credit") setPaymentMode("Cash");
     } else {
       setPaymentStatus("pending");
       setPaymentMode("Credit");
@@ -1664,121 +1662,120 @@ export default function POSBilling({ onOpenInvoice, onBillGenerated }) {
                       Payment Status
                     </label>
                     <select
-                      value={currentBalance > 0 && currentPaid > 0 ? "partial" : paymentStatus}
+                      value={isCreditSelected ? "credit" : "paid"}
                       onChange={(e) => handlePaymentStatusChange(e.target.value)}
                       className="custom-select"
                       style={{ padding: "7px 28px 7px 8px", fontSize: "0.82rem", fontWeight: 700 }}
                     >
-                      <option value="paid">Full Paid</option>
-                      {currentPaid > 0 && currentBalance > 0 && (
-                        <option value="partial">Partial Paid</option>
-                      )}
-                      <option value="pending">Credit / Due</option>
+                      <option value="paid">Paid</option>
+                      <option value="credit">Credit</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Amount Paid & Customer Credit Balance Calculation Card */}
-                <div style={{
-                  background: currentBalance > 0 ? "#FEF2F2" : "#F0FDF4",
-                  border: currentBalance > 0 ? "1.5px solid #FCA5A5" : "1.5px solid #BBF7D0",
-                  borderRadius: "10px",
-                  padding: "9px 11px",
-                  marginBottom: "8px"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", marginBottom: "5px" }}>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-black)" }}>
-                      Amount Paid (₹)
-                    </label>
-                    <div style={{ display: "flex", gap: "4px" }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaidAmount(roundedGrandTotal);
-                          setPaymentStatus("paid");
-                          if (paymentMode === "Credit") setPaymentMode("Cash");
-                        }}
-                        style={{
-                          background: currentBalance === 0 ? "#15803D" : "#E2E8F0",
-                          color: currentBalance === 0 ? "#FFFFFF" : "#334155",
-                          border: "none",
-                          borderRadius: "4px",
-                          fontSize: "0.68rem",
-                          fontWeight: 700,
-                          padding: "2px 6px",
-                          cursor: "pointer"
-                        }}
-                        title="Customer paid full bill amount"
-                      >
-                        Full Paid
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaidAmount(0);
-                          setPaymentStatus("pending");
-                          setPaymentMode("Credit");
-                        }}
-                        style={{
-                          background: currentPaid === 0 ? "#DC2626" : "#E2E8F0",
-                          color: currentPaid === 0 ? "#FFFFFF" : "#334155",
-                          border: "none",
-                          borderRadius: "4px",
-                          fontSize: "0.68rem",
-                          fontWeight: 700,
-                          padding: "2px 6px",
-                          cursor: "pointer"
-                        }}
-                        title="Add full bill amount to Customer Credit"
-                      >
-                        Credit (₹0)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div style={{ position: "relative", flex: 1 }}>
-                      <span style={{ position: "absolute", left: "9px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, color: "#64748B", fontSize: "0.88rem" }}>
-                        ₹
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        max={roundedGrandTotal}
-                        step="any"
-                        placeholder="0"
-                        value={paidAmount !== null && paidAmount !== undefined ? paidAmount : (paymentMode === "Credit" || paymentStatus === "pending" ? 0 : roundedGrandTotal)}
-                        onChange={(e) => handlePaidAmountChange(e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "6px 8px 6px 22px",
-                          borderRadius: "6px",
-                          border: "1.5px solid var(--sd-zinc-300)",
-                          fontSize: "0.95rem",
-                          fontWeight: 900,
-                          color: "var(--sd-black)",
-                          background: "#FFFFFF",
-                          outline: "none"
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ textAlign: "right", minWidth: "120px" }}>
-                      <div style={{ fontSize: "0.66rem", color: currentBalance > 0 ? "#991B1B" : "#166534", fontWeight: 800, textTransform: "uppercase" }}>
-                        {currentBalance > 0 ? "Credit Balance:" : "Status:"}
-                      </div>
-                      <div style={{ fontSize: "1.02rem", fontWeight: 900, color: currentBalance > 0 ? "#DC2626" : "#15803D" }}>
-                        {currentBalance > 0 ? `₹${currentBalance.toLocaleString("en-IN")}` : "Fully Paid"}
+                {/* Amount Paid & Customer Credit Balance Calculation Card (Only shown when Credit is selected) */}
+                {isCreditSelected && (
+                  <div style={{
+                    background: currentBalance > 0 ? "#FEF2F2" : "#F0FDF4",
+                    border: currentBalance > 0 ? "1.5px solid #FCA5A5" : "1.5px solid #BBF7D0",
+                    borderRadius: "10px",
+                    padding: "9px 11px",
+                    marginBottom: "8px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", marginBottom: "5px" }}>
+                      <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--sd-black)" }}>
+                        Amount Paid (₹)
+                      </label>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaidAmount(roundedGrandTotal);
+                            setPaymentStatus("paid");
+                            if (paymentMode === "Credit") setPaymentMode("Cash");
+                          }}
+                          style={{
+                            background: currentBalance === 0 ? "#15803D" : "#E2E8F0",
+                            color: currentBalance === 0 ? "#FFFFFF" : "#334155",
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            padding: "2px 6px",
+                            cursor: "pointer"
+                          }}
+                          title="Customer paid full bill amount"
+                        >
+                          Full Paid
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaidAmount(0);
+                            setPaymentStatus("pending");
+                            setPaymentMode("Credit");
+                          }}
+                          style={{
+                            background: currentPaid === 0 ? "#DC2626" : "#E2E8F0",
+                            color: currentPaid === 0 ? "#FFFFFF" : "#334155",
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            padding: "2px 6px",
+                            cursor: "pointer"
+                          }}
+                          title="Add full bill amount to Customer Credit"
+                        >
+                          Credit (₹0)
+                        </button>
                       </div>
                     </div>
-                  </div>
 
-                  {currentBalance > 0 && selectedCustomer && (
-                    <div style={{ fontSize: "0.68rem", color: "#991B1B", marginTop: "5px", fontWeight: 600 }}>
-                      ⚠️ ₹{currentBalance.toLocaleString("en-IN")} will be added to {selectedCustomer.shopName || selectedCustomer.customerName}'s Credit.
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div style={{ position: "relative", flex: 1 }}>
+                        <span style={{ position: "absolute", left: "9px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, color: "#64748B", fontSize: "0.88rem" }}>
+                          ₹
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={roundedGrandTotal}
+                          step="any"
+                          placeholder="0"
+                          value={paidAmount !== null && paidAmount !== undefined ? paidAmount : 0}
+                          onChange={(e) => handlePaidAmountChange(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "6px 8px 6px 22px",
+                            borderRadius: "6px",
+                            border: "1.5px solid var(--sd-zinc-300)",
+                            fontSize: "0.95rem",
+                            fontWeight: 900,
+                            color: "var(--sd-black)",
+                            background: "#FFFFFF",
+                            outline: "none"
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ textAlign: "right", minWidth: "120px" }}>
+                        <div style={{ fontSize: "0.66rem", color: currentBalance > 0 ? "#991B1B" : "#166534", fontWeight: 800, textTransform: "uppercase" }}>
+                          {currentBalance > 0 ? "Credit Balance:" : "Status:"}
+                        </div>
+                        <div style={{ fontSize: "1.02rem", fontWeight: 900, color: currentBalance > 0 ? "#DC2626" : "#15803D" }}>
+                          {currentBalance > 0 ? `₹${currentBalance.toLocaleString("en-IN")}` : "Fully Paid"}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
+
+                    {currentBalance > 0 && selectedCustomer && (
+                      <div style={{ fontSize: "0.68rem", color: "#991B1B", marginTop: "5px", fontWeight: 600 }}>
+                        ⚠️ ₹{currentBalance.toLocaleString("en-IN")} will be added to {selectedCustomer.shopName || selectedCustomer.customerName}'s Credit.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Field Notes */}
